@@ -11,6 +11,14 @@ import CalendarView from './ui/CalendarView.tsx';
 import OfficeView from './ui/OfficeView.tsx';
 
 type View = 'home' | 'reader' | 'calendar' | 'map' | 'office';
+type Theme = 'guided' | 'scholar' | 'nocturne' | 'graphite';
+
+const THEMES: { id: Theme; label: string; description: string }[] = [
+  { id: 'guided', label: 'Guided', description: 'Welcoming and progressively revealed' },
+  { id: 'scholar', label: 'Scholar', description: 'Dense metadata and study surfaces' },
+  { id: 'nocturne', label: 'Nocturne', description: 'Low-light chapel reading' },
+  { id: 'graphite', label: 'Graphite', description: 'Modern and subway-forward' },
+];
 
 const NAV: { id: View; ico: string; label: string; group?: 'study' }[] = [
   { id: 'home', ico: '✠', label: 'Today' },
@@ -19,6 +27,15 @@ const NAV: { id: View; ico: string; label: string; group?: 'study' }[] = [
   { id: 'map', ico: '🚇', label: 'Explore the Map', group: 'study' },
   { id: 'office', ico: '🕰', label: 'Divine Office', group: 'study' },
 ];
+
+function storedTheme(): Theme {
+  try {
+    const value = localStorage.getItem('standroids-theme');
+    return THEMES.some((theme) => theme.id === value) ? value as Theme : 'guided';
+  } catch {
+    return 'guided';
+  }
+}
 
 function HomeView({ day, onOpen }: { day: DayInfo; onOpen: (view: View) => void }) {
   return (
@@ -32,7 +49,7 @@ function HomeView({ day, onOpen }: { day: DayInfo; onOpen: (view: View) => void 
             {day.weekday} · {day.season}
           </p>
           <p>
-            Begin with the prayers for the day. Latin and English appear together, and the deeper study tools stay out of the way until you call for them.
+            Begin with the prayers for the day. Latin and English appear together, while deeper study tools remain nearby without blocking the doorway.
           </p>
           <div className="primary-actions">
             <button className="primary" onClick={() => onOpen('reader')}>Begin reading</button>
@@ -82,7 +99,8 @@ export default function App() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [focusSection, setFocusSection] = useState<string | null>(null);
   const [action, setAction] = useState<SelectionAction | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
+  const [theme, setTheme] = useState<Theme>(storedTheme);
+  const [showDetails, setShowDetails] = useState(() => storedTheme() === 'scholar');
 
   useEffect(() => {
     loadCorpusBytes()
@@ -97,6 +115,12 @@ export default function App() {
     document.documentElement.dataset.color = String(day?.color ?? 'green');
   }, [day?.color]);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('standroids-theme', theme);
+    if (theme === 'scholar') setShowDetails(true);
+  }, [theme]);
+
   function openView(next: View) {
     setAction(null);
     setView(next);
@@ -108,9 +132,9 @@ export default function App() {
   }
 
   function onOpenKey(nodeKey: string) {
-    const m = nodeKey.match(/^section:(.+)#(.+)$/);
-    if (!m) return;
-    setFocusSection(m[2]);
+    const match = nodeKey.match(/^section:(.+)#(.+)$/);
+    if (!match) return;
+    setFocusSection(match[2]);
     openView('reader');
   }
 
@@ -124,6 +148,7 @@ export default function App() {
       </div>
     );
   }
+
   if (!db || !day) {
     return (
       <div className="loading">
@@ -144,37 +169,47 @@ export default function App() {
         </button>
 
         <div className="nav-group">
-          {NAV.filter((n) => !n.group).map((n) => (
+          {NAV.filter((item) => !item.group).map((item) => (
             <button
-              key={n.id}
-              className={`nav${view === n.id ? ' active' : ''}`}
-              onClick={() => openView(n.id)}
+              key={item.id}
+              className={`nav${view === item.id ? ' active' : ''}`}
+              onClick={() => openView(item.id)}
             >
-              <span className="ico">{n.ico}</span>
-              <span className="label">{n.label}</span>
+              <span className="ico">{item.ico}</span>
+              <span className="label">{item.label}</span>
             </button>
           ))}
         </div>
 
         <div className="nav-caption">Explore & study</div>
         <div className="nav-group">
-          {NAV.filter((n) => n.group === 'study').map((n) => (
+          {NAV.filter((item) => item.group === 'study').map((item) => (
             <button
-              key={n.id}
-              className={`nav${view === n.id ? ' active' : ''}`}
-              onClick={() => openView(n.id)}
+              key={item.id}
+              className={`nav${view === item.id ? ' active' : ''}`}
+              onClick={() => openView(item.id)}
             >
-              <span className="ico">{n.ico}</span>
-              <span className="label">{n.label}</span>
+              <span className="ico">{item.ico}</span>
+              <span className="label">{item.label}</span>
             </button>
           ))}
         </div>
 
         <div className="spacer" />
+        <label className="theme-picker">
+          <span className="theme-label">Experience</span>
+          <select value={theme} onChange={(event) => setTheme(event.target.value as Theme)}>
+            {THEMES.map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
+          </select>
+          <span className="theme-description">{THEMES.find((option) => option.id === theme)?.description}</span>
+        </label>
+
         <div className="day-chip">
           <div className="date-row">
             <span className="swatch" title={`Liturgical color: ${day.color}`} />
-            <input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} aria-label="Liturgical date" />
+            <input type="date" value={date} onChange={(event) => event.target.value && setDate(event.target.value)} aria-label="Liturgical date" />
           </div>
           <div className="feast">{day.feastName ?? day.weekKey}</div>
           <div className="season">{day.season} · {day.weekday}</div>
@@ -197,7 +232,7 @@ export default function App() {
               <span>{day.weekKey}</span>
               <span>{day.temporaPath}</span>
               {day.commemorations.length > 0 && (
-                <span>Commemorations: {day.commemorations.slice(0, 2).map((c) => c.title ?? c.key).join('; ')}</span>
+                <span>Commemorations: {day.commemorations.slice(0, 2).map((item) => item.title ?? item.key).join('; ')}</span>
               )}
             </div>
           )}
@@ -215,9 +250,7 @@ export default function App() {
               <SubwayMap day={day} onStation={onStation} />
             </div>
           )}
-          {view === 'reader' && (
-            <ReaderView db={db} day={day} focusSection={focusSection} onAction={setAction} />
-          )}
+          {view === 'reader' && <ReaderView db={db} day={day} focusSection={focusSection} onAction={setAction} />}
           {view === 'calendar' && (
             <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); openView('reader'); setFocusSection(null); }} />
           )}
