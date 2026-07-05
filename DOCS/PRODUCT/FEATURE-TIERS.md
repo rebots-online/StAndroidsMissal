@@ -18,9 +18,11 @@ Therefore these capabilities remain free:
 
 A recipient must be able to read a composed shared passage and its annotations without St. Android's Missal hosting the content. The URL fragment or exported file carries the composition. Hosting provides only the app shell and installer.
 
-## Tiers
+## Plans and add-ons
 
-| Capability | Free | Fellowship | Parish | Scholar |
+The commercial ladder begins with an individual subscription. Institutional adoption is not presumed.
+
+| Capability | Free | Personal | Fellowship | Parish |
 |---|:---:|:---:|:---:|:---:|
 | Mass, Office, calendar, map | ✓ | ✓ | ✓ | ✓ |
 | All themes and accessibility controls | ✓ | ✓ | ✓ | ✓ |
@@ -28,36 +30,60 @@ A recipient must be able to read a composed shared passage and its annotations w
 | Self-contained annotated URL sharing | ✓ | ✓ | ✓ | ✓ |
 | Print / PDF / portable exports | ✓ | ✓ | ✓ | ✓ |
 | EcclesiDraw export | ✓ | ✓ | ✓ | ✓ |
-| Cross-device synchronization |  | ✓ | ✓ | ✓ |
-| Large shared collections |  | ✓ | ✓ | ✓ |
-| Fellowship workspace |  | ✓ | ✓ | ✓ |
-| Live collaboration and version history |  | ✓ | ✓ | ✓ |
-| Newsletter composition |  | ✓ | ✓ | ✓ |
-| Parish workspace |  |  | ✓ |  |
-| Roles, approval, moderation, audit history |  |  | ✓ |  |
-| Scheduled newsletter delivery |  |  | ✓ |  |
-| Advanced semantic research |  |  |  | ✓ |
-| Grounded AI exegesis |  |  |  | ✓ |
+| Private cross-device synchronization |  | ✓ | ✓ | ✓ |
+| Large private collections |  | ✓ | ✓ | ✓ |
+| Personal version history |  | ✓ | ✓ | ✓ |
+| Enhanced personal research allowance |  | ✓ | ✓ | ✓ |
+| Fellowship workspace |  |  | ✓ | ✓ |
+| Live collaboration and shared history |  |  | ✓ | ✓ |
+| Newsletter composition |  |  | ✓ | ✓ |
+| Parish workspace |  |  |  | ✓ |
+| Roles, approval, moderation, audit history |  |  |  | ✓ |
+| Scheduled newsletter delivery |  |  |  | ✓ |
+
+### Scholar add-on
+
+Scholar is an optional research add-on rather than an institutional plan. It may be attached to Personal, Fellowship, or Parish accounts.
+
+It adds:
+
+- larger semantic indexes;
+- richer embeddings and cross-corpus research;
+- higher-volume grounded research assistance;
+- research-oriented export and citation workflows.
+
+A private individual can therefore subscribe to **Personal + Scholar** without pretending to be a parish, fellowship, publisher, or committee.
 
 ## Why the paid features are paid
 
+### Personal
+
+Personal pays for private services with recurring costs: synchronized storage, recoverable history, larger personal collections, and a modest assisted-research allowance. It is the expected first commercial plan.
+
 ### Fellowship
 
-Fellowship features introduce persistent shared state: synchronization, storage, concurrent editing, and recoverable history. The subscription pays for coordination and retained shared data, not for reading Scripture or the liturgy.
+Fellowship introduces persistent shared state: concurrent editing, shared libraries, live EcclesiDraw sessions, group version history, and newsletter composition. The subscription pays for coordination and retained shared data, not for reading Scripture or the liturgy.
 
 ### Parish
 
-Parish features introduce institutional responsibility: roles, approvals, moderation, publication workflows, audit history, and scheduled delivery. They are organizational infrastructure rather than a larger reading font with a cassock on it.
+Parish introduces institutional responsibility: roles, approvals, moderation, publication workflows, audit history, and scheduled delivery. It is organizational infrastructure rather than a larger reading font with a cassock on it.
 
-### Scholar
+### Scholar add-on
 
-Scholar features introduce material compute costs: richer embeddings, larger indexes, cross-corpus research, and grounded model inference.
+Scholar covers material research-compute costs: richer embeddings, larger indexes, cross-corpus analysis, and grounded model inference. It is orthogonal to whether the subscriber is an individual or an institution.
 
 ## Entitlement integration
 
 The app consumes a neutral entitlement provider. Authentication and billing belong to the central Bidller platform connection rather than being implemented independently inside St. Android's Missal.
 
-The local/offline default provider grants the complete Free tier. A connected provider may add entitlements but must never revoke the Free tier's local-first capabilities.
+The local/offline default provider grants the complete Free plan. A connected provider may add entitlements but must never revoke the Free plan's local-first capabilities.
+
+The entitlement model therefore has two independent fields:
+
+```text
+plan: free | personal | fellowship | parish
+addOns: scholar[]
+```
 
 ## Portability covenant
 
@@ -65,4 +91,4 @@ The local/offline default provider grants the complete Free tier. A connected pr
 2. Shared URL fragments contain the selected passage, references, and chosen annotations.
 3. Standalone HTML exports contain all composed content and require no backend.
 4. EcclesiDraw exports remain Excalidraw-compatible rather than proprietary canvas blobs.
-5. A subscription ending may disable hosted collaboration but must not make previously exported or locally stored content unreadable.
+5. A subscription ending may disable hosted services but must not make previously exported or locally stored content unreadable.
