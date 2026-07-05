@@ -1,4 +1,10 @@
-export type SubscriptionTier = 'free' | 'fellowship' | 'parish' | 'scholar';
+export type SubscriptionPlan = 'free' | 'personal' | 'fellowship' | 'parish';
+export type SubscriptionAddOn = 'scholar';
+
+export interface EntitlementState {
+  plan: SubscriptionPlan;
+  addOns: SubscriptionAddOn[];
+}
 
 export type FeatureId =
   | 'read.mass'
@@ -9,66 +15,80 @@ export type FeatureId =
   | 'annotations.local'
   | 'share.url'
   | 'share.printPdf'
-  | 'share.markdownHtmlJson'
+  | 'share.portable'
   | 'ecclesidraw.export'
-  | 'collections.large'
+  | 'sync.private'
+  | 'collections.private'
+  | 'history.private'
+  | 'research.personal'
   | 'collaboration.live'
-  | 'collaboration.versionHistory'
+  | 'collaboration.history'
   | 'newsletter.compose'
-  | 'newsletter.schedule'
   | 'workspace.fellowship'
   | 'workspace.parish'
   | 'workspace.roles'
   | 'workspace.moderation'
-  | 'research.semanticAdvanced'
-  | 'research.aiExegesis'
-  | 'sync.crossDevice';
+  | 'newsletter.schedule'
+  | 'research.advanced'
+  | 'research.assisted';
 
 export interface FeatureDefinition {
   id: FeatureId;
   title: string;
   description: string;
-  minimumTier: SubscriptionTier;
+  minimumPlan?: SubscriptionPlan;
+  requiredAddOn?: SubscriptionAddOn;
   localFirst: boolean;
   costDriver: 'none' | 'storage' | 'compute' | 'collaboration' | 'delivery';
 }
 
-const TIER_ORDER: SubscriptionTier[] = ['free', 'fellowship', 'parish', 'scholar'];
+const PLAN_ORDER: SubscriptionPlan[] = ['free', 'personal', 'fellowship', 'parish'];
 
 export const FEATURES: FeatureDefinition[] = [
-  { id: 'read.mass', title: 'Read the Mass', description: 'Bilingual Mass texts and navigation.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'read.office', title: 'Read the Divine Office', description: 'The Office cursus and available texts.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'calendar.perpetual', title: 'Perpetual calendar', description: 'On-device liturgical date resolution.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'themes.all', title: 'All interface aesthetics', description: 'Traditional, modernist, glass, skeuomorphic, retro, brutalist, dopamine and future skins.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'accessibility.all', title: 'All accessibility and legibility controls', description: 'Font size, contrast, spacing, light and dark modes, reduced motion, and guided presentation.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'annotations.local', title: 'Local annotations', description: 'Highlights and notes stored on the device.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'share.url', title: 'Self-contained annotated links', description: 'Passage, references and notes encoded directly into the URL fragment.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'share.printPdf', title: 'Print and PDF', description: 'Clean printing and browser PDF output.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'share.markdownHtmlJson', title: 'Portable exports', description: 'Markdown, standalone HTML and JSON bundles.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'ecclesidraw.export', title: 'EcclesiDraw export', description: 'Open a selected passage and annotations as an Excalidraw-compatible canvas.', minimumTier: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'read.mass', title: 'Read the Mass', description: 'Bilingual Mass texts and navigation.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'read.office', title: 'Read the Divine Office', description: 'The Office cursus and available texts.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'calendar.perpetual', title: 'Perpetual calendar', description: 'On-device liturgical date resolution.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'themes.all', title: 'All interface aesthetics', description: 'All skins and future skins.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'accessibility.all', title: 'All legibility controls', description: 'Typography, contrast, spacing, motion and light modes.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'annotations.local', title: 'Local annotations', description: 'Highlights and notes stored on the device.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'share.url', title: 'Self-contained annotated links', description: 'Passage, references and notes encoded directly in the URL fragment.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'share.printPdf', title: 'Print and PDF', description: 'Clean printing and browser PDF output.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'share.portable', title: 'Portable exports', description: 'Markdown, standalone HTML and JSON bundles.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'ecclesidraw.export', title: 'EcclesiDraw export', description: 'Excalidraw-compatible canvas export.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
 
-  { id: 'collections.large', title: 'Large shared collections', description: 'Organize and share substantial annotated corpora.', minimumTier: 'fellowship', localFirst: false, costDriver: 'storage' },
-  { id: 'collaboration.live', title: 'Live collaboration', description: 'Multi-user notes and EcclesiDraw sessions.', minimumTier: 'fellowship', localFirst: false, costDriver: 'collaboration' },
-  { id: 'collaboration.versionHistory', title: 'Version history', description: 'Recover and compare revisions of shared work.', minimumTier: 'fellowship', localFirst: false, costDriver: 'storage' },
-  { id: 'newsletter.compose', title: 'Newsletter composition', description: 'Turn shared passages and notes into reusable newsletter blocks.', minimumTier: 'fellowship', localFirst: false, costDriver: 'none' },
-  { id: 'workspace.fellowship', title: 'Fellowship workspace', description: 'A small shared space for study groups and apostolates.', minimumTier: 'fellowship', localFirst: false, costDriver: 'collaboration' },
-  { id: 'sync.crossDevice', title: 'Cross-device sync', description: 'Synchronize annotations, preferences and collections.', minimumTier: 'fellowship', localFirst: false, costDriver: 'storage' },
+  { id: 'sync.private', title: 'Private cross-device sync', description: 'Synchronize personal notes, preferences and collections.', minimumPlan: 'personal', localFirst: false, costDriver: 'storage' },
+  { id: 'collections.private', title: 'Large private collections', description: 'Substantial personal study collections without an institutional workspace.', minimumPlan: 'personal', localFirst: false, costDriver: 'storage' },
+  { id: 'history.private', title: 'Personal version history', description: 'Recover revisions of private notes and study documents.', minimumPlan: 'personal', localFirst: false, costDriver: 'storage' },
+  { id: 'research.personal', title: 'Enhanced personal research', description: 'Richer search and a modest assisted-research allowance.', minimumPlan: 'personal', localFirst: false, costDriver: 'compute' },
 
-  { id: 'workspace.parish', title: 'Parish workspace', description: 'Parish-scale shared library, publishing and member access.', minimumTier: 'parish', localFirst: false, costDriver: 'collaboration' },
-  { id: 'workspace.roles', title: 'Roles and permissions', description: 'Editors, reviewers, clergy approval and publication roles.', minimumTier: 'parish', localFirst: false, costDriver: 'collaboration' },
-  { id: 'workspace.moderation', title: 'Moderation and approval', description: 'Review queues, publication gates and audit history.', minimumTier: 'parish', localFirst: false, costDriver: 'collaboration' },
-  { id: 'newsletter.schedule', title: 'Scheduled newsletter delivery', description: 'Publish and deliver approved parish content on a schedule.', minimumTier: 'parish', localFirst: false, costDriver: 'delivery' },
+  { id: 'collaboration.live', title: 'Live collaboration', description: 'Multi-user notes and EcclesiDraw sessions.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'collaboration' },
+  { id: 'collaboration.history', title: 'Shared version history', description: 'Recover and compare group revisions.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'storage' },
+  { id: 'newsletter.compose', title: 'Newsletter composition', description: 'Reusable newsletter blocks from shared passages and notes.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'none' },
+  { id: 'workspace.fellowship', title: 'Fellowship workspace', description: 'A shared space for study groups and apostolates.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'collaboration' },
 
-  { id: 'research.semanticAdvanced', title: 'Advanced semantic research', description: 'Larger indexes, richer embeddings and cross-corpus research tools.', minimumTier: 'scholar', localFirst: false, costDriver: 'compute' },
-  { id: 'research.aiExegesis', title: 'Grounded AI exegesis', description: 'Ecclesiastical Latin and Catholic doctrine assistance grounded in the corpus.', minimumTier: 'scholar', localFirst: false, costDriver: 'compute' },
+  { id: 'workspace.parish', title: 'Parish workspace', description: 'Parish-scale library, publishing and member access.', minimumPlan: 'parish', localFirst: false, costDriver: 'collaboration' },
+  { id: 'workspace.roles', title: 'Roles and permissions', description: 'Editors, reviewers and publication roles.', minimumPlan: 'parish', localFirst: false, costDriver: 'collaboration' },
+  { id: 'workspace.moderation', title: 'Moderation and approval', description: 'Review queues, publication gates and audit history.', minimumPlan: 'parish', localFirst: false, costDriver: 'collaboration' },
+  { id: 'newsletter.schedule', title: 'Scheduled delivery', description: 'Publish approved content on a schedule.', minimumPlan: 'parish', localFirst: false, costDriver: 'delivery' },
+
+  { id: 'research.advanced', title: 'Advanced semantic research', description: 'Larger indexes and cross-corpus research.', requiredAddOn: 'scholar', localFirst: false, costDriver: 'compute' },
+  { id: 'research.assisted', title: 'High-volume grounded assistance', description: 'Higher-volume assisted research grounded in the corpus.', requiredAddOn: 'scholar', localFirst: false, costDriver: 'compute' },
 ];
 
-export function hasFeature(tier: SubscriptionTier, featureId: FeatureId): boolean {
+export const FREE_ENTITLEMENTS: EntitlementState = { plan: 'free', addOns: [] };
+
+export function hasFeature(state: EntitlementState, featureId: FeatureId): boolean {
   const feature = FEATURES.find((item) => item.id === featureId);
   if (!feature) return false;
-  return TIER_ORDER.indexOf(tier) >= TIER_ORDER.indexOf(feature.minimumTier);
+  const planOk = feature.minimumPlan
+    ? PLAN_ORDER.indexOf(state.plan) >= PLAN_ORDER.indexOf(feature.minimumPlan)
+    : true;
+  const addOnOk = feature.requiredAddOn
+    ? state.addOns.includes(feature.requiredAddOn)
+    : true;
+  return planOk && addOnOk;
 }
 
-export function featuresForTier(tier: SubscriptionTier): FeatureDefinition[] {
-  return FEATURES.filter((feature) => hasFeature(tier, feature.id));
+export function featuresForEntitlements(state: EntitlementState): FeatureDefinition[] {
+  return FEATURES.filter((feature) => hasFeature(state, feature.id));
 }
