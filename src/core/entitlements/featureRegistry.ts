@@ -12,11 +12,14 @@ export type FeatureId =
   | 'calendar.perpetual'
   | 'themes.all'
   | 'accessibility.all'
+  | 'share.consume'
   | 'annotations.local'
-  | 'share.url'
+  | 'journal.personal'
+  | 'share.composeUrl'
   | 'share.printPdf'
   | 'share.portable'
   | 'ecclesidraw.export'
+  | 'collaboration.exchange'
   | 'sync.private'
   | 'collections.private'
   | 'history.private'
@@ -45,23 +48,26 @@ export interface FeatureDefinition {
 const PLAN_ORDER: SubscriptionPlan[] = ['free', 'personal', 'fellowship', 'parish'];
 
 export const FEATURES: FeatureDefinition[] = [
-  { id: 'read.mass', title: 'Read the Mass', description: 'Bilingual Mass texts and navigation.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'read.office', title: 'Read the Divine Office', description: 'The Office cursus and available texts.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'read.mass', title: 'Render the Mass', description: 'Bilingual Mass texts and navigation.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'read.office', title: 'Render the Divine Office', description: 'The Office cursus and available texts.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
   { id: 'calendar.perpetual', title: 'Perpetual calendar', description: 'On-device liturgical date resolution.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
   { id: 'themes.all', title: 'All interface aesthetics', description: 'All skins and future skins.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
   { id: 'accessibility.all', title: 'All legibility controls', description: 'Typography, contrast, spacing, motion and light modes.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'annotations.local', title: 'Local annotations', description: 'Highlights and notes stored on the device.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'share.url', title: 'Self-contained annotated links', description: 'Passage, references and notes encoded directly in the URL fragment.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'share.printPdf', title: 'Print and PDF', description: 'Clean printing and browser PDF output.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'share.portable', title: 'Portable exports', description: 'Markdown, standalone HTML and JSON bundles.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
-  { id: 'ecclesidraw.export', title: 'EcclesiDraw export', description: 'Excalidraw-compatible canvas export.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
+  { id: 'share.consume', title: 'Open shared passages', description: 'Anyone can open and read a self-contained shared passage without an account.', minimumPlan: 'free', localFirst: true, costDriver: 'none' },
 
+  { id: 'annotations.local', title: 'Highlights and annotations', description: 'Content-anchored highlights and notes stored on the device.', minimumPlan: 'personal', localFirst: true, costDriver: 'none' },
+  { id: 'journal.personal', title: 'Personal liturgical journal', description: 'Private dated reflections connected to days, sections and passages.', minimumPlan: 'personal', localFirst: true, costDriver: 'none' },
+  { id: 'share.composeUrl', title: 'Compose annotated links', description: 'Encode passage, references and chosen notes directly in the URL fragment.', minimumPlan: 'personal', localFirst: true, costDriver: 'none' },
+  { id: 'share.printPdf', title: 'Print and PDF', description: 'Clean printing and browser PDF output of composed material.', minimumPlan: 'personal', localFirst: true, costDriver: 'none' },
+  { id: 'share.portable', title: 'Portable exports', description: 'Markdown, standalone HTML and JSON bundles.', minimumPlan: 'personal', localFirst: true, costDriver: 'none' },
+  { id: 'ecclesidraw.export', title: 'EcclesiDraw export', description: 'Excalidraw-compatible canvas export.', minimumPlan: 'personal', localFirst: true, costDriver: 'none' },
+  { id: 'collaboration.exchange', title: 'Parcel collaboration', description: 'Exchange and revise self-contained annotated bundles without a hosted workspace.', minimumPlan: 'personal', localFirst: true, costDriver: 'none' },
   { id: 'sync.private', title: 'Private cross-device sync', description: 'Synchronize personal notes, preferences and collections.', minimumPlan: 'personal', localFirst: false, costDriver: 'storage' },
   { id: 'collections.private', title: 'Large private collections', description: 'Substantial personal study collections without an institutional workspace.', minimumPlan: 'personal', localFirst: false, costDriver: 'storage' },
   { id: 'history.private', title: 'Personal version history', description: 'Recover revisions of private notes and study documents.', minimumPlan: 'personal', localFirst: false, costDriver: 'storage' },
   { id: 'research.personal', title: 'Enhanced personal research', description: 'Richer search and a modest assisted-research allowance.', minimumPlan: 'personal', localFirst: false, costDriver: 'compute' },
 
-  { id: 'collaboration.live', title: 'Live collaboration', description: 'Multi-user notes and EcclesiDraw sessions.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'collaboration' },
+  { id: 'collaboration.live', title: 'Live collaboration', description: 'Concurrent multi-user notes and EcclesiDraw sessions.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'collaboration' },
   { id: 'collaboration.history', title: 'Shared version history', description: 'Recover and compare group revisions.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'storage' },
   { id: 'newsletter.compose', title: 'Newsletter composition', description: 'Reusable newsletter blocks from shared passages and notes.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'none' },
   { id: 'workspace.fellowship', title: 'Fellowship workspace', description: 'A shared space for study groups and apostolates.', minimumPlan: 'fellowship', localFirst: false, costDriver: 'collaboration' },
