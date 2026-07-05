@@ -1,0 +1,13 @@
+node_modules/
+public/missal.db
+dist/
+dist-*/
+src-tauri/target/
+src-tauri/gen/android/app/build/
+src-tauri/gen/apple/build/
+*.local
+.DS_Store
+*.log
+.env
+.env.*
+src-tauri/gen/schemas/

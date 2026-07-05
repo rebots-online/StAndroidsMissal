@@ -1,0 +1,214 @@
+/* St. Android's Missal — design system
+   Parchment & ink, illuminated by the liturgical color of the day. */
+
+:root {
+  --ink: #221c14;
+  --ink-soft: #4a4034;
+  --ink-faint: #8a7d6a;
+  --parchment: #f6f0e2;
+  --parchment-deep: #ece2cc;
+  --vellum: #fbf7ee;
+  --gold: #a97e13;
+  --gold-bright: #d4a017;
+  --line-catechumens: #a97e13;
+  --line-faithful: #7a1f2b;
+  --line-office: #274b69;
+  --rail: #2b241b;
+  --rail-text: #d9cdb8;
+
+  /* seasonal accents (set on <html> as data-color) */
+  --accent: #3f7a52;
+  --accent-soft: #3f7a5226;
+
+  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+  --sans: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+html[data-color='purple'] { --accent: #5d3a80; --accent-soft: #5d3a8022; }
+html[data-color='red'] { --accent: #9c2733; --accent-soft: #9c273322; }
+html[data-color='green'] { --accent: #3f7a52; --accent-soft: #3f7a5222; }
+html[data-color='white'] { --accent: #a97e13; --accent-soft: #a97e1322; }
+html[data-color='black'] { --accent: #33302b; --accent-soft: #33302b22; }
+html[data-color='rose'] { --accent: #b76a7d; --accent-soft: #b76a7d22; }
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: var(--serif);
+  background: var(--parchment);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.app { display: grid; grid-template-columns: 232px 1fr; height: 100%; }
+@media (max-width: 860px) { .app { grid-template-columns: 64px 1fr; } .rail .label, .rail .day-chip .feast { display: none; } }
+
+/* ── Left rail ─────────────────────────────────────────────── */
+.rail {
+  background: var(--rail);
+  color: var(--rail-text);
+  display: flex; flex-direction: column;
+  padding: 14px 10px;
+  gap: 4px;
+  font-family: var(--sans);
+}
+.rail .brand {
+  font-family: var(--serif);
+  font-size: 17px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--gold-bright);
+  padding: 4px 10px 14px;
+  line-height: 1.25;
+}
+.rail button.nav {
+  display: flex; align-items: center; gap: 10px;
+  background: none; border: 0; color: var(--rail-text);
+  font: 500 14px var(--sans);
+  padding: 9px 10px; border-radius: 8px; cursor: pointer;
+  text-align: left; width: 100%;
+}
+.rail button.nav:hover { background: #ffffff14; }
+.rail button.nav.active { background: var(--accent); color: #fff; }
+.rail .nav .ico { font-size: 16px; width: 20px; text-align: center; }
+.rail .spacer { flex: 1; }
+.day-chip {
+  margin-top: 10px; padding: 10px; border-radius: 10px;
+  background: #ffffff0f; font-family: var(--sans); font-size: 12px;
+}
+.day-chip .date-row { display: flex; align-items: center; gap: 8px; }
+.day-chip input[type='date'] {
+  background: transparent; color: var(--rail-text);
+  border: 1px solid #ffffff2e; border-radius: 6px; padding: 3px 5px;
+  font: 12px var(--sans); width: 100%;
+  color-scheme: dark;
+}
+.day-chip .swatch { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 1px solid #fff6; flex: none; }
+.day-chip .feast { margin-top: 7px; color: #f2e9d8; font-family: var(--serif); font-size: 13px; line-height: 1.35; }
+.day-chip .season { color: #bdb09a; margin-top: 3px; }
+
+/* ── Main column ───────────────────────────────────────────── */
+.main { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+.masthead {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  padding: 16px 26px 12px;
+  border-bottom: 3px double var(--accent);
+  background: linear-gradient(var(--vellum), var(--parchment));
+}
+.masthead h1 { font-size: 22px; margin: 0; font-weight: 700; }
+.masthead .sub { font-family: var(--sans); font-size: 13px; color: var(--ink-faint); }
+.masthead .rank-badge {
+  font: 600 11px var(--sans); letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--accent); color: #fff; border-radius: 999px; padding: 3px 10px;
+}
+.content { overflow: auto; padding: 20px 26px 60px; }
+
+.split { display: grid; grid-template-columns: 1fr 340px; gap: 0; height: 100%; overflow: hidden; }
+.split > .content { min-width: 0; }
+
+/* ── Subway map ────────────────────────────────────────────── */
+.map-wrap { overflow: auto; }
+.subway { width: 100%; min-width: 980px; height: auto; display: block; }
+.subway .track { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.subway .station { cursor: pointer; }
+.subway .station circle.halo { fill: transparent; }
+.subway .station:hover circle.halo { fill: var(--accent-soft); }
+.subway text { font-family: var(--sans); fill: var(--ink-soft); }
+.subway .st-label { font-size: 11.5px; }
+.subway .st-latin { font-size: 12.5px; font-family: var(--serif); font-style: italic; fill: var(--ink); }
+.subway .line-name { font: 700 12px var(--sans); letter-spacing: 0.14em; text-transform: uppercase; }
+.subway .inactive { opacity: 0.28; }
+.subway .legend text { font-size: 11px; }
+
+/* ── Reader ────────────────────────────────────────────────── */
+.reader-section { margin: 0 0 30px; }
+.reader-section .head {
+  display: flex; align-items: baseline; gap: 10px;
+  border-bottom: 1px solid var(--parchment-deep); padding-bottom: 4px; margin-bottom: 10px;
+}
+.reader-section h3 { margin: 0; font-size: 17px; color: var(--accent); font-variant: small-caps; letter-spacing: 0.04em; }
+.reader-section .src { font: 11px var(--sans); color: var(--ink-faint); }
+.reader-section .src.commune { color: var(--gold); }
+.bilingual { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+@media (max-width: 1100px) { .bilingual { grid-template-columns: 1fr; } }
+.bilingual .latin { font-size: 16.5px; }
+.bilingual .english { color: var(--ink-soft); font-size: 15px; }
+.bilingual .lang-tag { font: 600 10px var(--sans); letter-spacing: 0.1em; color: var(--ink-faint); text-transform: uppercase; display: block; margin-bottom: 5px; }
+.verse-ref { color: var(--gold); font-style: italic; font-size: 0.86em; display: block; margin: 6px 0 2px; }
+.reader p { margin: 0 0 8px; white-space: pre-wrap; }
+mark.ann { background: #f2d67a88; border-radius: 2px; padding: 0 1px; }
+.ann-list { margin-top: 8px; }
+.ann-item { font: 13px var(--sans); background: var(--vellum); border-left: 3px solid var(--gold); padding: 6px 10px; border-radius: 0 6px 6px 0; margin: 4px 0; }
+.ann-item .quote { font-family: var(--serif); font-style: italic; color: var(--ink-soft); }
+.ann-item button { border: 0; background: none; color: var(--ink-faint); cursor: pointer; float: right; }
+
+/* ── Context menu ─────────────────────────────────────────── */
+.ctx-menu {
+  position: fixed; z-index: 50; min-width: 240px;
+  background: #2b241bf5; color: #eee3cd; border-radius: 10px;
+  box-shadow: 0 10px 30px #0006; padding: 6px;
+  font-family: var(--sans); font-size: 13px;
+  backdrop-filter: blur(4px);
+}
+.ctx-menu .sel { padding: 6px 10px 8px; font-family: var(--serif); font-style: italic; color: var(--gold-bright); border-bottom: 1px solid #ffffff1f; margin-bottom: 4px; max-height: 60px; overflow: hidden; }
+.ctx-menu button { display: block; width: 100%; text-align: left; background: none; border: 0; color: inherit; padding: 7px 10px; border-radius: 6px; cursor: pointer; font: inherit; }
+.ctx-menu button:hover { background: var(--accent); color: #fff; }
+
+/* ── Right exegesis panel ─────────────────────────────────── */
+.exegesis {
+  border-left: 1px solid var(--parchment-deep);
+  background: var(--vellum);
+  overflow: auto; padding: 18px;
+  font-family: var(--sans); font-size: 13.5px;
+}
+.exegesis h2 { font-family: var(--serif); font-size: 16px; margin: 0 0 4px; }
+.exegesis .term { color: var(--accent); font-style: italic; font-family: var(--serif); font-size: 18px; }
+.exegesis .hit { background: #fff; border: 1px solid var(--parchment-deep); border-radius: 8px; padding: 9px 11px; margin: 8px 0; }
+.exegesis .hit .where { font: 600 11px var(--sans); color: var(--ink-faint); display: flex; justify-content: space-between; margin-bottom: 4px; }
+.exegesis .hit .score { color: var(--gold); }
+.exegesis .hit .text { font-family: var(--serif); font-size: 13.5px; }
+.exegesis .llm-slot { margin-top: 14px; border: 1px dashed var(--ink-faint); border-radius: 8px; padding: 10px; color: var(--ink-faint); font-size: 12px; }
+.exegesis .close { float: right; border: 0; background: none; font-size: 16px; cursor: pointer; color: var(--ink-faint); }
+.exegesis .group-title { font: 700 11px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin: 16px 0 4px; }
+.exegesis textarea { width: 100%; min-height: 64px; font: 13px var(--sans); border: 1px solid var(--parchment-deep); border-radius: 6px; padding: 7px; background: #fff; }
+.exegesis .btn { background: var(--accent); border: 0; color: #fff; font: 600 12px var(--sans); border-radius: 6px; padding: 7px 14px; cursor: pointer; margin-top: 6px; }
+
+/* ── Calendar ─────────────────────────────────────────────── */
+.cal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; font-family: var(--sans); }
+.cal-head h2 { font-family: var(--serif); margin: 0; font-size: 20px; }
+.cal-head button { border: 1px solid var(--parchment-deep); background: var(--vellum); border-radius: 6px; padding: 5px 11px; cursor: pointer; font: 14px var(--sans); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-grid .dow { font: 600 11px var(--sans); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: center; padding: 4px 0; }
+.cal-cell {
+  min-height: 86px; background: var(--vellum); border: 1px solid var(--parchment-deep);
+  border-radius: 8px; padding: 6px 7px; cursor: pointer; position: relative;
+  font-family: var(--sans); overflow: hidden;
+}
+.cal-cell:hover { outline: 2px solid var(--accent); }
+.cal-cell.today { outline: 2px solid var(--gold); }
+.cal-cell.selected { outline: 3px solid var(--accent); }
+.cal-cell .n { font-weight: 700; font-size: 13px; }
+.cal-cell .dot { width: 9px; height: 9px; border-radius: 50%; position: absolute; top: 8px; right: 8px; border: 1px solid #0002; }
+.cal-cell .feast { font-family: var(--serif); font-size: 11.5px; line-height: 1.3; margin-top: 3px; color: var(--ink-soft); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cal-cell.empty { background: transparent; border: 0; cursor: default; }
+
+/* liturgical color dots */
+.lc-purple { background: #5d3a80; } .lc-red { background: #9c2733; }
+.lc-green { background: #3f7a52; } .lc-white { background: #f4ead0; }
+.lc-black { background: #2c2925; } .lc-rose { background: #d193a3; }
+
+/* ── Office loop ──────────────────────────────────────────── */
+.office-wrap { display: grid; grid-template-columns: minmax(340px, 480px) 1fr; gap: 28px; align-items: start; }
+@media (max-width: 980px) { .office-wrap { grid-template-columns: 1fr; } }
+.office-loop { width: 100%; height: auto; }
+.office-loop .hour-node { cursor: pointer; }
+.office-loop text { font-family: var(--sans); }
+.hour-card { background: var(--vellum); border: 1px solid var(--parchment-deep); border-radius: 10px; padding: 16px 20px; }
+.hour-card h3 { margin: 0 0 2px; font-size: 20px; }
+.hour-card .eng { font: 13px var(--sans); color: var(--ink-faint); margin-bottom: 12px; }
+.hour-card ol { margin: 0; padding-left: 22px; }
+.hour-card li { margin: 5px 0; }
+.hour-card .phase2 { margin-top: 14px; font: 12px var(--sans); color: var(--ink-faint); border-top: 1px dashed var(--parchment-deep); padding-top: 8px; }
+
+.loading { display: grid; place-items: center; height: 100%; color: var(--ink-faint); font-family: var(--sans); }
+.loading .rose { font-size: 42px; animation: spin 3.2s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
