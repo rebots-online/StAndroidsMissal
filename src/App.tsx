@@ -12,8 +12,31 @@ import OfficeView from './ui/OfficeView.tsx';
 
 type View = 'home' | 'reader' | 'calendar' | 'map' | 'office';
 type Experience = 'guided' | 'scholar';
-type Aesthetic = 'traditional' | 'modernist' | 'austere';
+type Aesthetic =
+  | 'traditional'
+  | 'modernist'
+  | 'austere'
+  | 'glass-acrylic'
+  | 'glass-clear'
+  | 'skeuomorphic'
+  | 'retro'
+  | 'brutalist'
+  | 'dopamine'
+  | 'anti-design';
 type Mode = 'system' | 'light' | 'dark';
+
+const AESTHETICS: { id: Aesthetic; label: string }[] = [
+  { id: 'traditional', label: 'Traditional' },
+  { id: 'modernist', label: 'Modernist' },
+  { id: 'austere', label: 'Austere' },
+  { id: 'glass-acrylic', label: 'Glass · Acrylic' },
+  { id: 'glass-clear', label: 'Glass · Clear' },
+  { id: 'skeuomorphic', label: 'Skeuomorphic' },
+  { id: 'retro', label: 'Retro-futurist' },
+  { id: 'brutalist', label: 'Brutalist' },
+  { id: 'dopamine', label: 'Dopamine' },
+  { id: 'anti-design', label: 'Anti-design' },
+];
 
 const NAV: { id: View; ico: string; label: string; group?: 'study' }[] = [
   { id: 'home', ico: '✠', label: 'Today' },
@@ -98,7 +121,7 @@ export default function App() {
     storedChoice('standroids-experience', ['guided', 'scholar'] as const, 'guided')
   );
   const [aesthetic, setAesthetic] = useState<Aesthetic>(() =>
-    storedChoice('standroids-aesthetic', ['traditional', 'modernist', 'austere'] as const, 'traditional')
+    storedChoice('standroids-aesthetic', AESTHETICS.map((item) => item.id), 'traditional')
   );
   const [mode, setMode] = useState<Mode>(() =>
     storedChoice('standroids-mode', ['system', 'light', 'dark'] as const, 'system')
@@ -227,9 +250,7 @@ export default function App() {
           <label>
             <span>Aesthetic</span>
             <select value={aesthetic} onChange={(event) => setAesthetic(event.target.value as Aesthetic)}>
-              <option value="traditional">Traditional</option>
-              <option value="modernist">Modernist</option>
-              <option value="austere">Austere</option>
+              {AESTHETICS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
           </label>
           <label>
