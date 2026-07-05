@@ -43,7 +43,8 @@ States: `[ ]` not started · `[/]` in progress · `[X]` implemented · ✅ verif
   Ran `cargo check` (after installing libwebkit2gtk-4.1-dev & GTK headers) → `Finished dev profile … in 1m 00s`, zero errors. Matches criteria.
 - [X] **T4.2** `.github/workflows/build-all-platforms.yml` — test+web on every push/PR; linux deb+AppImage, windows NSIS, android APK on master/tags/dispatch.
   Verification = first Actions run on push (CI is the execution environment; local YAML reviewed).
-- [/] **T4.3** Push branch `claude/st-androids-missal-tauri-sg3xos`, open draft PR.
+- ✅ **T4.3** Push branch `claude/st-androids-missal-tauri-sg3xos`, open draft PR.
+  Ran `git push -u origin claude/st-androids-missal-tauri-sg3xos` → new branch tracked; draft PR opened: https://github.com/rebots-online/StAndroidsMissal/pull/1.
 
 ## Phase 5 (next major — not in v1)
 - [ ] Breviary full texts + hour-construction schema (all eight hours, every day).
