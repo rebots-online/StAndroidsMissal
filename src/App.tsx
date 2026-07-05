@@ -11,14 +11,9 @@ import CalendarView from './ui/CalendarView.tsx';
 import OfficeView from './ui/OfficeView.tsx';
 
 type View = 'home' | 'reader' | 'calendar' | 'map' | 'office';
-type Theme = 'guided' | 'scholar' | 'nocturne' | 'graphite';
-
-const THEMES: { id: Theme; label: string; description: string }[] = [
-  { id: 'guided', label: 'Guided', description: 'Welcoming and progressively revealed' },
-  { id: 'scholar', label: 'Scholar', description: 'Dense metadata and study surfaces' },
-  { id: 'nocturne', label: 'Nocturne', description: 'Low-light chapel reading' },
-  { id: 'graphite', label: 'Graphite', description: 'Modern and subway-forward' },
-];
+type Experience = 'guided' | 'scholar';
+type Aesthetic = 'traditional' | 'modernist' | 'austere';
+type Mode = 'system' | 'light' | 'dark';
 
 const NAV: { id: View; ico: string; label: string; group?: 'study' }[] = [
   { id: 'home', ico: '✠', label: 'Today' },
@@ -28,12 +23,12 @@ const NAV: { id: View; ico: string; label: string; group?: 'study' }[] = [
   { id: 'office', ico: '🕰', label: 'Divine Office', group: 'study' },
 ];
 
-function storedTheme(): Theme {
+function storedChoice<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   try {
-    const value = localStorage.getItem('standroids-theme');
-    return THEMES.some((theme) => theme.id === value) ? value as Theme : 'guided';
+    const value = localStorage.getItem(key) as T | null;
+    return value && allowed.includes(value) ? value : fallback;
   } catch {
-    return 'guided';
+    return fallback;
   }
 }
 
@@ -99,8 +94,18 @@ export default function App() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [focusSection, setFocusSection] = useState<string | null>(null);
   const [action, setAction] = useState<SelectionAction | null>(null);
-  const [theme, setTheme] = useState<Theme>(storedTheme);
-  const [showDetails, setShowDetails] = useState(() => storedTheme() === 'scholar');
+  const [experience, setExperience] = useState<Experience>(() =>
+    storedChoice('standroids-experience', ['guided', 'scholar'] as const, 'guided')
+  );
+  const [aesthetic, setAesthetic] = useState<Aesthetic>(() =>
+    storedChoice('standroids-aesthetic', ['traditional', 'modernist', 'austere'] as const, 'traditional')
+  );
+  const [mode, setMode] = useState<Mode>(() =>
+    storedChoice('standroids-mode', ['system', 'light', 'dark'] as const, 'system')
+  );
+  const [showDetails, setShowDetails] = useState(() =>
+    storedChoice('standroids-experience', ['guided', 'scholar'] as const, 'guided') === 'scholar'
+  );
 
   useEffect(() => {
     loadCorpusBytes()
@@ -116,18 +121,32 @@ export default function App() {
   }, [day?.color]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('standroids-theme', theme);
-    if (theme === 'scholar') setShowDetails(true);
-  }, [theme]);
+    document.documentElement.dataset.experience = experience;
+    localStorage.setItem('standroids-experience', experience);
+  }, [experience]);
+
+  useEffect(() => {
+    document.documentElement.dataset.aesthetic = aesthetic;
+    localStorage.setItem('standroids-aesthetic', aesthetic);
+  }, [aesthetic]);
+
+  useEffect(() => {
+    document.documentElement.dataset.mode = mode;
+    localStorage.setItem('standroids-mode', mode);
+  }, [mode]);
+
+  function changeExperience(next: Experience) {
+    setExperience(next);
+    if (next === 'scholar') setShowDetails(true);
+  }
 
   function openView(next: View) {
     setAction(null);
     setView(next);
   }
 
-  function onStation(s: Station) {
-    setFocusSection(s.sectionKey ?? null);
+  function onStation(station: Station) {
+    setFocusSection(station.sectionKey ?? null);
     openView('reader');
   }
 
@@ -196,15 +215,32 @@ export default function App() {
         </div>
 
         <div className="spacer" />
-        <label className="theme-picker">
-          <span className="theme-label">Experience</span>
-          <select value={theme} onChange={(event) => setTheme(event.target.value as Theme)}>
-            {THEMES.map((option) => (
-              <option key={option.id} value={option.id}>{option.label}</option>
-            ))}
-          </select>
-          <span className="theme-description">{THEMES.find((option) => option.id === theme)?.description}</span>
-        </label>
+
+        <section className="appearance-panel" aria-label="Interface preferences">
+          <label>
+            <span>Experience</span>
+            <select value={experience} onChange={(event) => changeExperience(event.target.value as Experience)}>
+              <option value="guided">Guided</option>
+              <option value="scholar">Scholar</option>
+            </select>
+          </label>
+          <label>
+            <span>Aesthetic</span>
+            <select value={aesthetic} onChange={(event) => setAesthetic(event.target.value as Aesthetic)}>
+              <option value="traditional">Traditional</option>
+              <option value="modernist">Modernist</option>
+              <option value="austere">Austere</option>
+            </select>
+          </label>
+          <label>
+            <span>Light</span>
+            <select value={mode} onChange={(event) => setMode(event.target.value as Mode)}>
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+        </section>
 
         <div className="day-chip">
           <div className="date-row">
