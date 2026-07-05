@@ -43,7 +43,8 @@ npm run tauri dev     # desktop
 - `DOCS/ARCHITECTURE/StAndroidsMissal-v1.md` — entity table, data flows, decisions
 - `CHECKLIST.md` — execution contract and audit trail
 
-Corpus source: [Divinum Officium](https://github.com/DivinumOfficium/divinum-officium)
+Corpus source only is licenced MIT: [Divinum Officium](https://github.com/DivinumOfficium/divinum-officium)
 (MIT), by László Kiss and contributors. Latin is the normative reference language.
 
+The St. Android Missal and Breviary in the Extraordinary Form is proprietary software: unauthorized copying, use, or distribution is prohibited.
 Copyright © 2026 Robin L. M. Cheung, MBA. All rights reserved.
