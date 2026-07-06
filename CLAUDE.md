@@ -1,0 +1,61 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+St. Android's Missal — the Traditional Latin Mass and Divine Office rendered as a navigable subway map. Tauri 2 multiplatform (web/PWA, Windows, Linux, Android), React 18 + Vite frontend, sql.js corpus. Rewrite of SanctissiMissa / "Hello, Word"; corpus is László Kiss' Divinum Officium flat-text tree re-realized as a graph + vector SQLite database.
+
+## Commands
+
+```bash
+npm run dev            # web dev server (predev copies assets/missal.db → public/missal.db)
+npm run tauri dev      # desktop shell
+npm run build          # tsc -b && vite build (prebuild syncs the db too)
+npm test               # all tests (node:test runner)
+node --experimental-strip-types --test tests/computus.test.ts   # single test file
+npm run ingest         # rebuild assets/missal.db from VENDORED/ (see below)
+```
+
+Node ≥ 22.6 required (`--experimental-strip-types` runs the TS test files and the ingest, which imports `src/core/vector/embed.ts` directly). Tests use the built-in `node:test` runner — no test framework dependency.
+
+The dev port is fixed at 5173 (`strictPort`) because Tauri's `devUrl` expects it.
+
+## The corpus pipeline (the thing to understand first)
+
+Everything the app displays comes from one committed SQLite file, built by a fully in-repo pipeline:
+
+```
+VENDORED/divinum-officium/web/www/  (flat-text corpus snapshot, ours to edit)
+  → scripts/ingest-corpus.mjs  (+ do-parse.mjs parser, scripture.mjs fallback)
+  → assets/missal.db           (committed; graph + vector + FTS5)
+  → scripts/sync-db.mjs        (copies to public/ for web; Tauri embeds the bytes natively)
+```
+
+- **Nothing references outside the repo.** The ingest reads only `VENDORED/`. Scripture gap-fills come from `VENDORED/vulgate-clementina/` (Latin) and `VENDORED/douay-rheims/` (English).
+- **Schema** (`nodes` / `edges` / `text_blocks` / `embeddings` / FTS5 `search`) and the Divinum Officium flat-text format (`[Section]` headers, `@include`, `$`/`&` macros, `vide` cross-refs) are documented in `DOCS/CORPUS-SCHEMA.md`. Directives become graph edges (`HAS_SECTION`, `CROSS_REF`, `INCLUDES`, `EXPANDS`).
+- **Generation never breaks.** Broken directives are gap-filled via a fallback chain (same section elsewhere → vide Commune → vendored scripture by citation → marked placeholder). Every fill is logged to `DOCS/CORPUS-FILL-LOG.md`, regenerated on each ingest, and flagged `meta.filled` on the node so the UI can mark supplied text.
+- **Modifying corpus text:** edit the `.txt` under `VENDORED/divinum-officium/` directly (it's a snapshot, no upstream tracking), record the change in the modification log of `VENDORED/divinum-officium/PROVENANCE.md`, re-run `npm run ingest`, review the fill log (a good fix removes fill rows), then `npm test`.
+
+## Runtime architecture
+
+- **One query layer everywhere (the "collinear rule"):** `src/core/data/corpusDb.ts` (`CorpusDb` over sql.js WASM) is identical on web and native; the platforms differ only in how `loadCorpus.ts` obtains the bytes (web `fetch('/missal.db')`, Tauri `invoke('load_corpus')`). Never add a platform-divergent data adapter or dev-only server.
+- **Perpetual calendar, computed on demand — never pre-generated.** `src/core/calendar/computus.ts` (Butcher's Easter, DO week keys, season/color) + `precedence.ts` (`resolveWinner`, 1962 rules incl. privileged Lenten ferias) resolve any date at runtime: computus → `Tempora/<weekKey>` + `Sancti/MM-DD*` candidates → `resolveWinner`.
+- **Commune gap-filling is non-inverted:** sections present in the feast file always win; only *missing* sections come from the `CROSS_REF`'d Commune. (Fixes HelloWord's C2a inversion bug by construction — don't reintroduce it.)
+- **Latin is normative.** `text_blocks.latin` is the reference column; English is a modular translation and may be NULL. The reader renders Latin first.
+- **Embeddings are deterministic and offline** (`src/core/vector/embed.ts`, 128-d hashed trigrams, int8) — byte-stable across platforms; the `embeddings` table is model-agnostic so a real sentence-transformer can replace it without schema change.
+- **No placeholder data.** Every UI surface renders real corpus rows; content marked as filled/missing is explicitly flagged, never fabricated.
+- **UI:** `src/App.tsx` shell + rail nav routes between `src/ui/` surfaces — `SubwayMap` (SVG Mass map, stations click through to the reader), `ReaderView` (bilingual reader, selection → context menu), `MeaningPanel` (concordance + vector neighbours for a selection), `CalendarView`, `OfficeView`. Annotations live in `src/core/annotations/store.ts` (localStorage v1, schema mirrors a future sync table).
+
+## Contracts
+
+- `DOCS/ARCHITECTURE/StAndroidsMissal-v1.md` — authoritative entity table (names, signatures, file:line), data flow, decisions. New entities get a row there before they're coded.
+- `CHECKLIST.md` — execution contract with state markers: `[ ]` not started · `[/]` in progress · `[X]` implemented · ✅ verified by running code. Only flip to ✅ after actually running the verification.
+- One version string (`0.1.0`) across `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` — keep them in lock-step. App identifier: `mba.robin.standroidsmissal`.
+- CI: `.github/workflows/build-all-platforms.yml` builds web/Windows/Linux/Android.
+
+## Gotchas
+
+- `public/missal.db` is gitignored and overwritten by the pre-dev/pre-build sync; `assets/missal.db` is the single source — edit nothing in `public/`.
+- The README quick-start's `npm run ingest -- /path/to/...liturgical.db` argument is legacy (ingest v1 from HelloWord). Ingest v2 takes only an optional output-path argument and reads `VENDORED/` unconditionally.
+- `scripts/legacy-file-meta.json` preserves rank/color metadata extracted from the legacy HelloWord db and is consumed by the ingest — don't delete it.
