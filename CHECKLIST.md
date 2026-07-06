@@ -391,3 +391,34 @@ Contract: `DOCS/ARCHITECTURE.md` (v0.2, authoritative). v0.1 sections below are 
 - [ ] Full DO-engine hour construction (psalm schema per weekday/rank) replacing pattern-based assembly.
 - [ ] Sidecar sync transport (multi-device / parish groups).
 - [ ] Signed Android staging/production builds per the all-projects signing SOP.
+
+---
+
+# v0.3 — Office-generation engine (THE PRODUCT CORE; contract: DOCS/ARCHITECTURE.md §7.5)
+
+**Operator directives recorded verbatim-in-substance (2026-07-06):** (1) full Divine Office generation is the product — HelloWord was the Mass-only PoC this app completes; NOTHING office-related is out of scope or "later". (2) Role/form rubrics ship at DO-provided granularity (Celebrans/Diaconus/Subdiaconus/Ministri; lecta vs sollemnis from Ordo.txt `!` prose; Cantata = derived display; external-manual M-C/laity lenses = next major). (3) Missing-material routes, priority order: **S** scripture-first Vulgate/DR lookup (primary preferred) → **A** DO-internal substitution + in-style cross-translation → **C** our-licensed generation (two-step when neither language exists); all supplied text flagged + lighter-ink/tinted-bg rendering. (4) One-time ingestion; runtime DB distributed offline-first (bundled in installers; fast-follow download optional). (5) Release gated by DOCS/TEST_RUBRIC.md gauntlet + screencast + manual artifact set (apk, aab, symbols zip, deb, AppImage, exe, msi, MSIX code-readiness attestation).
+
+**Status: stanzas scoped; NOT yet expanded to self-contained coder tasks.** Next architect action (TC13): expand each stanza below into wholly self-contained parallel tasks in the v0.2-wave format above (inline signatures/DDL/anchors, hermetic Verify, per-task commit), using ARCHITECTURE §7.5 as the entity source. Formats of all source tables verified 2026-07-06; a working normalization prototype exists at `.tmp/office-schema-demo.mjs` (ephemeral — reference logic, not project source; NOTE: invitatories live in `Matutinum Special.txt`, not Major Special).
+
+## Stanza O-A — Ingest v3: office plane
+- [ ] **OA.1** `scripts/ingest-office.mjs`: `OFFICE_SCHEMA_SQL` (§7.5 DDL verbatim) + normalize `Psalmi {major,matutinum,minor}.txt` → `office_psalm_schema`/`office_nocturn_versicle` (Latin+English trees merged; festal brackets flagged).
+- [ ] **OA.2** Skeletons: `Special/{Matutinum,Major,Minor,Prima} Special.txt` + `Preces.txt` → `office_skeleton` (verbatim lines; directive/condition flags).
+- [ ] **OA.3** Seasonal sets: invitatories (`Matutinum Special.txt` `[Invit*]`), `Mariaant.txt`, `Doxologies.txt`, `Benedictions.txt` → `office_seasonal`.
+- [ ] **OA.4** `role_rubrics` from missa `Ordo.txt` `!` prose: role + form classification per sentence subject (Celebrans/Diaconus/Subdiaconus/Ministri; `si est Missa sollemnis / si privata` → form), `source_line` provenance.
+- [ ] **OA.5** Resolution routes S→A→C over the missing-reference register + translation census; write `meta.translationSupplied`; regenerate `DOCS/MISSING-REFERENCES.md`; fix the ~45 `transform-skipped` xform-parser gaps in `do-parse.mjs`. Accept: shipped `textus deest` = 0.
+- [ ] **OA.6** Ingest tests: schema-table row counts ≥ demo baselines (257/24/3427/22 Latin-side), Day0 Laudes1 = 92/99/62/210/148, invitatory seasonal keys present, role_rubrics provenance non-null.
+
+## Stanza O-B — Runtime engine
+- [ ] **OB.1** `src/core/office/types.ts` (`MassForm`, `RoleLens`, `OfficeOpts`, `OfficeCtx`) + `conditions.ts` (`evalCondition` — grammar per §7.5, rubricSet fixed '1960').
+- [ ] **OB.2** `src/core/office/resolve.ts` (`resolveDirectiveRuntime` — graph-backed `@`/`&`/`$` + routes S/A/C fallthrough).
+- [ ] **OB.3** `src/core/office/engine.ts` (`OfficeEngine.buildHour` — 7-step algorithm §7.5; commemoration rule also resolves the Octava placeholder cluster).
+- [ ] **OB.4** Golden tests: the TEST_RUBRIC §O battery dates (O-2 Sunday Lauds psalmody, O-3 ferial, O-6 Nativity, O-9 Lent, O-10/11 Paschal, O-12 Marian antiphon windows) asserted headlessly against `missal.db`.
+
+## Stanza O-C — Presentation tray + rubric layers
+- [ ] **OC.1** `src/ui/TrayPanel.tsx` (slide-out; theme/mode relocated here; massForm/roleLens/rubrics-visible/typeface/size; sidecar persistence; settings keys per ARCHITECTURE §7).
+- [ ] **OC.2** Reader/Office rubric layer: render `role_rubrics` rows per active form; role lens highlights (never hides); `--supplied-ink`/`--supplied-bg` tokens in all 12 theme blocks; bundled local fonts (serif liturgical default, sans, dyslexia-friendly).
+- [ ] **OC.3** OfficeView switches from `HOUR_SECTION_PATTERNS` assembly to `OfficeEngine.buildHour` (patterns remain the engine's proper-section selection layer).
+
+## Stanza O-D — Gauntlet + release (after ALL v0.2 + v0.3 tasks ✅)
+- [ ] **OD.1** Run DOCS/TEST_RUBRIC.md in full; screencast per TC11 → `dist/rubric-runs/`; run report + attestation → `dist/`.
+- [ ] **OD.2** Manual artifact set staged in canonical `dist/` per I-25: apk + aab + native-debug-symbols zip; deb + AppImage; exe (NSIS) + msi (WiX, windows runner); MSIX code-readiness attestation; `v{VERSION}:` stamped commit; ecosystem production key signing.

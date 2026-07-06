@@ -110,7 +110,47 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY, device_id TEXT NOT NULL, updated_at TEXT NOT NULL, value TEXT NOT NULL);
 ```
 
-Settings keys used: `mode` (`priest`|`laity`), `theme.family`, `theme.mode`.
+Settings keys used: `mode` (`priest`|`laity`), `theme.family`, `theme.mode`, `massForm` (`lecta`|`cantata`|`sollemnis`), `roleLens` (`celebrant`|`diaconus`|`subdiaconus`|`ministri`|`laity`|`none`), `rubrics.visible` (`1`|`0`), `type.face`, `type.size`.
+
+## 7.5 Office-generation plane (v0.3 — the product core; supersedes decision 7's interim scope)
+
+**Mandate (operator, 2026-07-06):** the app generates the **complete Divine Office** — all eight hours, any date — exactly as Divinum Officium's engine reckons it. HelloWord was the Mass-only proof of concept; this product completes it. Nothing office-generation-related is "out of scope"; the interim `HOUR_SECTION_PATTERNS` assembly (P-B rows above) remains only as the already-specified fallback layer under the engine.
+
+**Ingest v3 adds these tables to `missal.db`** (formats verified against the vendored tree 2026-07-06; a live normalization demo produced 257 psalm-schema rows, 24 nocturn versicles, 3,427 skeleton lines across 411 sections, 22 seasonal rows):
+
+```sql
+CREATE TABLE office_psalm_schema (   -- from Psalterium/Psalmi/Psalmi {major,matutinum,minor}.txt
+  day_key TEXT NOT NULL,             -- 'Day0'(Sun)..'Day6'(Sat)
+  hour TEXT NOT NULL,                -- 'Matutinum','Laudes1','Laudes2','Prima','Tertia','Sexta','Nona','Vespera','Completorium'
+  nocturn INTEGER,                   -- Matins 1..3, else NULL
+  slot_ord INTEGER NOT NULL,
+  antiphon_la TEXT, antiphon_en TEXT,
+  psalm_ref TEXT NOT NULL,           -- '92', '9(2-11)', '118(33-48)'
+  festal_bracket INTEGER NOT NULL DEFAULT 0);  -- bracketed = displaced on feasts
+CREATE TABLE office_nocturn_versicle (day_key TEXT, nocturn INTEGER, versicle_la TEXT, response_la TEXT, versicle_en TEXT, response_en TEXT);
+CREATE TABLE office_skeleton (       -- from Psalterium/Special/{Matutinum,Major,Minor,Prima} Special.txt + Preces.txt
+  hour_file TEXT NOT NULL, section TEXT NOT NULL, ord INTEGER NOT NULL,
+  line TEXT NOT NULL,                -- verbatim: text, or @/&/$ directive, or (condition)
+  is_directive INTEGER NOT NULL, is_condition INTEGER NOT NULL);
+CREATE TABLE office_seasonal (kind TEXT NOT NULL, key TEXT NOT NULL, body_la TEXT, body_en TEXT);
+  -- kind ∈ invitatory (SOURCE: 'Matutinum Special.txt' [Invit*] sections — NOT Major Special), marian_ant (Mariaant.txt), doxology (Doxologies.txt), benediction (Benedictions.txt)
+CREATE TABLE role_rubrics (          -- DO-provided granularity ONLY (operator 2026-07-06): parsed from missa Ordo.txt '!' rubric prose
+  section_key TEXT NOT NULL,         -- e.g. 'Ordo/Missae#Incensatio'
+  form TEXT NOT NULL,                -- 'lecta' | 'sollemnis' | 'both'  (Cantata = derived display: sollemnis minus sacred-minister rows)
+  role TEXT NOT NULL,                -- 'celebrant'|'diaconus'|'subdiaconus'|'ministri'|'all'
+  ord INTEGER NOT NULL, latin TEXT, english TEXT,
+  source_line TEXT NOT NULL);        -- provenance: 'Ordo.txt:62'
+```
+
+**Runtime engine:** `OfficeEngine` (`src/core/office/engine.ts`) — `buildHour(db: CorpusDb, day: DayInfo, hourId: string, opts: OfficeOpts): ReaderEntry[]`. Algorithm: (1) select the hour's skeleton sections; (2) evaluate `(condition)` lines against `{season, rank, weekday, rubricSet: '1960'}` (grammar: `sed rubrica …`, `si …`, day/season names — the vendored `(sed rubrica praedicatorum/cisterciensis/monastica)` branches are skipped: we fix rubricSet 1960/Romana); (3) resolve `@file:section[:xform]` / `&macro` / `$prayer` directives at generation time against the graph (same resolver contract as ingest, now runtime — `INCLUDES`/`EXPANDS` edges make targets queryable); (4) psalmody from `office_psalm_schema[day_key]` with festal displacement (feast propers/commune override bracketed slots; I-class = proper psalms where the Sancti file carries them); (5) seasonal layer: invitatory, hymn doxology, Paschal alleluia appendage, Marian antiphon at Compline (`office_seasonal`); (6) precedence/commemoration from the existing `resolveWinner` + occurring Sancti (commemoration = the commemorated office's antiphon+versicle+oratio after the day's collect; this rule also resolves the Octava-placeholder cluster in `DOCS/MISSING-REFERENCES.md` §1); (7) missing-text resolution per routes S→A→C below. Mass side reuses steps 2–3 to build the `role_rubrics`-aware rubric layer.
+
+**Missing-primary-material resolution (operator policy, final priority):**
+- **Route S (primary preferred):** scriptural text (explicit `!` citation or derivable — psalm number, lesson incipit) with one language held → counterpart **looked up** from Clementine Vulgate (la) / Douay-Rheims (en), both vendored, public domain.
+- **Route A:** non-scriptural text present elsewhere in the DO tree → substitute; missing counterpart language → in-style ecclesiastical cross-translation (metre/constructions matched).
+- **Route C:** Ordinary/euchology absent from DO → in-style our-licensed generation; neither language → two-step (our interpretation, then our translation of our interpretation). Licensing impediments anywhere also route here.
+- All supplied text: `meta.translationSupplied`/`meta.filled`, rendered via tokens `--supplied-ink`/`--supplied-bg` (lighter ink, tinted bg, all 12 themes), provenance on hover, every fill in the fill log. Register: `DOCS/MISSING-REFERENCES.md` (166 distinct directives; 13,596 Latin-only + 263 English-only sections). Target after routes run: **0 shipped `textus deest`** (gauntlet O-16).
+
+**Presentation tray** (`src/ui/TrayPanel.tsx`, slide-out on all views): theme family + light/dark (relocates ThemePicker), Mass-form toggle (lecta / cantata-derived / sollemnis), role lens (DO-provided roles only), rubrics on/off master toggle, typeface selection (bundled-local families: serif liturgical default + sans + dyslexia-friendly; no remote fonts) and font-size control — all persisted in sidecar `settings` (keys above), applied via `data-*` attrs/CSS vars. Gauntlet §Y binds.
 
 ## 8. Entity Table
 
@@ -159,6 +199,14 @@ Status: **S** = shipped (on disk now) · **P-<phase>** = planned, target locatio
 | `resolveDay` | fn | `src/core/data/liturgicalDay.ts:15` | S | date → `DayInfo`, memoized | `resolveDay(db, iso)` |
 | `OfficeSlot` / `HOUR_SECTION_PATTERNS` | type/const | `src/core/data/officeTexts.ts` | P-B | per-hour ordered regex slot plans over ingested DO section names | `OfficeSlot { pattern: RegExp; title?: string }`; `Record<string, OfficeSlot[]>` keyed by the eight `Hour.id`s |
 | `getOfficeTexts` | fn | `src/core/data/officeTexts.ts:1` | P-B | assemble one hour's bilingual texts for a day (own sections first, commune fallback, dedup by anchor) | `getOfficeTexts(db: CorpusDb, day: DayInfo, hourId: string): ReaderEntry[]` |
+| `OFFICE_SCHEMA_SQL` | const | `scripts/ingest-corpus.mjs` (v3 stage) | P-O | §7.5 office-plane DDL verbatim, applied into `missal.db` at ingest | string |
+| `ingestOfficePlane` | fn | `scripts/ingest-office.mjs:1` | P-O | ingest v3 stage: normalize Psalmi tables, Special skeletons, seasonal sets, `role_rubrics` from Ordo.txt `!` prose; run S/A/C resolution routes; regenerate `DOCS/MISSING-REFERENCES.md` audit | invoked from `ingest-corpus.mjs` |
+| `OfficeEngine` / `buildHour` / `OfficeOpts` | class/fn/type | `src/core/office/engine.ts:1` | P-O | §7.5 runtime hour construction (skeleton walk → condition eval → directive resolution → psalmody → seasonal layer → commemorations → routes) | `buildHour(db: CorpusDb, day: DayInfo, hourId: string, opts: OfficeOpts): ReaderEntry[]`; `OfficeOpts { rubricSet: '1960'; massForm?: MassForm; roleLens?: RoleLens }` |
+| `evalCondition` | fn | `src/core/office/conditions.ts:1` | P-O | `(sed rubrica …)`/`(si …)`/day-season condition grammar over `{season, rank, weekday, rubricSet}` | `evalCondition(cond: string, ctx: OfficeCtx): boolean` |
+| `resolveDirectiveRuntime` | fn | `src/core/office/resolve.ts:1` | P-O | runtime `@`/`&`/`$` resolver against the graph (same contract as ingest resolver) + S/A/C supplied-text lookup | `(db, directive, ctx) => SectionText \| null` |
+| `MassForm` / `RoleLens` | types | `src/core/office/types.ts:1` | P-O | `'lecta'\|'cantata'\|'sollemnis'`; `'celebrant'\|'diaconus'\|'subdiaconus'\|'ministri'\|'laity'\|'none'` | — |
+| `TrayPanel` | comp | `src/ui/TrayPanel.tsx:1` | P-O | slide-out tray: theme, mode, mass form, role lens, rubrics on/off, typeface, font size — persisted to sidecar settings | props `{ sidecar: SidecarDb \| null }` |
+| `--supplied-ink` / `--supplied-bg` | CSS tokens | `src/styles.css` | P-O | supplied-content rendering (lighter ink, tinted bg) in all 12 themes | — |
 | `SIDECAR_SCHEMA_SQL` | const | `src/core/data/sidecarDb.ts` | P-D | DDL §7 verbatim | string |
 | `SidecarDb` | class | `src/core/data/sidecarDb.ts:1` | P-D | user-data plane (sql.js; IndexedDB blob on web, file via Tauri cmds) | `static open(): Promise<SidecarDb>`, `persist()`, `listAnnotations(nodeKey?)`, `addAnnotation(a)`, `removeAnnotation(id)`, `listHomilies(liturgicalKey?, year?)`, `upsertHomily(h)`, `listJournalEntries(liturgicalKey?)`, `upsertJournalEntry(e)`, `listThemeSpans()`, `upsertThemeSpan(t)`, `deleteRow(table, id)` (tombstone), `getSetting(key)`, `setSetting(key, value)` |
 | `migrateLocalStorageAnnotations` | fn | `src/core/data/sidecarDb.ts` | P-D | one-shot import of v0.1 localStorage annotations | `(sdb: SidecarDb) => number` (rows migrated; idempotent via settings flag `migrated.localStorage`) |
@@ -214,7 +262,7 @@ Status: **S** = shipped (on disk now) · **P-<phase>** = planned, target locatio
 4. **Homily yearly recycling model?** Base row (`year IS NULL`) + per-year overlay rows sharing `liturgical_key` (decision 11), not copy-on-write duplicates.
 5. **Do lore callouts gate on entitlements?** No — lore is core content; `FEATURE_GATES` covers planner/journal/themes-premium/export/share/office and ships all-`null` anyway (G3).
 6. **Theme count.** Plan says "6 families × light/dark" and also "twelve themes" — resolved as 6 × 2 = 12 (family list in `ThemeFamily`).
-7. **Office hour construction depth (v0.2).** The DO engine builds hours from per-weekday/rank psalm schemas at runtime; reproducing that engine is out of v0.2 scope. v0.2 assembles each hour from the **real stored sections** of the day's `Horas/` file (plus commune fallback), ordered by `HOUR_SECTION_PATTERNS` regexes over the actual ingested section names (`Ant Laudes`, `Capitulum Nona`, `Lectio1..9`, `Responsory Breve Sexta`, …) — no fabricated content, decision 6 preserved. Full engine-equivalent construction is backlog (§10).
+7. **SUPERSEDED (operator, 2026-07-06) — full office engine is IN SCOPE.** The original v0.2 carve-out ("pattern-based assembly; engine is backlog") was rejected: generating the complete Divine Office **is the product**. §7.5 is the binding contract; `HOUR_SECTION_PATTERNS` assembly survives only as the engine's proper-section selection layer, never as the shipped depth. The "no invented content" rationale was a category error — the engine deterministically *reckons* offices; implementing that reckoning (schema + population + directive interpretation) is the spec.
 8. **Shared-file ownership under parallel dispatch.** Exactly one CHECKLIST task owns each shared shell file (`src/App.tsx` → APP.1; `src/styles.css` → E2; `src/ui/SectionReader.tsx` created by B3.1 with APP.2 as its same-worktree follow-up) so the whole wave dispatches concurrently without merge collisions (I-22 axis 1).
 
 ## 10. Out of scope (v0.2)
@@ -223,11 +271,13 @@ Status: **S** = shipped (on disk now) · **P-<phase>** = planned, target locatio
 - Real sentence-transformer embeddings (schema is ready; not swapped).
 - Actual multi-device/parish sync transport (sidecar schema is sync-*ready*; no server ships).
 - Entitlement tier decisions and any paid gating (map ships all-`null`); the BTCPay/Woo bridge *implementation* (spec doc only).
-- Full DO-engine hour construction (psalm schema per weekday/rank) — v0.2 ships pattern-based assembly of real stored sections (decision 7 / §9.7).
-- Full corpus browser / cross-corpus navigation beyond same-day sections.
+- Full corpus browser / cross-corpus navigation beyond same-day sections (v0.1 Phase-5 backlog item).
+- External-manual role lenses (M-C, detailed server choreography, laity postures from a St. Stephen's-type ceremonies manual) — release ships the DO-provided role granularity (§7.5 `role_rubrics`); manual vendoring + transcription is next-major (operator, 2026-07-06).
 - Signed Android store builds (tracked in CHECKLIST v0.1 Phase 5 / signing SOP).
 
 ---
+
+**Attestation (2026-07-06, second re-attestation).** Amended per operator direction: §7.5 office-generation plane added (full DO-engine-equivalent construction IN scope — decision 7 superseded), `role_rubrics` at DO-provided granularity, S/A/C missing-material resolution routes (scripture-first primary), presentation tray, supplied-content tokens; §10 office carve-out removed. Status header's "v0.2" now denotes this complete contract including the office plane (labelled P-O in the entity table).
 
 **Attestation.** This document is complete, stub-free, and depicts the end-state v0.2 production release: every named entity carries an exact identifier, target `file:line`, role, and signature; no TBD markers remain; open questions are resolved above. Shipped rows were verified against the working tree via codegraph on the date below; planned rows are normative targets and are cited verbatim by the self-contained v0.2 task wave in `CHECKLIST.md`. Re-attested after reconciling entity rows (`HOUR_SECTION_PATTERNS`, `CorpusDb.getFileSections`/`hasFile`, `SectionReader` toolbar/`SelectionAction` move, theme/entitlement/calendar/planner signatures, decisions 7–8) with the checklist wave.
 — Authored and attested by Claude Fable 5 (`claude-fable-5`, Claude Code session, orchestrated architect pass) · 2026-07-06
