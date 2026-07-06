@@ -141,6 +141,22 @@ export class CorpusDb {
     return out;
   }
 
+  /** The Ordinary of the Mass (invariable), keyed by Ordo/Missae section name. */
+  getOrdoTexts(): Map<string, SectionText> {
+    const map = new Map<string, SectionText>();
+    for (const [section, t] of this.sectionsOf('Ordo/Missae')) {
+      map.set(section, {
+        nodeKey: `section:Ordo/Missae#${section}`,
+        section,
+        latin: t.latin,
+        english: t.english,
+        sourcePath: 'Ordo/Missae',
+        fromCommune: false,
+      });
+    }
+    return map;
+  }
+
   /** Graph edges out of / into a file node. */
   crossRefs(path: string): CrossRef[] {
     return this.all(

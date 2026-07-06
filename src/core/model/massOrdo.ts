@@ -91,6 +91,67 @@ export const MASS_ORDO: Station[] = [
   { id: 'ultimum-evangelium', latin: 'Ultimum Evangelium', english: 'Last Gospel (John 1)', kind: 'ordinary', line: 'faithful' },
 ];
 
+/**
+ * Ordinary stations → their section in the ingested Ordinary of the Mass
+ * (corpus file "Ordo/Missae", from missa/<lang>/Ordo/Ordo.txt). Several
+ * stations share one Ordo section (Kyrie+Gloria, Preface+Sanctus…).
+ */
+export const ORDO_STATION_SECTION: Record<string, string> = {
+  asperges: 'Prelude',
+  iudica: 'Incipit',
+  confiteor: 'Incipit',
+  kyrie: 'Kyrie',
+  gloria: 'Kyrie',
+  credo: 'Credo',
+  lavabo: 'Offertorium',
+  'orate-fratres': 'Offertorium',
+  praefatio: 'Præfatio',
+  sanctus: 'Præfatio',
+  canon: 'Canon',
+  'pater-noster': 'Preparatio Communionis',
+  'agnus-dei': 'Preparatio Communionis',
+  ite: 'Conclusio',
+  'ultimum-evangelium': 'Conclusio',
+};
+
+/**
+ * Canonical interleaving of the Ordinary (o:) and the day's propers (p:)
+ * for the full-Mass reader. Ordinary entries reference Ordo/Missae sections.
+ */
+export const READER_ORDER: { kind: 'ordo' | 'proper'; section: string; title?: string }[] = [
+  { kind: 'ordo', section: 'Incipit', title: 'Prayers at the Foot of the Altar' },
+  { kind: 'proper', section: 'Introitus' },
+  { kind: 'ordo', section: 'Kyrie', title: 'Kyrie · Gloria' },
+  { kind: 'proper', section: 'Oratio' },
+  { kind: 'proper', section: 'Oratio 2' },
+  { kind: 'proper', section: 'Oratio 3' },
+  { kind: 'proper', section: 'LectioL1' },
+  { kind: 'proper', section: 'GradualeL1' },
+  { kind: 'proper', section: 'OratioL1' },
+  { kind: 'proper', section: 'Lectio' },
+  { kind: 'proper', section: 'Lectio 2' },
+  { kind: 'proper', section: 'Graduale' },
+  { kind: 'proper', section: 'GradualeP' },
+  { kind: 'proper', section: 'Tractus' },
+  { kind: 'proper', section: 'Alleluia' },
+  { kind: 'proper', section: 'Evangelium' },
+  { kind: 'ordo', section: 'Credo', title: 'Credo' },
+  { kind: 'proper', section: 'Offertorium' },
+  { kind: 'ordo', section: 'Offertorium', title: 'Offertory · Lavabo · Orate fratres' },
+  { kind: 'proper', section: 'Secreta' },
+  { kind: 'proper', section: 'Secreta 2' },
+  { kind: 'proper', section: 'Secreta 3' },
+  { kind: 'ordo', section: 'Præfatio', title: 'Preface · Sanctus' },
+  { kind: 'ordo', section: 'Canon', title: 'The Roman Canon' },
+  { kind: 'ordo', section: 'Preparatio Communionis', title: 'Pater noster · Agnus Dei' },
+  { kind: 'proper', section: 'Communio' },
+  { kind: 'proper', section: 'Postcommunio' },
+  { kind: 'proper', section: 'Postcommunio 2' },
+  { kind: 'proper', section: 'Postcommunio 3' },
+  { kind: 'proper', section: 'Super populum' },
+  { kind: 'ordo', section: 'Conclusio', title: 'Ite missa est · Last Gospel' },
+];
+
 /** Trunk stations of a line, in order (branches excluded). */
 export function trunkOf(line: LineId): Station[] {
   return MASS_ORDO.filter((s) => s.line === line && !s.branch);

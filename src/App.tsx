@@ -24,7 +24,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('map');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [focusSection, setFocusSection] = useState<string | null>(null);
+  const [focus, setFocus] = useState<{ section: string | null; nonce: number }>({ section: null, nonce: 0 });
   const [action, setAction] = useState<SelectionAction | null>(null);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function App() {
   }, [day?.color]);
 
   function onStation(s: Station) {
-    setFocusSection(s.sectionKey ?? null);
+    setFocus({ section: s.sectionKey ?? s.id, nonce: Date.now() });
     setView('reader');
   }
 
@@ -49,7 +49,7 @@ export default function App() {
     // "section:Sancti/02-25#Introitus" — jump the reader to that source day/section.
     const m = nodeKey.match(/^section:(.+)#(.+)$/);
     if (!m) return;
-    setFocusSection(m[2]);
+    setFocus({ section: m[2], nonce: Date.now() });
     setView('reader');
     // Note: cross-corpus navigation opens the section within the current day's
     // reader when the path matches; a full corpus browser lands in Phase 2.
@@ -116,17 +116,17 @@ export default function App() {
           </span>
         </header>
 
-        <div className={action ? 'split' : undefined} style={{ overflow: 'hidden', height: '100%' }}>
+        <div className={action ? 'split' : 'single'}>
           {view === 'map' && (
             <div className="content map-wrap">
               <SubwayMap day={day} onStation={onStation} />
             </div>
           )}
           {view === 'reader' && day && (
-            <ReaderView db={db} day={day} focusSection={focusSection} onAction={setAction} />
+            <ReaderView db={db} day={day} focusSection={focus.section} focusNonce={focus.nonce} onAction={setAction} />
           )}
           {view === 'calendar' && (
-            <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); setView('reader'); setFocusSection(null); }} />
+            <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); setView('reader'); setFocus({ section: null, nonce: 0 }); }} />
           )}
           {view === 'office' && <OfficeView day={day} />}
 

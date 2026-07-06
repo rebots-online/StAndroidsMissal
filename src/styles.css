@@ -20,6 +20,10 @@
   --accent: #3f7a52;
   --accent-soft: #3f7a5226;
 
+  /* bilingual pane delineation — darker tint in light themes, lighter in dark */
+  --pane-latin-bg: rgba(84, 62, 26, 0.075);
+  --pane-english-bg: rgba(84, 62, 26, 0.035);
+
   --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
   --sans: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
@@ -102,8 +106,9 @@ body {
 }
 .content { overflow: auto; padding: 20px 26px 60px; }
 
-.split { display: grid; grid-template-columns: 1fr 340px; gap: 0; height: 100%; overflow: hidden; }
-.split > .content { min-width: 0; }
+.split { display: grid; grid-template-columns: 1fr 340px; gap: 0; height: 100%; min-height: 0; overflow: hidden; }
+.single { display: grid; grid-template-columns: 1fr; height: 100%; min-height: 0; overflow: hidden; }
+.split > .content, .single > .content { min-width: 0; min-height: 0; }
 
 /* ── Subway map ────────────────────────────────────────────── */
 .map-wrap { overflow: auto; }
@@ -128,10 +133,13 @@ body {
 .reader-section h3 { margin: 0; font-size: 17px; color: var(--accent); font-variant: small-caps; letter-spacing: 0.04em; }
 .reader-section .src { font: 11px var(--sans); color: var(--ink-faint); }
 .reader-section .src.commune { color: var(--gold); }
-.bilingual { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.reader-section.ordinary h3 { color: var(--ink-soft); }
+.reader-section.ordinary .head { border-bottom-style: dashed; }
+.bilingual { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 1100px) { .bilingual { grid-template-columns: 1fr; } }
-.bilingual .latin { font-size: 16.5px; }
-.bilingual .english { color: var(--ink-soft); font-size: 15px; }
+.bilingual .latin, .bilingual .english { padding: 10px 12px; border-radius: 8px; }
+.bilingual .latin { font-size: 16.5px; background: var(--pane-latin-bg); }
+.bilingual .english { color: var(--ink-soft); font-size: 15px; background: var(--pane-english-bg); }
 .bilingual .lang-tag { font: 600 10px var(--sans); letter-spacing: 0.1em; color: var(--ink-faint); text-transform: uppercase; display: block; margin-bottom: 5px; }
 .verse-ref { color: var(--gold); font-style: italic; font-size: 0.86em; display: block; margin: 6px 0 2px; }
 .reader p { margin: 0 0 8px; white-space: pre-wrap; }

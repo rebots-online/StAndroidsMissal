@@ -5,9 +5,10 @@
  * Catholic meaning · similar passages · cross-references · annotate.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { DayInfo, SectionText } from '../core/data/types.ts';
+import { READER_ORDER, ORDO_STATION_SECTION } from '../core/model/massOrdo.ts';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 
 export interface SelectionAction {
@@ -20,6 +21,8 @@ interface Props {
   db: CorpusDb;
   day: DayInfo;
   focusSection: string | null;
+  /** Bumped on every navigation request so re-clicking the same station re-scrolls. */
+  focusNonce: number;
   onAction: (a: SelectionAction) => void;
 }
 
@@ -67,7 +70,15 @@ function TextBlock({ text, quotes }: { text: string; quotes: string[] }) {
   );
 }
 
-export default function ReaderView({ db, day, focusSection, onAction }: Props) {
+/** One renderable entry of the interleaved full-Mass reader. */
+interface ReaderEntry extends SectionText {
+  ordinary: boolean;
+  displayTitle: string;
+  /** Unique data-section anchor ("Introitus" or "ordo:Canon"). */
+  anchor: string;
+}
+
+export default function ReaderView({ db, day, focusSection, focusNonce, onAction }: Props) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [noteFor, setNoteFor] = useState<Menu | null>(null);
   const [noteText, setNoteText] = useState('');
@@ -75,14 +86,36 @@ export default function ReaderView({ db, day, focusSection, onAction }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   const path = day.winner?.key ?? day.temporaPath;
-  const sections: SectionText[] = db.getMassTexts(path);
+  const entries: ReaderEntry[] = useMemo(() => {
+    const propers = new Map(db.getMassTexts(path).map((s) => [s.section, s]));
+    const ordo = db.getOrdoTexts();
+    const out: ReaderEntry[] = [];
+    for (const slot of READER_ORDER) {
+      if (slot.kind === 'proper') {
+        const s = propers.get(slot.section);
+        if (s) out.push({ ...s, ordinary: false, displayTitle: s.section, anchor: s.section });
+      } else {
+        const s = ordo.get(slot.section);
+        if (s && (s.latin || s.english)) {
+          out.push({ ...s, ordinary: true, displayTitle: slot.title ?? s.section, anchor: `ordo:${slot.section}` });
+        }
+      }
+    }
+    return out;
+  }, [db, path]);
 
-  useEffect(() => {
+/useEffect(() => {
     if (focusSection && rootRef.current) {
-      const el = rootRef.current.querySelector(`[data-section="${CSS.escape(focusSection)}"]`);
+      // Accept a proper section key, an Ordo anchor, or an ordinary station id.
+      const anchor = ORDO_STATION_SECTION[focusSection]
+        ? `ordo:${ORDO_STATION_SECTION[focusSection]}`
+        : focusSection;
+      const el =
+        rootRef.current.querySelector(`[data-section="${CSS.escape(anchor)}"]`) ??
+        rootRef.current.querySelector(`[data-section="${CSS.escape(focusSection)}"]`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [focusSection, day.date]);
+  }, [focusSection, focusNonce, day.date]);
 
   useEffect(() => {
     const close = () => setMenu(null);
@@ -97,7 +130,7 @@ export default function ReaderView({ db, day, focusSection, onAction }: Props) {
     setMenu({ x: Math.min(e.clientX, window.innerWidth - 270), y: Math.min(e.clientY + 6, window.innerHeight - 220), term: sel.slice(0, 300), nodeKey });
   }
 
-  if (sections.length === 0) {
+  if (entries.length === 0) {
     return (
       <div className="content reader" ref={rootRef}>
         <p>
@@ -125,16 +158,21 @@ export default function ReaderView({ db, day, focusSection, onAction }: Props) {
         }
       }}
     >
-      {sections.map((s) => {
+      {entries.map((s) => {
         const anns = annotationsFor(s.nodeKey);
         const quotes = anns.map((a) => a.quote).filter(Boolean);
         void annVersion;
         return (
-          <section className="reader-section" key={s.nodeKey} data-section={s.section} data-nodekey={s.nodeKey}>
+          <section
+            className={`reader-section${s.ordinary ? ' ordinary' : ''}`}
+            key={s.anchor}
+            data-section={s.anchor}
+            data-nodekey={s.nodeKey}
+          >
             <div className="head">
-              <h3>{s.section}</h3>
+              <h3>{s.displayTitle}</h3>
               <span className={`src${s.fromCommune ? ' commune' : ''}`}>
-                {s.fromCommune ? `ex communi — ${s.sourcePath} (vide)` : s.sourcePath}
+                {s.ordinary ? 'Ordinarium Missæ' : s.fromCommune ? `ex communi — ${s.sourcePath} (vide)` : s.sourcePath}
               </span>
             </div>
             <div className="bilingual">
