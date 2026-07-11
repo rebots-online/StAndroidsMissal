@@ -111,18 +111,66 @@ body {
 .split > .content, .single > .content { min-width: 0; min-height: 0; }
 
 /* ── Subway map ────────────────────────────────────────────── */
-.map-wrap { overflow: auto; }
-.subway { width: 100%; min-width: 980px; height: auto; display: block; }
-.subway .track { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.subway .station { cursor: pointer; }
-.subway .station circle.halo { fill: transparent; }
-.subway .station:hover circle.halo { fill: var(--accent-soft); }
-.subway text { font-family: var(--sans); fill: var(--ink-soft); }
-.subway .st-label { font-size: 11.5px; }
-.subway .st-latin { font-size: 12.5px; font-family: var(--serif); font-style: italic; fill: var(--ink); }
-.subway .line-name { font: 700 12px var(--sans); letter-spacing: 0.14em; text-transform: uppercase; }
-.subway .inactive { opacity: 0.28; }
-.subway .legend text { font-size: 11px; }
+.map-wrap { overflow-y: auto; }
+
+/* ── Vertical metro map (Montreal-style single column) ─────── */
+.vmap { max-width: 620px; margin: 0 auto; padding: 6px 8px 40px; font-family: var(--sans); }
+.vmap-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.vmap-hint { font: italic 12px var(--serif); color: var(--ink-faint); }
+.vmap-toggle {
+  font: 12px var(--sans); color: var(--ink-soft); background: var(--vellum);
+  border: 1px solid var(--parchment-deep); border-radius: 20px; padding: 5px 14px; cursor: pointer;
+}
+.vmap-toggle:hover { border-color: var(--accent); color: var(--ink); }
+.vline-header { font: 700 13px var(--sans); letter-spacing: 0.12em; text-transform: uppercase; margin: 18px 0 6px; }
+.vline-header span { font-weight: 400; letter-spacing: 0.02em; text-transform: none; color: var(--ink-faint); margin-left: 8px; }
+
+.vtrunk { position: relative; }
+.vtrunk::before {
+  content: ''; position: absolute; left: 16px; top: 0; bottom: 0; width: 7px;
+  background: var(--line-color, var(--line-catechumens)); border-radius: 4px;
+}
+.vstation {
+  position: relative; display: flex; align-items: center; gap: 12px; width: 100%;
+  background: none; border: 0; text-align: left; cursor: pointer; padding: 7px 6px 7px 0;
+  font-family: inherit;
+}
+.vstation .vdot { width: 34px; height: 34px; flex: 0 0 34px; z-index: 1; }
+.vstation:hover .vlatin { color: var(--accent); }
+.vstation.inactive { opacity: 0.32; cursor: default; }
+.vstation .vlabels { display: flex; flex-direction: column; min-width: 0; }
+.vstation .vlatin { font: italic 15px var(--serif); color: var(--ink); }
+.vstation .veng { font: 11.5px var(--sans); color: var(--ink-faint); }
+.vstation .vnote { margin-left: auto; font: italic 10.5px var(--sans); color: var(--ink-faint); max-width: 180px; text-align: right; }
+.vstation.small { padding: 4px 6px 4px 0; }
+.vstation.small .vlatin { font-size: 13.5px; }
+.vstation.small .vdot { width: 26px; height: 26px; flex-basis: 26px; }
+
+.vbranch { position: relative; margin: 2px 0 6px 40px; }
+.vbranch::before {
+  content: ''; position: absolute; left: -24px; top: -6px; bottom: 8px; width: 22px;
+  border-left: 3px dashed var(--branch-color, var(--line-catechumens));
+  border-bottom: 3px dashed var(--branch-color, var(--line-catechumens));
+  border-bottom-left-radius: 14px; opacity: 0.55;
+}
+.vbranch.inactive { opacity: 0.45; }
+.vbranch-head {
+  background: none; border: 0; cursor: pointer; font: 12px var(--sans); color: var(--ink-soft);
+  display: flex; align-items: center; gap: 6px; padding: 4px 0; width: 100%; text-align: left;
+}
+.vbranch-head .chev { color: var(--accent); }
+.vbranch-head .vnote { margin-left: 10px; font-style: italic; color: var(--ink-faint); }
+.vbranch-body { position: relative; margin-left: 4px; }
+.vbranch-body::before {
+  content: ''; position: absolute; left: 12px; top: 0; bottom: 14px; width: 4px;
+  background: var(--branch-color, var(--line-catechumens)); opacity: 0.4; border-radius: 3px;
+}
+.vreturn { font: italic 11px var(--sans); color: var(--ink-faint); padding: 2px 0 4px 8px; }
+
+.vlegend { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 26px; padding-top: 12px; border-top: 1px dashed var(--parchment-deep); font: 11.5px var(--sans); color: var(--ink-soft); }
+.vlegend span { display: inline-flex; align-items: center; gap: 6px; }
+.vlegend .vdot { width: 22px; height: 22px; }
+.vlegend .faded { font-style: italic; color: var(--ink-faint); }
 
 /* ── Reader ────────────────────────────────────────────────── */
 .reader-section { margin: 0 0 30px; }
