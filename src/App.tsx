@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CorpusDb } from './core/data/corpusDb.ts';
 import { loadCorpusBytes } from './core/data/loadCorpus.ts';
 import { resolveDay } from './core/data/liturgicalDay.ts';
@@ -23,7 +23,15 @@ export default function App() {
   const [db, setDb] = useState<CorpusDb | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('map');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // The user's LOCAL calendar date — never UTC: an evening user in Canada must
+  // see today's feast, not tomorrow's (toISOString would skip ahead at 20:00 EDT).
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  });
   const [focus, setFocus] = useState<{ section: string | null; nonce: number }>({ section: null, nonce: 0 });
   const [action, setAction] = useState<SelectionAction | null>(null);
 
@@ -33,6 +41,36 @@ export default function App() {
       .then(setDb)
       .catch((e) => setError(String(e)));
   }, []);
+
+  // ── Layered back navigation ─────────────────────────────────────────
+  // Every UI layer (view change, meaning panel) becomes a history entry, so
+  // the browser/Android system back button unwinds panel → view → map and
+  // only exits the app from the root layer — never a surprise termination.
+  const fromPop = useRef(false);
+  const navReady = useRef(false);
+  useEffect(() => {
+    history.replaceState({ view: 'map', panel: false }, '');
+    const onPop = (e: PopStateEvent) => {
+      const st = (e.state as { view?: View; panel?: boolean } | null) ?? { view: 'map', panel: false };
+      fromPop.current = true;
+      setView((st.view as View) ?? 'map');
+      if (!st.panel) setAction(null);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const panelOpen = action !== null;
+  useEffect(() => {
+    if (!navReady.current) {
+      navReady.current = true;
+      return;
+    }
+    if (fromPop.current) {
+      fromPop.current = false;
+      return;
+    }
+    history.pushState({ view, panel: panelOpen }, '');
+  }, [view, panelOpen]);
 
   const day: DayInfo | null = useMemo(() => (db ? resolveDay(db, date) : null), [db, date]);
 
@@ -128,10 +166,10 @@ export default function App() {
           {view === 'calendar' && (
             <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); setView('reader'); setFocus({ section: null, nonce: 0 }); }} />
           )}
-          {view === 'office' && <OfficeView day={day} />}
+          {view === 'office' && <OfficeView db={db} day={day} />}
 
           {action && (
-            <MeaningPanel db={db} action={action} onClose={() => setAction(null)} onOpenKey={onOpenKey} />
+            <MeaningPanel db={db} action={action} onClose={() => history.back()} onOpenKey={onOpenKey} />
           )}
         </div>
       </div>

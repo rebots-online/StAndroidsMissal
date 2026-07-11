@@ -401,23 +401,25 @@ Contract: `DOCS/ARCHITECTURE.md` (v0.2, authoritative). v0.1 sections below are 
 **Status: stanzas scoped; NOT yet expanded to self-contained coder tasks.** Next architect action (TC13): expand each stanza below into wholly self-contained parallel tasks in the v0.2-wave format above (inline signatures/DDL/anchors, hermetic Verify, per-task commit), using ARCHITECTURE §7.5 as the entity source. Formats of all source tables verified 2026-07-06; a working normalization prototype exists at `.tmp/office-schema-demo.mjs` (ephemeral — reference logic, not project source; NOTE: invitatories live in `Matutinum Special.txt`, not Major Special).
 
 ## Stanza O-A — Ingest v3: office plane
-- [ ] **OA.1** `scripts/ingest-office.mjs`: `OFFICE_SCHEMA_SQL` (§7.5 DDL verbatim) + normalize `Psalmi {major,matutinum,minor}.txt` → `office_psalm_schema`/`office_nocturn_versicle` (Latin+English trees merged; festal brackets flagged).
-- [ ] **OA.2** Skeletons: `Special/{Matutinum,Major,Minor,Prima} Special.txt` + `Preces.txt` → `office_skeleton` (verbatim lines; directive/condition flags).
-- [ ] **OA.3** Seasonal sets: invitatories (`Matutinum Special.txt` `[Invit*]`), `Mariaant.txt`, `Doxologies.txt`, `Benedictions.txt` → `office_seasonal`.
+_2026-07-11 status: OA.1–OA.3 shipped (deviations per ARCHITECTURE §8 entity rows: skeletons from `horas/Ordinarium`, seasonal sets via ordinary section tables); plus the calendar plane the spec presupposed — Kalendaria chain + Transfer tables + 1960 conditional realization at ingest. Verified: `npm test` 22/22 incl. tests/office.test.ts baselines; live 1:1 harness `scripts/verify-calendar.mjs` 40/40 vs divinumofficium.com._
+- [X] **OA.1** `scripts/ingest-office.mjs`: `OFFICE_SCHEMA_SQL` (§7.5 DDL verbatim) + normalize `Psalmi {major,matutinum,minor}.txt` → `office_psalm_schema`/`office_nocturn_versicle` (Latin+English trees merged; festal brackets flagged).
+- [X] **OA.2** Skeletons: `Special/{Matutinum,Major,Minor,Prima} Special.txt` + `Preces.txt` → `office_skeleton` (verbatim lines; directive/condition flags).
+- [X] **OA.3** Seasonal sets: invitatories (`Matutinum Special.txt` `[Invit*]`), `Mariaant.txt`, `Doxologies.txt`, `Benedictions.txt` → `office_seasonal`.
 - [ ] **OA.4** `role_rubrics` from missa `Ordo.txt` `!` prose: role + form classification per sentence subject (Celebrans/Diaconus/Subdiaconus/Ministri; `si est Missa sollemnis / si privata` → form), `source_line` provenance.
 - [ ] **OA.5** Resolution routes S→A→C over the missing-reference register + translation census; write `meta.translationSupplied`; regenerate `DOCS/MISSING-REFERENCES.md`; fix the ~45 `transform-skipped` xform-parser gaps in `do-parse.mjs`. Accept: shipped `textus deest` = 0.
 - [ ] **OA.6** Ingest tests: schema-table row counts ≥ demo baselines (257/24/3427/22 Latin-side), Day0 Laudes1 = 92/99/62/210/148, invitatory seasonal keys present, role_rubrics provenance non-null.
 
 ## Stanza O-B — Runtime engine
-- [ ] **OB.1** `src/core/office/types.ts` (`MassForm`, `RoleLens`, `OfficeOpts`, `OfficeCtx`) + `conditions.ts` (`evalCondition` — grammar per §7.5, rubricSet fixed '1960').
-- [ ] **OB.2** `src/core/office/resolve.ts` (`resolveDirectiveRuntime` — graph-backed `@`/`&`/`$` + routes S/A/C fallthrough).
-- [ ] **OB.3** `src/core/office/engine.ts` (`OfficeEngine.buildHour` — 7-step algorithm §7.5; commemoration rule also resolves the Octava placeholder cluster).
-- [ ] **OB.4** Golden tests: the TEST_RUBRIC §O battery dates (O-2 Sunday Lauds psalmody, O-3 ferial, O-6 Nativity, O-9 Lent, O-10/11 Paschal, O-12 Marian antiphon windows) asserted headlessly against `missal.db`.
+_2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 grammar, full DO SetupString port) + `src/core/office/engine.ts` (OB.2 runtime macro/psalm resolution + OB.3 buildHour); OB.4 golden battery started in tests/office.test.ts (6 tests: schema baselines, Sunday Lauds/Matins, feast Vespers, Compline Marian antiphon, 8-hours×5-dates no-placeholder sweep)._
+- [X] **OB.1** `src/core/office/types.ts` (`MassForm`, `RoleLens`, `OfficeOpts`, `OfficeCtx`) + `conditions.ts` (`evalCondition` — grammar per §7.5, rubricSet fixed '1960').
+- [X] **OB.2** (in engine.ts) `src/core/office/resolve.ts` (`resolveDirectiveRuntime` — graph-backed `@`/`&`/`$` + routes S/A/C fallthrough).
+- [X] **OB.3** `src/core/office/engine.ts` (`OfficeEngine.buildHour` — 7-step algorithm §7.5; commemoration rule also resolves the Octava placeholder cluster).
+- [/] **OB.4** Golden tests: the TEST_RUBRIC §O battery dates (O-2 Sunday Lauds psalmody, O-3 ferial, O-6 Nativity, O-9 Lent, O-10/11 Paschal, O-12 Marian antiphon windows) asserted headlessly against `missal.db`.
 
 ## Stanza O-C — Presentation tray + rubric layers
 - [ ] **OC.1** `src/ui/TrayPanel.tsx` (slide-out; theme/mode relocated here; massForm/roleLens/rubrics-visible/typeface/size; sidecar persistence; settings keys per ARCHITECTURE §7).
 - [ ] **OC.2** Reader/Office rubric layer: render `role_rubrics` rows per active form; role lens highlights (never hides); `--supplied-ink`/`--supplied-bg` tokens in all 12 theme blocks; bundled local fonts (serif liturgical default, sans, dyslexia-friendly).
-- [ ] **OC.3** OfficeView switches from `HOUR_SECTION_PATTERNS` assembly to `OfficeEngine.buildHour` (patterns remain the engine's proper-section selection layer).
+- [X] **OC.3** OfficeView switches (directly to `OfficeEngine.buildHour`; the interim `HOUR_SECTION_PATTERNS` layer was never needed) — OfficeView switches from `HOUR_SECTION_PATTERNS` assembly to `OfficeEngine.buildHour` (patterns remain the engine's proper-section selection layer).
 
 ## Stanza O-D — Gauntlet + release (after ALL v0.2 + v0.3 tasks ✅)
 - [ ] **OD.1** Run DOCS/TEST_RUBRIC.md in full; screencast per TC11 → `dist/rubric-runs/`; run report + attestation → `dist/`.

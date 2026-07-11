@@ -33,6 +33,11 @@ export interface Station {
   activeIn?: Season[];
   /** For conditionals not driven by season alone (e.g. Gloria on feasts). */
   note?: string;
+  /**
+   * Detail-layer station: hidden when the map is folded to the basic
+   * skeleton (the Montreal-metro simple view), shown in full detail.
+   */
+  detail?: boolean;
 }
 
 /** Canonical DO Mass section order (from HelloWord corpus-db.js — verbatim). */
@@ -54,7 +59,7 @@ export const MASS_SECTION_ORDER = [
 
 export const MASS_ORDO: Station[] = [
   // ── Line 1: Mass of the Catechumens ─────────────────────────────
-  { id: 'asperges', latin: 'Asperges me', english: 'Sprinkling Rite', kind: 'conditional', line: 'catechumens', branch: 'spur', note: 'Principal Sunday Mass; Vidi aquam in Paschaltide' },
+  { id: 'asperges', latin: 'Asperges me', english: 'Sprinkling Rite', kind: 'conditional', line: 'catechumens', branch: 'spur', note: 'Principal Sunday Mass; Vidi aquam in Paschaltide', detail: true },
   { id: 'iudica', latin: 'Iudica me (Ps. 42)', english: 'Prayers at the Foot of the Altar', kind: 'ordinary', line: 'catechumens' },
   { id: 'confiteor', latin: 'Confiteor', english: 'Confession of Sin', kind: 'ordinary', line: 'catechumens' },
   { id: 'introitus', latin: 'Introitus', english: 'Introit', kind: 'proper', line: 'catechumens', sectionKey: 'Introitus' },
@@ -77,17 +82,17 @@ export const MASS_ORDO: Station[] = [
   // ── Line 2: Mass of the Faithful ────────────────────────────────
   { id: 'offertorium', latin: 'Offertorium', english: 'Offertory Antiphon', kind: 'proper', line: 'faithful', sectionKey: 'Offertorium' },
   { id: 'lavabo', latin: 'Lavabo (Ps. 25)', english: 'Washing of Hands', kind: 'ordinary', line: 'faithful' },
-  { id: 'orate-fratres', latin: 'Orate, fratres', english: 'Pray, Brethren', kind: 'ordinary', line: 'faithful' },
+  { id: 'orate-fratres', latin: 'Orate, fratres', english: 'Pray, Brethren', kind: 'ordinary', line: 'faithful', detail: true },
   { id: 'secreta', latin: 'Secreta', english: 'Secret', kind: 'proper', line: 'faithful', sectionKey: 'Secreta' },
   { id: 'praefatio', latin: 'Praefatio', english: 'Preface', kind: 'ordinary', line: 'faithful', note: 'Common or seasonal/festal preface' },
   { id: 'sanctus', latin: 'Sanctus', english: 'Sanctus', kind: 'ordinary', line: 'faithful' },
   { id: 'canon', latin: 'Canon Missae', english: 'The Roman Canon', kind: 'ordinary', line: 'faithful', note: 'Te igitur → consecration → doxology — the still center of the map' },
-  { id: 'pater-noster', latin: 'Pater noster', english: "Lord's Prayer", kind: 'ordinary', line: 'faithful' },
-  { id: 'agnus-dei', latin: 'Agnus Dei', english: 'Lamb of God', kind: 'ordinary', line: 'faithful' },
+  { id: 'pater-noster', latin: 'Pater noster', english: "Lord's Prayer", kind: 'ordinary', line: 'faithful', detail: true },
+  { id: 'agnus-dei', latin: 'Agnus Dei', english: 'Lamb of God', kind: 'ordinary', line: 'faithful', detail: true },
   { id: 'communio', latin: 'Communio', english: 'Communion Antiphon', kind: 'proper', line: 'faithful', sectionKey: 'Communio' },
   { id: 'postcommunio', latin: 'Postcommunio', english: 'Postcommunion', kind: 'proper', line: 'faithful', sectionKey: 'Postcommunio' },
   { id: 'super-populum', latin: 'Oratio super populum', english: 'Prayer over the People', kind: 'conditional', line: 'faithful', sectionKey: 'Super populum', branch: 'spur', activeIn: ['Lent'], note: 'Lenten ferias' },
-  { id: 'ite', latin: 'Ite, missa est', english: 'Dismissal', kind: 'ordinary', line: 'faithful', note: 'Benedicamus Domino when Gloria was omitted' },
+  { id: 'ite', latin: 'Ite, missa est', english: 'Dismissal', kind: 'ordinary', line: 'faithful', note: 'Benedicamus Domino when Gloria was omitted', detail: true },
   { id: 'ultimum-evangelium', latin: 'Ultimum Evangelium', english: 'Last Gospel (John 1)', kind: 'ordinary', line: 'faithful' },
 ];
 

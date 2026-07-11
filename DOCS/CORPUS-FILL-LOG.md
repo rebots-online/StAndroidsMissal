@@ -33,52 +33,12 @@ and recorded here with its citation.
 | Tempora/Epi6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Epi6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Epi6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-28:Octava` | placeholder | — | — | — |
 | Tempora/Nat1-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Nat1-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0a | Commemoratio 1 | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0a | Commemoratio 1 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0a | Commemoratio 1 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
 | Tempora/Nat2-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Nat2-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Nat27 | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat27 | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat28 | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat28 | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat28 | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat28 | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 3 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 3 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
 | Tempora/Nat30 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Nat30 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Nat30o | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 3 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat31o | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat31o | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat31o | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
 | Tempora/Pasc0-0 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc0-0 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc0-1 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -124,7 +84,6 @@ and recorded here with its citation.
 | Tempora/Pasc5-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc5-6 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc5-6 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pasc6-0 | Commemoratio | `@TemporaCist/Pasc5-4:Oratio` | placeholder | — | — | — |
 | Tempora/Pasc6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc6-1 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -153,16 +112,12 @@ and recorded here with its citation.
 | Tempora/Pasc7-6t | GradualeL1 | `!John 6:64` | filled-orphan-citation | Douay-Rheims (VENDORED/douay-rheims) | John 6:64 | It is the spirit that quickeneth: the flesh profiteth nothing: the words that I have spoken to you, are spirit and life. |
 | Tempora/Pent01-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent01-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent01-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-4 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-4 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-6 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-6 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent02-0 | Commemoratio | `@TemporaCist/Pent01-4:Oratio` | placeholder | — | — | — |
-| Tempora/Pent02-0 | Commemoratio | `@TemporaCist/Pent01-4:Oratio` | placeholder | — | — | — |
 | Tempora/Pent02-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-0o | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -170,14 +125,8 @@ and recorded here with its citation.
 | Tempora/Pent02-1 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-2 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-2 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent02-2 | Ant 2 | `@Tempora/Pent01-5` | placeholder | — | — | — |
-| Tempora/Pent02-2 | Ant Vespera 3 | `@Tempora/Pent01-5` | placeholder | — | — | — |
-| Tempora/Pent02-2 | Ant 3 | `@Tempora/Pent01-5` | placeholder | — | — | — |
 | Tempora/Pent02-3 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-3 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent02-3 | Ant 2 | `@Tempora/Pent01-5` | placeholder | — | — | — |
-| Tempora/Pent02-3 | Ant Vespera 3 | `@Tempora/Pent01-5` | placeholder | — | — | — |
-| Tempora/Pent02-3 | Ant 3 | `@Tempora/Pent01-5` | placeholder | — | — | — |
 | Tempora/Pent02-4 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-4 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-4o | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -209,7 +158,7 @@ and recorded here with its citation.
 | Tempora/Pent05-0o | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent06-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent06-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent06-1 | Responsory2 | `@TemporaM/Pent01-3:Responsory2` | placeholder | — | — | — |
+| Tempora/Pent06-1 | Responsory2 | `@TemporaM/Pent01-3:Responsory2` | filled-from-commune | Tempora/Pent01-3#Responsory2 | — | R. Exaudísti, Dómine, oratiónem servi tui, ut ædificárem templum nómini tuo:  * Bénedic et sanctífica domum istam in sem |
 | Tempora/Pent07-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent07-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent08-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -249,7 +198,7 @@ and recorded here with its citation.
 | Tempora/Pent24-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Quad5-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Quad5-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Quad6-0 | Evangelium1 | `!Matt 26:1-75; 27:1-66.` | filled-orphan-citation | Vulgata Clementina (VENDORED/vulgate-clementina) | Matt 26:1-75; 27:1-66. | Et factum est : cum consummasset Jesus sermones hos omnes, dixit discipulis suis : Scitis quia post biduum Pascha fiet, |
+| Tempora/Quad6-0 | Evangelium1 | `!Matt 26:1-75; 27:1-66.` | filled-orphan-citation | Vulgata Clementina (VENDORED/vulgate-clementina) | Matt 26:1-75; 27:1-66. | Et factum est : cum consummasset Jesus sermones hos omnes, dixit discipulis suis : Scitis quia post biduum Pascha fiet,  |
 | Tempora/Quad6-0 | Evangelium1 | `!Matt 26:1-75; 27:1-66` | filled-orphan-citation | Douay-Rheims (VENDORED/douay-rheims) | Matt 26:1-75; 27:1-66 | And it came to pass, when Jesus had ended all these words, he said to his disciples: You know that after two days shall  |
 | Tempora/Quad6-0r | Evangelium1 | `!Matt 26:36-75; 27:1-60` | filled-orphan-citation | Vulgata Clementina (VENDORED/vulgate-clementina) | Matt 26:36-75; 27:1-60 | Tunc venit Jesus cum illis in villam, quae dicitur Gethsemani, et dixit discipulis suis : Sedete hic donec vadam illuc,  |
 | Tempora/Quad6-0r | Evangelium1 | `!Matt 26:36-75; 27:1-60.` | filled-orphan-citation | Douay-Rheims (VENDORED/douay-rheims) | Matt 26:36-75; 27:1-60. | Then Jesus came with them to a country place, which is called Gethsemani; and he said to his disciples: Sit you here, ti |
@@ -271,19 +220,12 @@ and recorded here with its citation.
 | Psalterium/Special/Preces | Preces feriales Laudes→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
 | Sancti/01-01 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-01 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-02 | Oratio | `@Sancti/12-26:Oratio1` | placeholder | — | — | — |
 | Sancti/01-02 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-02 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-02 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-02 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-02 | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Sancti/01-02 | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Sancti/01-03 | Commemoratio | `@Sancti/12-28:Octava` | placeholder | — | — | — |
 | Sancti/01-03 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-03 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-04 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-04 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-04 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-05 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-05 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-06 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -318,7 +260,6 @@ and recorded here with its citation.
 | Sancti/01-15cc | Versum 2 | `@Commune/C5:Versum 1` | placeholder | — | — | — |
 | Sancti/01-16 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-16 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-16 | Responsory8 | `@Commune/C2a` | placeholder | — | — | — |
 | Sancti/01-17 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-17 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-18r | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -448,15 +389,11 @@ and recorded here with its citation.
 | Commune/C2 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/04-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/04-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/04-14t | Versum 1 | `@Commune/C3p:Versum 2` | placeholder | — | — | — |
-| Sancti/04-14t | Versum 1 | `@Commune/C3p` | placeholder | — | — | — |
-| Sancti/04-14t | Ant 1 | `@Commune/C3p:Ant 2` | placeholder | — | — | — |
-| Sancti/04-14t | Ant 1 | `@Commune/C3p` | placeholder | — | — | — |
+| Sancti/04-14t | Versum 1 (tempore paschali) | `@Commune/C3p:Versum 2` | placeholder | — | — | — |
+| Sancti/04-14t | Ant 1 (tempore paschali) | `@Commune/C3p:Ant 2` | placeholder | — | — | — |
 | Sancti/04-14t | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/04-14t | Versum 2 | `@Commune/C3p:Versum 1` | placeholder | — | — | — |
-| Sancti/04-14t | Versum 2 | `@Commune/C3p` | placeholder | — | — | — |
-| Sancti/04-14t | Ant 2 | `@Commune/C3p:Ant 1` | placeholder | — | — | — |
-| Sancti/04-14t | Ant 2 | `@Commune/C3p` | placeholder | — | — | — |
+| Sancti/04-14t | Versum 2 (tempore paschali) | `@Commune/C3p:Versum 1` | placeholder | — | — | — |
+| Sancti/04-14t | Ant 2 (tempore paschali) | `@Commune/C3p:Ant 1` | placeholder | — | — | — |
 | Sancti/04-17 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/04-17 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/04-21 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -690,7 +627,6 @@ and recorded here with its citation.
 | Sancti/07-12 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-13 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-13 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/07-13 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C4a | Lectio9 in 3 loco | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -705,8 +641,6 @@ and recorded here with its citation.
 | Sancti/07-18 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-18 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-18 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/07-18o | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/07-18o | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-19 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-19 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C1a | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -751,11 +685,9 @@ and recorded here with its citation.
 | Sancti/08-02o | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-02o | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-03 | Versum 1 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/08-03 | Versum 1 | `@CommuneCist/C2a` | placeholder | — | — | — |
 | Sancti/08-03 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-03 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-26 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/08-03 | Versum 1 | `@Commune/C2a` | placeholder | — | — | — |
 | Sancti/08-04 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-04 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-05 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -788,6 +720,7 @@ and recorded here with its citation.
 | Sancti/08-15t | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-16 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-16 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
+| Sancti/08-17 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-17 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-17t | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-18r | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -954,7 +887,6 @@ and recorded here with its citation.
 | Sancti/10-13 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/02-22 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-15 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-15 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-16 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -987,7 +919,6 @@ and recorded here with its citation.
 | Sancti/10-DUr | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-01 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-01 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/11-01 | Ant Laudes | `@CommuneCist/C1:Ant Vespera:4:s/;;.*//` | transform-skipped (unrecognized transform tail: :s/;;.*//) | CommuneCist/C1 | — | — |
 | Commune/C9 | Oratio_a_porta→A porta inferi | `@:Aportainferi` | placeholder | — | — | — |
 | Commune/C9 | Oratio_a_porta→A porta inferi | `@:Requiescant` | placeholder | — | — | — |
 | Commune/C9 | Oratio_a_porta→A porta inferi | `@:Dominus:3-4` | placeholder | — | — | — |
@@ -1057,14 +988,10 @@ and recorded here with its citation.
 | Sancti/11-20 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-20 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C5 | Lectio9 in 2 loco | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/11-21 | Commemoratio 2 | `@SanctiM/11-21M:Oratio:s/N\./Columbáni/` | filled-from-commune | Commune/C11#Oratio | — | Concéde nos fámulos tuos, quǽsumus, Dómine Deus, perpétua mentis et córporis sanitáte gaudére: et, gloriósa beátæ Maríæ  |
 | Sancti/11-22 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-22 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-22 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-22 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/11-23 | Responsory1 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/11-23 | Responsory2 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/11-23 | Responsory3 | `@Commune/C2a` | placeholder | — | — | — |
 | Sancti/11-23 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-23 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-23 | Versum 0 | `@Commune/C2a::s/N\./Clemens/` | placeholder | — | — | — |
@@ -1112,6 +1039,9 @@ and recorded here with its citation.
 | Sancti/12-12n | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-12n | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-13 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
+| Sancti/12-14bmv | Lectio1 (feria 4) | `@Commune/C11` | placeholder | — | — | — |
+| Sancti/12-14bmv | Lectio2 (feria 4) | `@Commune/C11` | placeholder | — | — | — |
+| Sancti/12-14bmv | Lectio3 (feria 4) | `@Commune/C11` | placeholder | — | — | — |
 | Sancti/12-14bmv | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-14bmv | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-15 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1124,20 +1054,13 @@ and recorded here with its citation.
 | Sancti/12-25 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-25 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-26 | Versum 1 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/12-26 | Commemoratio | `@CommuneCist/C3:Oratio proper` | placeholder | — | — | — |
 | Sancti/12-26 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-26 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-26 | Versum 0 | `@Commune/C2a::s/N\./Stéphane/` | placeholder | — | — | — |
-| Sancti/12-26 | Commemoratio | `@CommuneCist/C3:Oratio proper` | placeholder | — | — | — |
 | Sancti/12-27 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-27 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-29 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-29 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/12-29 | Ant Vespera 3 | `@CommuneCist/C2:Ant Vespera` | placeholder | — | — | — |
-| Sancti/12-29o | Responsory1 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/12-29o | Responsory2 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/12-29o | Responsory3 | `@Commune/C2a` | placeholder | — | — | — |
-| Commune/C5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C1 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C1 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C1 | Lectio9 in 2 loco | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1172,7 +1095,6 @@ and recorded here with its citation.
 | Commune/C11 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C12 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C12 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Commune/C12 | Minor final | `$rubrica Pater post` | kept-as-rubric-marker | — | — | — |
 | Commune/C12 | Minor final | `$rubrica Pater post` | kept-as-rubric-marker | — | — | — |
 | Commune/C12 | Minor final | `$rubrica Pater post` | kept-as-rubric-marker | — | — | — |
 | Commune/C12 | Minor final | `$rubrica Pater post` | kept-as-rubric-marker | — | — | — |
@@ -1182,10 +1104,6 @@ and recorded here with its citation.
 | Psalterium/Mariaant | Ant Finalis OP | `@:Quadragesimae:s/.*_.V\./V./s 1-2 s/\.$/. (Allelúja.)/gm` | transform-skipped (unrecognized transform tail: 1-2 s/\.$/. (Allelúja.)/gm) | Psalterium/Mariaant | — | — |
 | Psalterium/Mariaant | Ant Finalis Cist | `$rubrica CompletBMV2` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Mariaant | Ant Finalis Cist | `@:Postpentecost::s/.*\_.//s` | transform-skipped (unrecognized transform tail: :s/.*\_.//s) | Psalterium/Mariaant | — | — |
-| Psalterium/Mariaant | Ant Finalis Cist | `$rubrica CompletBMV2` | kept-as-rubric-marker | — | — | — |
-| Psalterium/Mariaant | Ant Finalis Cist | `@:Postpentecost::s/.*\_.//s` | transform-skipped (unrecognized transform tail: :s/.*\_.//s) | Psalterium/Mariaant | — | — |
-| Commune/C12 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Commune/C12 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C12A | Ant Matutinum | `@Commune/C11::s/After thy delivery.*\./The Angel of the Lord * announced unto Mary, and she conceived of the Holy Spirit./` | placeholder | — | — | — |
 | Commune/C12 | Minor final | `$rubrica Pater post` | kept-as-rubric-marker | — | — | — |
 | Commune/C12 | Minor final | `$rubrica Pater post` | kept-as-rubric-marker | — | — | — |
@@ -1313,6 +1231,7 @@ and recorded here with its citation.
 | Commune/C6a-1 | Evangelium in 2 loco | `@Commune/C6` | placeholder | — | — | — |
 | Commune/C7 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C7 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
+| Commune/C7b | Oratio (ad missam) | `@Commune/C6b::s/Virgins and // s/N\. and N\./N. and N./` | placeholder | — | — | — |
 | Commune/C8 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C8 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C9 | Oratio_a_porta→A porta inferi | `@:Aportainferi` | placeholder | — | — | — |
@@ -1327,6 +1246,30 @@ and recorded here with its citation.
 | Commune/C9 | Oratio 21→A porta inferi | `@:Aportainferi` | placeholder | — | — | — |
 | Commune/C9 | Oratio 21→A porta inferi | `@:Requiescant` | placeholder | — | — | — |
 | Commune/C9 | Oratio 21→A porta inferi | `@:Dominus:3-4` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Ant Vespera (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Ant 1 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Invit (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Nocturn 1 Versum (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Nocturn 2 Versum (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Nocturn 3 Versum (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory1 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory2 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory3 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory4 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory5 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory6 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory7 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory8 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Versum 2 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Ant 2 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory Breve Tertia (nisi tempore paschali) | `@Sancti/03-19` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Responsory Breve Nona (nisi tempore paschali) | `@Sancti/03-19` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Versum Nona (nisi tempore paschali) | `@Sancti/03-19` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Versum 3 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Ant 3 (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Introitus (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Offertorium (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
+| Commune/Votiva/V4 | Communio (nisi tempore paschali) | `@Tempora/Pasc2-3::s/[\,\.] al.*$/./gmi` | placeholder | — | — | — |
 | Sancti/03-12 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Common/Prayers | pater secreto | `$rubrica Pater secreto` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Common/Prayers | Pater totum secreto | `$rubrica Pater totum secreto` | kept-as-rubric-marker | — | — | — |
@@ -1344,14 +1287,18 @@ and recorded here with its citation.
 | Psalterium/Mariaant | Ant Finalis OP | `@:Quadragesimae:s/.*_.V\./V./s 1-2 s/\.$/. (Allelúja.)/gm` | transform-skipped (unrecognized transform tail: 1-2 s/\.$/. (Allelúja.)/gm) | Psalterium/Mariaant | — | — |
 | Psalterium/Mariaant | Ant Finalis Cist | `$rubrica CompletBMV2` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Mariaant | Ant Finalis Cist | `@:Postpentecost::s/.*\_.//s` | transform-skipped (unrecognized transform tail: :s/.*\_.//s) | Psalterium/Mariaant | — | — |
-| Psalterium/Mariaant | Ant Finalis OP | `@:Quadragesimae:s/.*_.V\./V./s 1-2 s/\.$/. (Allelúja.)/gm` | transform-skipped (unrecognized transform tail: 1-2 s/\.$/. (Allelúja.)/gm) | Psalterium/Mariaant | — | — |
-| Psalterium/Mariaant | Ant Finalis Cist | `$rubrica CompletBMV2` | kept-as-rubric-marker | — | — | — |
-| Psalterium/Mariaant | Ant Finalis Cist | `@:Postpentecost::s/.*\_.//s` | transform-skipped (unrecognized transform tail: :s/.*\_.//s) | Psalterium/Mariaant | — | — |
-| Psalterium/Psalmi/Psalmi matutinum | Paschm0 | `@Psalterium/Psalmi/Psalmi minor:Pasch:5:s/$/;;243;244;245/` | transform-skipped (unrecognized transform tail: :s/$/;;243;244;245/) | Psalterium/Psalmi/Psalmi minor | — | — |
 | Psalterium/Psalmi/Psalmi matutinum | Daym5C | `@:Daym5_:1-6:s/92.*/92/` | transform-skipped (unrecognized transform tail: :s/92.*/92/) | Psalterium/Psalmi/Psalmi matutinum | — | — |
 | Psalterium/Psalmi/Psalmi matutinum | Daym5C | `@:Daym5_:9-14:s/99.*/99/` | transform-skipped (unrecognized transform tail: :s/99.*/99/) | Psalterium/Psalmi/Psalmi matutinum | — | — |
-| Psalterium/Psalmi/Psalmi matutinum | Daym5C | `@:Daym5_:1-6:s/92.*/92/` | transform-skipped (unrecognized transform tail: :s/92.*/92/) | Psalterium/Psalmi/Psalmi matutinum | — | — |
-| Psalterium/Psalmi/Psalmi matutinum | Daym5C | `@:Daym5_:9-14:s/99.*/99/` | transform-skipped (unrecognized transform tail: :s/99.*/99/) | Psalterium/Psalmi/Psalmi matutinum | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
+| Psalterium/Psalmorum/Psalm94 | Psalmus | `$ant` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Revtrans | Deus in adiutorium | `$Deus in adiutorium` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Revtrans | Aperi | `$Aperi` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Revtrans | Sacrosanctea | `$Sacrosanctaea` | kept-as-rubric-marker | — | — | — |
@@ -1366,13 +1313,8 @@ and recorded here with its citation.
 | Psalterium/Special/Major Special | Preces feriales Vespera→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
 | Psalterium/Special/Matutinum Special | Invit TridC | `@:Invit Trid_:6:s/VI=/V=/` | transform-skipped (unrecognized transform tail: :s/VI=/V=/) | Psalterium/Special/Matutinum Special | — | — |
 | Psalterium/Special/Matutinum Special | Invit TridC | `@:Invit Trid_:5:s/V=/VI=/` | transform-skipped (unrecognized transform tail: :s/V=/VI=/) | Psalterium/Special/Matutinum Special | — | — |
-| Psalterium/Special/Matutinum Special | Invit TridC | `@:Invit Trid_:6:s/VI=/V=/` | transform-skipped (unrecognized transform tail: :s/VI=/V=/) | Psalterium/Special/Matutinum Special | — | — |
-| Psalterium/Special/Matutinum Special | Invit TridC | `@:Invit Trid_:5:s/V=/VI=/` | transform-skipped (unrecognized transform tail: :s/V=/VI=/) | Psalterium/Special/Matutinum Special | — | — |
 | Psalterium/Special/Matutinum Special | HymnusM Quad | `@:Hymnus Quad:s/nóxia/péssima/ 1-20` | transform-skipped (unrecognized transform tail: 1-20) | Psalterium/Special/Matutinum Special | — | — |
 | Psalterium/Special/Matutinum Special | HymnusM Quad | `@:Hymnus Quad:s/ore súpplici/atque sínguli/ 23` | transform-skipped (unrecognized transform tail: 23) | Psalterium/Special/Matutinum Special | — | — |
-| Psalterium/Special/Matutinum Special | MM Capitulum Quad5 | `@Psalterium/Special/Minor Special:Responsory Quad5 SextaC_` | placeholder | — | — | — |
-| Psalterium/Special/Matutinum Special | MM Capitulum Quad5 | `@Psalterium/Special/Minor Special:Responsory Quad5 SextaC_` | placeholder | — | — | — |
-| Psalterium/Special/Preces | Preces feriales Laudes→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
 | Psalterium/Special/Minor Special | Preces Feriales | `$rubrica Pater secreto` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Special/Minor Special | Preces Feriales | `$Preces feriales minora` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Special/Minor Special | Preces Dominicales | `$rubrica Pater secreto` | kept-as-rubric-marker | — | — | — |
@@ -1380,17 +1322,12 @@ and recorded here with its citation.
 | Psalterium/Special/Minor Special | Preces Dominicales | `$Preces dominicales Completorium` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Special/Minor Special | Preces Dominicales→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
 | Psalterium/Special/Preces | Preces feriales Laudes→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
-| Psalterium/Special/Preces | Preces feriales Laudes | `$Domine exaudi` | kept-as-rubric-marker | — | — | — |
-| Psalterium/Special/Preces | Preces feriales Laudes→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
 | Psalterium/Special/Prima Special | Preces Dominicales Prima 1 | `$rubrica Pater secreto` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Special/Prima Special | Preces Dominicales Prima 1 | `$rubrica Credo secreto` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Special/Prima Special | Preces Dominicales Prima 1 | `$Preces dominicales primae` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Special/Prima Special | Preces Dominicales Prima 2 | `$Preces dominicales secundae` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Special/Prima Special | Preces Dominicales Prima 2→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
-| Psalterium/Special/Prima Special | Preces Dominicales Prima 2 | `$Preces dominicales secundae` | kept-as-rubric-marker | — | — | — |
-| Psalterium/Special/Prima Special | Preces Dominicales Prima 2→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
 | Psalterium/Special/Prima Special | Preces feriales Prima | `$Preces feriales Prima` | kept-as-rubric-marker | — | — | — |
-| Psalterium/Special/Prima Special | Commemoratio defunctorum | `&necrologium` | kept-as-rubric-marker | — | — | — |
 | Psalterium/Special/Prima Special | Commemoratio defunctorum→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
 | Psalterium/Special/Prima Special | Commemoratio defunctorum→deus veniae | `@:deus veniae_: s/$/~/` | placeholder | — | — | — |
 | Psalterium/Special/Prima Special | Commemoratio defunctorum→Requiem2 | `@:Requiem:s/\ \*//g` | placeholder | — | — | — |
@@ -1421,52 +1358,12 @@ and recorded here with its citation.
 | Tempora/Epi6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Epi6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Epi6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio | `@Sancti/12-28:Octava` | placeholder | — | — | — |
 | Tempora/Nat1-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Nat1-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0 | Commemoratio 3 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0a | Commemoratio 1 | `@Sancti/12-25:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0a | Commemoratio 1 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat1-0a | Commemoratio 1 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
 | Tempora/Nat2-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Nat2-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Nat27 | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat27 | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat28 | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat28 | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat28 | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat28 | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29 | Commemoratio 3 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat29o | Commemoratio 3 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
 | Tempora/Nat30 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Nat30 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Nat30o | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 3 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 3 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat30o | Commemoratio 3 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Tempora/Nat31o | Commemoratio 2 | `@Sancti/12-26:Octava` | placeholder | — | — | — |
-| Tempora/Nat31o | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Tempora/Nat31o | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
 | Tempora/Pasc0-0 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc0-0 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc0-1 | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1512,7 +1409,6 @@ and recorded here with its citation.
 | Tempora/Pasc5-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc5-6 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc5-6 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pasc6-0 | Commemoratio | `@TemporaCist/Pasc5-4:Oratio` | placeholder | — | — | — |
 | Tempora/Pasc6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc6-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pasc6-1 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1541,16 +1437,12 @@ and recorded here with its citation.
 | Horas/Tempora/Pasc7-6t | GradualeL1 | `!John 6:64` | filled-orphan-citation | Douay-Rheims (VENDORED/douay-rheims) | John 6:64 | It is the spirit that quickeneth: the flesh profiteth nothing: the words that I have spoken to you, are spirit and life. |
 | Tempora/Pent01-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent01-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent01-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-4 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-4 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-6 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent01-6 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent02-0 | Commemoratio | `@TemporaCist/Pent01-4:Oratio` | placeholder | — | — | — |
-| Tempora/Pent02-0 | Commemoratio | `@TemporaCist/Pent01-4:Oratio` | placeholder | — | — | — |
 | Tempora/Pent02-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-0o | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1558,14 +1450,8 @@ and recorded here with its citation.
 | Tempora/Pent02-1 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-2 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-2 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent02-2 | Ant 2 | `@Tempora/Pent01-5` | placeholder | — | — | — |
-| Tempora/Pent02-2 | Ant Vespera 3 | `@Tempora/Pent01-5` | placeholder | — | — | — |
-| Tempora/Pent02-2 | Ant 3 | `@Tempora/Pent01-5` | placeholder | — | — | — |
 | Tempora/Pent02-3 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-3 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent02-3 | Ant 2 | `@Tempora/Pent01-5` | placeholder | — | — | — |
-| Tempora/Pent02-3 | Ant Vespera 3 | `@Tempora/Pent01-5` | placeholder | — | — | — |
-| Tempora/Pent02-3 | Ant 3 | `@Tempora/Pent01-5` | placeholder | — | — | — |
 | Tempora/Pent02-4 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-4 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent02-4o | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1597,7 +1483,7 @@ and recorded here with its citation.
 | Tempora/Pent05-0o | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent06-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent06-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent06-1 | Responsory2 | `@TemporaM/Pent01-3:Responsory2` | placeholder | — | — | — |
+| Tempora/Pent06-1 | Responsory2 | `@TemporaM/Pent01-3:Responsory2` | filled-from-commune | Tempora/Pent01-3#Responsory2 | — | R. Exaudísti, Dómine, oratiónem servi tui, ut ædificárem templum nómini tuo:  * Bénedic et sanctífica domum istam in sem |
 | Tempora/Pent07-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent07-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent08-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1637,7 +1523,7 @@ and recorded here with its citation.
 | Tempora/Pent24-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Quad5-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Quad5-5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Horas/Tempora/Quad6-0 | Evangelium1 | `!Matt 26:1-75; 27:1-66.` | filled-orphan-citation | Vulgata Clementina (VENDORED/vulgate-clementina) | Matt 26:1-75; 27:1-66. | Et factum est : cum consummasset Jesus sermones hos omnes, dixit discipulis suis : Scitis quia post biduum Pascha fiet, |
+| Horas/Tempora/Quad6-0 | Evangelium1 | `!Matt 26:1-75; 27:1-66.` | filled-orphan-citation | Vulgata Clementina (VENDORED/vulgate-clementina) | Matt 26:1-75; 27:1-66. | Et factum est : cum consummasset Jesus sermones hos omnes, dixit discipulis suis : Scitis quia post biduum Pascha fiet,  |
 | Horas/Tempora/Quad6-0 | Evangelium1 | `!Matt 26:1-75; 27:1-66` | filled-orphan-citation | Douay-Rheims (VENDORED/douay-rheims) | Matt 26:1-75; 27:1-66 | And it came to pass, when Jesus had ended all these words, he said to his disciples: You know that after two days shall  |
 | Horas/Tempora/Quad6-0r | Evangelium1 | `!Matt 26:36-75; 27:1-60` | filled-orphan-citation | Vulgata Clementina (VENDORED/vulgate-clementina) | Matt 26:36-75; 27:1-60 | Tunc venit Jesus cum illis in villam, quae dicitur Gethsemani, et dixit discipulis suis : Sedete hic donec vadam illuc,  |
 | Horas/Tempora/Quad6-0r | Evangelium1 | `!Matt 26:36-75; 27:1-60.` | filled-orphan-citation | Douay-Rheims (VENDORED/douay-rheims) | Matt 26:36-75; 27:1-60. | Then Jesus came with them to a country place, which is called Gethsemani; and he said to his disciples: Sit you here, ti |
@@ -1657,19 +1543,12 @@ and recorded here with its citation.
 | Psalterium/Special/Preces | Preces feriales Laudes→Domine exaudi | `@:Dominus:3-4` | placeholder | — | — | — |
 | Sancti/01-01 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-01 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-02 | Oratio | `@Sancti/12-26:Oratio1` | placeholder | — | — | — |
 | Sancti/01-02 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-02 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-02 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-02 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-02 | Commemoratio 2 | `@Sancti/12-27:Octava` | placeholder | — | — | — |
-| Sancti/01-02 | Commemoratio 2 | `@Sancti/12-28:Octava` | placeholder | — | — | — |
-| Sancti/01-03 | Commemoratio | `@Sancti/12-28:Octava` | placeholder | — | — | — |
 | Sancti/01-03 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-03 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-04 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-04 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-04 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-05 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-05 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-06 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1704,7 +1583,6 @@ and recorded here with its citation.
 | Sancti/01-15cc | Versum 2 | `@Commune/C5:Versum 1` | placeholder | — | — | — |
 | Sancti/01-16 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-16 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/01-16 | Responsory8 | `@Commune/C2a` | placeholder | — | — | — |
 | Sancti/01-17 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-17 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/01-18r | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1834,15 +1712,11 @@ and recorded here with its citation.
 | Commune/C2 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/04-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/04-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/04-14t | Versum 1 | `@Commune/C3p:Versum 2` | placeholder | — | — | — |
-| Sancti/04-14t | Versum 1 | `@Commune/C3p` | placeholder | — | — | — |
-| Sancti/04-14t | Ant 1 | `@Commune/C3p:Ant 2` | placeholder | — | — | — |
-| Sancti/04-14t | Ant 1 | `@Commune/C3p` | placeholder | — | — | — |
+| Sancti/04-14t | Versum 1 (tempore paschali) | `@Commune/C3p:Versum 2` | placeholder | — | — | — |
+| Sancti/04-14t | Ant 1 (tempore paschali) | `@Commune/C3p:Ant 2` | placeholder | — | — | — |
 | Sancti/04-14t | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/04-14t | Versum 2 | `@Commune/C3p:Versum 1` | placeholder | — | — | — |
-| Sancti/04-14t | Versum 2 | `@Commune/C3p` | placeholder | — | — | — |
-| Sancti/04-14t | Ant 2 | `@Commune/C3p:Ant 1` | placeholder | — | — | — |
-| Sancti/04-14t | Ant 2 | `@Commune/C3p` | placeholder | — | — | — |
+| Sancti/04-14t | Versum 2 (tempore paschali) | `@Commune/C3p:Versum 1` | placeholder | — | — | — |
+| Sancti/04-14t | Ant 2 (tempore paschali) | `@Commune/C3p:Ant 1` | placeholder | — | — | — |
 | Sancti/04-17 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/04-17 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/04-21 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -2069,7 +1943,6 @@ and recorded here with its citation.
 | Sancti/07-12 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-13 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-13 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/07-13 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C4a | Lectio9 in 3 loco | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -2084,8 +1957,6 @@ and recorded here with its citation.
 | Sancti/07-18 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-18 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-18 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/07-18o | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/07-18o | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-19 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/07-19 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C1a | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -2130,11 +2001,9 @@ and recorded here with its citation.
 | Sancti/08-02o | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-02o | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-03 | Versum 1 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/08-03 | Versum 1 | `@CommuneCist/C2a` | placeholder | — | — | — |
 | Sancti/08-03 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-03 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-26 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/08-03 | Versum 1 | `@Commune/C2a` | placeholder | — | — | — |
 | Sancti/08-04 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-04 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-05 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -2167,6 +2036,7 @@ and recorded here with its citation.
 | Sancti/08-15t | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-16 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-16 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
+| Sancti/08-17 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-17 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-17t | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/08-18r | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -2333,7 +2203,6 @@ and recorded here with its citation.
 | Sancti/10-13 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-14 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/02-22 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-15 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-15 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/10-16 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -2366,7 +2235,6 @@ and recorded here with its citation.
 | Sancti/10-DUr | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-01 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-01 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/11-01 | Ant Laudes | `@CommuneCist/C1:Ant Vespera:4:s/;;.*//` | transform-skipped (unrecognized transform tail: :s/;;.*//) | CommuneCist/C1 | — | — |
 | Commune/C9 | Oratio_a_porta→A porta inferi | `@:Aportainferi` | placeholder | — | — | — |
 | Commune/C9 | Oratio_a_porta→A porta inferi | `@:Requiescant` | placeholder | — | — | — |
 | Commune/C9 | Oratio_a_porta→A porta inferi | `@:Dominus:3-4` | placeholder | — | — | — |
@@ -2438,14 +2306,10 @@ and recorded here with its citation.
 | Sancti/11-20 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-20 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Commune/C5 | Lectio9 in 2 loco | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/11-21 | Commemoratio 2 | `@SanctiM/11-21M:Oratio:s/N\./Columbáni/` | filled-from-commune | Commune/C11#Oratio | — | Concéde nos fámulos tuos, quǽsumus, Dómine Deus, perpétua mentis et córporis sanitáte gaudére: et, gloriósa beátæ Maríæ  |
 | Sancti/11-22 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-22 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-22 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-22 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/11-23 | Responsory1 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/11-23 | Responsory2 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/11-23 | Responsory3 | `@Commune/C2a` | placeholder | — | — | — |
 | Sancti/11-23 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-23 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/11-23 | Versum 0 | `@Commune/C2a::s/N\./Clemens/` | placeholder | — | — | — |
@@ -2493,6 +2357,9 @@ and recorded here with its citation.
 | Sancti/12-12n | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-12n | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-13 | Lectio94 | `&teDeum` | kept-as-rubric-marker | — | — | — |
+| Sancti/12-14bmv | Lectio1 (feria 4) | `@Commune/C11` | placeholder | — | — | — |
+| Sancti/12-14bmv | Lectio2 (feria 4) | `@Commune/C11` | placeholder | — | — | — |
+| Sancti/12-14bmv | Lectio3 (feria 4) | `@Commune/C11` | placeholder | — | — | — |
 | Sancti/12-14bmv | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-14bmv | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-15 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -2505,25 +2372,18 @@ and recorded here with its citation.
 | Sancti/12-25 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-25 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-26 | Versum 1 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/12-26 | Commemoratio | `@CommuneCist/C3:Oratio proper` | placeholder | — | — | — |
 | Sancti/12-26 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-26 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-26 | Versum 0 | `@Commune/C2a::s/N\./Stéphane/` | placeholder | — | — | — |
-| Sancti/12-26 | Commemoratio | `@CommuneCist/C3:Oratio proper` | placeholder | — | — | — |
 | Sancti/12-27 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-27 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-29 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/12-29 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/12-29 | Ant Vespera 3 | `@CommuneCist/C2:Ant Vespera` | placeholder | — | — | — |
-| Sancti/12-29o | Responsory1 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/12-29o | Responsory2 | `@Commune/C2a` | placeholder | — | — | — |
-| Sancti/12-29o | Responsory3 | `@Commune/C2a` | placeholder | — | — | — |
-| Commune/C5 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/Bavaria/03-27 | Versum 1 | `@Commune/C5a:Versum 2` | placeholder | — | — | — |
 | Sancti/Bavaria/03-27 | Versum 2 | `@Commune/C5a:Versum 1` | placeholder | — | — | — |
 | Sancti/Bavaria/03-27 | Versum 3 | `@Commune/C5a:Nocturn 2 Versum` | placeholder | — | — | — |
-| Sancti/Bavaria/05-SP | Capitulum Laudes | `@CommuneM/C10` | filled-from-commune | Commune/C11#Capitulum Laudes | Sir 24:14 | !Sir 24:14 v. Ab inítio et ante sǽcula creáta sum, et usque ad futúrum sǽculum non désinam, et in habitatióne sancta cor |
-| Sancti/Bavaria/05-SPr | Capitulum Laudes | `@CommuneM/C10` | filled-from-commune | Commune/C11#Capitulum Laudes | Sir 24:14 | !Sir 24:14 v. Ab inítio et ante sǽcula creáta sum, et usque ad futúrum sǽculum non désinam, et in habitatióne sancta cor |
+| Sancti/Bavaria/05-SP | Capitulum Laudes | `@CommuneM/C10` | filled-from-commune | Commune/C10#Capitulum Laudes | Sir 24:14 | !Sir 24:14 v. Ab inítio et ante sǽcula creáta sum, et usque ad futúrum sǽculum non désinam, et in habitatióne sancta cor |
+| Sancti/Bavaria/05-SPr | Capitulum Laudes | `@CommuneM/C10` | filled-from-commune | Commune/C10#Capitulum Laudes | Sir 24:14 | !Sir 24:14 v. Ab inítio et ante sǽcula creáta sum, et usque ad futúrum sǽculum non désinam, et in habitatióne sancta cor |
 | Sancti/Bavaria/Monacensis/07-31-Bathonis | Versum 1 | `@Commune/C5:Versum 2` | placeholder | — | — | — |
 | Sancti/Bavaria/Monacensis/07-31-Bathonis | Versum 2 | `@Commune/C5:Versum 1` | placeholder | — | — | — |
 | Sancti/Bavaria/Monacensis/09-02 | Versum 1 | `@Commune/C5:Versum 2` | placeholder | — | — | — |
@@ -2541,10 +2401,10 @@ and recorded here with its citation.
 | Sancti/05-27o | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/05-27o | Lectio3 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/05-30 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Sancti/Urbis/06-02-Erasmus | Versum 1 | `@Commune/C2p:Versum 2` | filled-from-commune | Commune/C2#Versum 2 | — | V. Justus ut palma florébit. R. Sicut cedrus Líbani multiplicábitur. |
-| Sancti/Urbis/06-02-Erasmus | Ant 1 | `@Commune/C2p:Ant 2` | filled-from-commune | Commune/C2#Ant 2 | — | Qui odit * ánimam suam in hoc mundo, in vitam ætérnam custódit eam. |
-| Sancti/Urbis/06-02-Erasmus | Versum 2 | `@Commune/C2p:Versum 1` | filled-from-commune | Commune/C2#Versum 1 | — | V. Glória et honóre coronásti eum, Dómine. R. Et constituísti eum super ópera mánuum tuárum. |
-| Sancti/Urbis/06-02-Erasmus | Ant 2 | `@Commune/C2p:Ant 1` | filled-from-commune | Commune/C2#Ant 1 | — | Iste Sanctus * pro lege Dei sui certávit usque ad mortem, et a verbis impiórum non tímuit: fundátus enim erat supra firm |
+| Sancti/Urbis/06-02-Erasmus | Versum 1 (tempore paschali) | `@Commune/C2p:Versum 2` | filled-from-commune | Commune/C2#Versum 2 | — | V. Justus ut palma florébit. R. Sicut cedrus Líbani multiplicábitur. |
+| Sancti/Urbis/06-02-Erasmus | Ant 1 (tempore paschali) | `@Commune/C2p:Ant 2` | filled-from-commune | Commune/C2#Ant 2 | — | Qui odit * ánimam suam in hoc mundo, in vitam ætérnam custódit eam. |
+| Sancti/Urbis/06-02-Erasmus | Versum 2 (tempore paschali) | `@Commune/C2p:Versum 1` | filled-from-commune | Commune/C2#Versum 1 | — | V. Glória et honóre coronásti eum, Dómine. R. Et constituísti eum super ópera mánuum tuárum. |
+| Sancti/Urbis/06-02-Erasmus | Ant 2 (tempore paschali) | `@Commune/C2p:Ant 1` | filled-from-commune | Commune/C2#Ant 1 | — | Iste Sanctus * pro lege Dei sui certávit usque ad mortem, et a verbis impiórum non tímuit: fundátus enim erat supra firm |
 | Sancti/06-20 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/06-20 | Lectio93 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/Urbis/06-20 | Responsory8 | `@Commune/C2b:Responsory8 non Effusorum` | placeholder | — | — | — |
@@ -2571,6 +2431,7 @@ and recorded here with its citation.
 | Sancti/aliquibus locis/07Dpost-OmnisSSRESP | Capitulum Laudes | `$Deo grátias` | kept-as-rubric-marker | — | — | — |
 | Sancti/aliquibus locis/08-22 | Lectio Prima | `@:Capitulum Nona:1-2 s/[\§\*]//gs` | filled-from-commune | Commune/C11#Capitulum Nona | Sir 24:19-20 | !Sir 24:19-20 v. In platéis sicut cinnamómum et bálsamum aromatízans odórem dedi: quasi myrrha elécta, dedi suavitátem o |
 | Sancti/aliquibus locis/08-22 | Versum Nona | `@:Versum 2` | filled-from-commune | Commune/C11#Versum 2 | — | V. Diffúsa est grátia in lábiis tuis. R. Proptérea benedíxit te Deus in ætérnum. |
+| Sancti/aliquibus locis/10-11 | Lectio8 (feria 1) | `@Sancti/10-11::s/$/~/` | placeholder | — | — | — |
 | Sancti/10-11 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Sancti/aliquibus locis/10-11 | Versum 3 | `@:Versum 1` | filled-from-commune | Commune/C11#Versum 1 | — | V. Dignáre me laudáre te, Virgo sacráta. R. Da mihi virtútem contra hostes tuos. |
 | Sancti/aliquibus locis/10-23-Redemptor | Responsory3 | `&Glória` | kept-as-rubric-marker | — | — | — |
@@ -2603,4 +2464,4 @@ and recorded here with its citation.
 | Ordo/Ordo | Conclusio | `&itemissaest` | kept-as-rubric-marker | — | — | — |
 | Ordo/Ordo | Conclusio | `&Ultimaev` | kept-as-rubric-marker | — | — | — |
 
-Total: 2595 fill(s).
+Total: 2456 fill(s).

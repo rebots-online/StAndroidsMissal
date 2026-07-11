@@ -104,7 +104,7 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
     return out;
   }, [db, path]);
 
-/useEffect(() => {
+  useEffect(() => {
     if (focusSection && rootRef.current) {
       // Accept a proper section key, an Ordo anchor, or an ordinary station id.
       const anchor = ORDO_STATION_SECTION[focusSection]

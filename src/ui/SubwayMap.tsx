@@ -1,12 +1,17 @@
 /**
- * The whole Mass as a subway map. Two trunk lines — Catechumens (gold) and
- * Faithful (deep red) — joined by an S-curve connector; the Ember-Day loop
- * rises between the Collect and the Epistle; the seasonal chant tracks run
- * as parallel routes between the Epistle and the Gospel; Super populum is a
- * Lenten spur. Proper stations render as interchange rings in the day's
- * liturgical color. Clicking any station opens the reader at that section.
+ * The whole Mass as a vertical metro line (Montreal-style single-column
+ * representation — nothing is ever cut off; the page scrolls, the line
+ * doesn't snake). Two trunk segments — ① Catechumens (gold) and
+ * ② Faithful (deep red) — one below the other; the Ember-Day lessons, the
+ * seasonal chant alternatives and the Lenten Super populum are indented
+ * fold-out branches, and detail stations (Asperges, Orate fratres, Pater
+ * noster…) fold away behind the skeleton/full toggle so the simple spine
+ * of the Mass always stays legible. Proper stations render as interchange
+ * rings in the day's liturgical color; clicking any station opens the
+ * reader at that section.
  */
 
+import { useState } from 'react';
 import { trunkOf, branchOf, stationActive, type Station } from '../core/model/massOrdo.ts';
 import type { DayInfo } from '../core/data/types.ts';
 
@@ -20,177 +25,171 @@ const ACCENTS: Record<string, string> = {
   white: '#c9a227', black: '#2c2925', rose: '#d193a3',
 };
 
-const X0 = 100;
-const XSTEP = 112;
-const Y1 = 190;
-const Y2 = 470;
+function Dot({ s, accent }: { s: Station; accent: string }) {
+  const isProper = s.kind === 'proper' || s.kind === 'switch';
+  return (
+    <svg className="vdot" viewBox="0 0 34 34" aria-hidden="true">
+      {s.kind === 'conditional' && (
+        <circle cx={17} cy={17} r={14.5} fill="none" stroke="#4a4034" strokeWidth={1.2} strokeDasharray="3 3" />
+      )}
+      {isProper ? (
+        <>
+          <circle cx={17} cy={17} r={10.5} fill="#fff" stroke={accent} strokeWidth={4} />
+          <circle cx={17} cy={17} r={4.5} fill={accent} />
+        </>
+      ) : (
+        <circle cx={17} cy={17} r={8.5} fill="#fff" stroke="#4a4034" strokeWidth={3} />
+      )}
+    </svg>
+  );
+}
+
+function StationRow({
+  s, accent, active, onStation, small,
+}: {
+  s: Station; accent: string; active: boolean; onStation: (s: Station) => void; small?: boolean;
+}) {
+  return (
+    <button
+      className={`vstation${active ? '' : ' inactive'}${small ? ' small' : ''}`}
+      onClick={() => active && onStation(s)}
+      title={s.note ?? undefined}
+      disabled={!active}
+    >
+      <Dot s={s} accent={accent} />
+      <span className="vlabels">
+        <span className="vlatin">{s.latin}</span>
+        <span className="veng">{s.english}</span>
+      </span>
+      {s.note && <span className="vnote">{s.note}</span>}
+    </button>
+  );
+}
+
+/** Indented fold-out branch (Ember insert, chant alternatives, spur). */
+function Branch({
+  title, color, stations, accent, season, onStation, defaultOpen,
+}: {
+  title: string; color: string; stations: Station[]; accent: string;
+  season: string; onStation: (s: Station) => void; defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const anyActive = stations.some((s) => stationActive(s, season as never));
+  return (
+    <div className={`vbranch${anyActive ? '' : ' inactive'}`} style={{ ['--branch-color' as never]: color }}>
+      <button className="vbranch-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="chev">{open ? '▾' : '▸'}</span> {title}
+        {!anyActive && <span className="vnote">not travelled in {season}</span>}
+      </button>
+      {open && (
+        <div className="vbranch-body">
+          {stations.map((s) => (
+            <StationRow key={s.id} s={s} accent={accent} active={stationActive(s, season as never)} onStation={onStation} small />
+          ))}
+          <div className="vreturn">└─ return</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SubwayMap({ day, onStation }: Props) {
   const accent = ACCENTS[String(day?.color ?? 'green')] ?? '#3f7a52';
   const season = day?.season ?? 'Time after Pentecost';
+  const [full, setFull] = useState(false);
 
-  const cat = trunkOf('catechumens').filter((s) => s.id !== 'asperges');
-  const fai = trunkOf('faithful');
+  const filterDetail = (s: Station) => full || !s.detail;
+  const cat = trunkOf('catechumens').filter(filterDetail);
+  const asperges = branchOf('spur').find((s) => s.id === 'asperges');
+  const fai = trunkOf('faithful').filter(filterDetail);
   const ember = branchOf('ember');
   const chants = branchOf('chant');
   const superPopulum = branchOf('spur').find((s) => s.id === 'super-populum');
 
-  // Slot layout: the ember loop borrows 2 extra slots after the Collect, the
-  // chant switch 2 extra slots after the Epistle — room for the branches.
-  const catX = new Map<string, number>();
-  {
-    let slot = 0;
-    for (const s of cat) {
-      catX.set(s.id, X0 + slot * XSTEP);
-      slot += 1;
-      if (s.id === 'oratio') slot += 2;
-      if (s.id === 'lectio') slot += 2;
-    }
-  }
-  const faiX = (i: number) => X0 + i * XSTEP;
-  const catEnd = Math.max(...catX.values());
-  const width = Math.max(catEnd, faiX(fai.length - 1)) + 130;
-
-  const xOratio = catX.get('oratio')!;
-  const xLectio = catX.get('lectio')!;
-  const xEvang = catX.get('evangelium')!;
-  const emberY = Y1 - 84;
-
   const emberActive = ['Advent', 'Lent', 'Time after Pentecost'].includes(season);
-  const spActive = superPopulum ? stationActive(superPopulum, season) : false;
-  const xPost = faiX(fai.findIndex((s) => s.id === 'postcommunio'));
-  const xIte = faiX(fai.findIndex((s) => s.id === 'ite'));
 
-  function StationDot({ s, x, y, small, stagger }: { s: Station; x: number; y: number; small?: boolean; stagger?: boolean }) {
-    const active = stationActive(s, season);
-    const isProper = s.kind === 'proper' || s.kind === 'switch';
-    const r = small ? 7.5 : isProper ? 12 : 9;
-    return (
-      <g
-        className={`station${active ? '' : ' inactive'}`}
-        transform={`translate(${x},${y})`}
-        onClick={() => active && onStation(s)}
-      >
-        <title>{`${s.latin} — ${s.english}${s.note ? ` (${s.note})` : ''}`}</title>
-        <circle className="halo" r={r + 9} />
-        {isProper ? (
-          <>
-            <circle r={r} fill="#fff" stroke={accent} strokeWidth={small ? 3 : 4} />
-            <circle r={Math.max(r - 6, 2.5)} fill={accent} />
-          </>
-        ) : (
-          <circle r={r} fill="#fff" stroke="#4a4034" strokeWidth={3} />
-        )}
-        {s.kind === 'conditional' && (
-          <circle r={r + 4.5} fill="none" stroke="#4a4034" strokeWidth={1} strokeDasharray="3 3" />
-        )}
-        {small ? (
-          <text className="st-label" y={stagger ? -r - 22 : -r - 8} textAnchor="middle" fontStyle="italic">
-            {s.latin}
-          </text>
-        ) : (
-          <>
-            <text className="st-latin" transform={`translate(-2,${-r - 24}) rotate(-34)`} textAnchor="start">
-              {s.latin}
-            </text>
-            <text className="st-label" y={stagger ? r + 34 : r + 20} textAnchor="middle">
-              {s.english}
-            </text>
-          </>
-        )}
-      </g>
-    );
-  }
+  const renderTrunk = (stations: Station[], lineColor: string, injectAfter: Record<string, React.ReactNode>) => (
+    <div className="vtrunk" style={{ ['--line-color' as never]: lineColor }}>
+      {stations.map((s) => (
+        <div key={s.id}>
+          <StationRow s={s} accent={accent} active={stationActive(s, season as never)} onStation={onStation} />
+          {injectAfter[s.id]}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="map-wrap">
-      <svg
-        className="subway"
-        viewBox={`0 0 ${width} 700`}
-        role="img"
-        aria-label="Subway map of the Order of Mass"
-      >
-        <text className="line-name" x={X0 - 60} y={62} fill="var(--line-catechumens)">
-          ① Missa Catechumenorum — Mass of the Catechumens
-        </text>
-        <text className="line-name" x={X0 - 60} y={Y2 + 130} fill="var(--line-faithful)">
-          ② Missa Fidelium — Mass of the Faithful
-        </text>
+    <div className="vmap">
+      <div className="vmap-toolbar">
+        <span className="vmap-hint">the whole Mass, one line, top to bottom</span>
+        <button className="vmap-toggle" onClick={() => setFull(!full)}>
+          {full ? '⊖ fold to skeleton' : '⊕ unfold full detail'}
+        </button>
+      </div>
 
-        {/* Trunk 1 */}
-        <path className="track" stroke="var(--line-catechumens)" strokeWidth={9}
-          d={`M ${X0 - 45} ${Y1} H ${catEnd + 10}`} />
+      <div className="vline-header" style={{ color: 'var(--line-catechumens)' }}>
+        ① Missa Catechumenorum <span>Mass of the Catechumens</span>
+      </div>
 
-        {/* S-curve connector: end of line 1 → start of line 2 */}
-        <path className="track" stroke="var(--line-faithful)" strokeWidth={9} opacity={0.85}
-          d={`M ${catEnd + 10} ${Y1} C ${catEnd + 95} ${Y1}, ${catEnd + 95} ${(Y1 + Y2) / 2}, ${catEnd - 20} ${(Y1 + Y2) / 2} H ${X0 - 25} C ${X0 - 100} ${(Y1 + Y2) / 2}, ${X0 - 100} ${Y2}, ${X0 - 45} ${Y2}`} />
+      {full && asperges && (
+        <div className="vtrunk" style={{ ['--line-color' as never]: 'var(--line-catechumens)' }}>
+          <StationRow s={asperges} accent={accent} active onStation={onStation} />
+        </div>
+      )}
 
-        {/* Trunk 2 */}
-        <path className="track" stroke="var(--line-faithful)" strokeWidth={9}
-          d={`M ${X0 - 45} ${Y2} H ${faiX(fai.length - 1) + 45}`} />
+      {renderTrunk(cat, 'var(--line-catechumens)', {
+        oratio: (
+          <Branch
+            key={`ember-${season}-${full}`}
+            title="Quatuor Tempora — the Ember-Day lessons"
+            color="var(--line-catechumens)"
+            stations={ember}
+            accent={accent}
+            season={season}
+            onStation={onStation}
+            defaultOpen={emberActive && full}
+          />
+        ),
+        lectio: (
+          <Branch
+            key={`chant-${season}`}
+            title="Seasonal chant — Gradual · Alleluia · Tract · Paschal Alleluia"
+            color="var(--line-catechumens)"
+            stations={chants}
+            accent={accent}
+            season={season}
+            onStation={onStation}
+            defaultOpen
+          />
+        ),
+      })}
 
-        {/* Ember-Day loop between Oratio and Lectio */}
-        <g className={emberActive ? '' : 'inactive'}>
-          <path className="track" stroke="var(--line-catechumens)" strokeWidth={5} strokeDasharray="10 6"
-            d={`M ${xOratio} ${Y1} C ${xOratio + 50} ${emberY}, ${xLectio - 50} ${emberY}, ${xLectio} ${Y1}`} />
-          <text className="st-label" x={(xOratio + xLectio) / 2} y={emberY - 34} textAnchor="middle" fontStyle="italic">
-            Quatuor Tempora — the Ember-Day lessons
-          </text>
-        </g>
-        {ember.map((s, i) => {
-          const t = (i + 1) / (ember.length + 1);
-          const x = xOratio + (xLectio - xOratio) * t;
-          return <StationDot key={s.id} s={s} x={x} y={emberY + 14} small stagger={i % 2 === 1} />;
-        })}
+      <div className="vline-header" style={{ color: 'var(--line-faithful)' }}>
+        ② Missa Fidelium <span>Mass of the Faithful</span>
+      </div>
 
-        {/* Chant switch: parallel routes between Epistle and Gospel */}
-        {chants.map((s) => {
-          const lane: Record<string, number> = {
-            graduale: Y1, alleluia: Y1 - 58, tractus: Y1 + 58, 'graduale-p': Y1 + 112,
-          };
-          const y = lane[s.id] ?? Y1;
-          const active = stationActive(s, season);
-          return (
-            <g key={s.id} className={active ? '' : 'inactive'}>
-              <path className="track" stroke="var(--line-catechumens)" strokeWidth={active ? 6 : 3}
-                d={y === Y1
-                  ? `M ${xLectio} ${Y1} H ${xEvang}`
-                  : `M ${xLectio} ${Y1} C ${xLectio + 55} ${y}, ${xEvang - 55} ${y}, ${xEvang} ${Y1}`} />
-              <StationDot s={s} x={(xLectio + xEvang) / 2} y={y} small={y !== Y1} />
-            </g>
-          );
-        })}
-        <text className="st-label" x={(xLectio + xEvang) / 2} y={Y1 + 148} textAnchor="middle" fontStyle="italic">
-          seasonal chant routes — Gradual · Alleluia · Tract
-        </text>
+      {renderTrunk(fai, 'var(--line-faithful)', {
+        postcommunio: superPopulum ? (
+          <Branch
+            key={`sp-${season}`}
+            title="Oratio super populum — Lenten ferias"
+            color="var(--line-faithful)"
+            stations={[superPopulum]}
+            accent={accent}
+            season={season}
+            onStation={onStation}
+            defaultOpen={season === 'Lent'}
+          />
+        ) : null,
+      })}
 
-        {/* Trunk 1 stations */}
-        {cat.map((s, i) => <StationDot key={s.id} s={s} x={catX.get(s.id)!} y={Y1} stagger={i % 2 === 1} />)}
-
-        {/* Super populum spur (Lenten ferias) */}
-        {superPopulum && (
-          <g className={spActive ? '' : 'inactive'}>
-            <path className="track" stroke="var(--line-faithful)" strokeWidth={5} strokeDasharray="10 6"
-              d={`M ${xPost} ${Y2} C ${xPost + 30} ${Y2 + 66}, ${xIte - 30} ${Y2 + 66}, ${xIte} ${Y2}`} />
-            <StationDot s={superPopulum} x={(xPost + xIte) / 2} y={Y2 + 66} small />
-          </g>
-        )}
-
-        {/* Trunk 2 stations */}
-        {fai.map((s, i) => <StationDot key={s.id} s={s} x={faiX(i)} y={Y2} stagger={i % 2 === 1} />)}
-
-        {/* Legend */}
-        <g className="legend" transform={`translate(${X0 - 45}, 660)`}>
-          <circle cx={8} cy={0} r={8} fill="#fff" stroke={accent} strokeWidth={4} />
-          <circle cx={8} cy={0} r={3} fill={accent} />
-          <text x={24} y={4}>Proper of the day — interchange, in the day's color ({String(day?.color ?? '')})</text>
-          <circle cx={420} cy={0} r={7} fill="#fff" stroke="#4a4034" strokeWidth={3} />
-          <text x={434} y={4}>Ordinary (invariable)</text>
-          <circle cx={600} cy={0} r={7} fill="#fff" stroke="#4a4034" strokeWidth={2} strokeDasharray="3 3" />
-          <text x={614} y={4}>Conditional by rubric</text>
-          <text x={790} y={4} fontStyle="italic">Faded = not travelled in {season}</text>
-        </g>
-      </svg>
+      <div className="vlegend">
+        <span><svg viewBox="0 0 34 34" className="vdot"><circle cx={17} cy={17} r={10.5} fill="#fff" stroke={accent} strokeWidth={4} /><circle cx={17} cy={17} r={4.5} fill={accent} /></svg> Proper of the day — in the day's color ({String(day?.color ?? '')})</span>
+        <span><svg viewBox="0 0 34 34" className="vdot"><circle cx={17} cy={17} r={8.5} fill="#fff" stroke="#4a4034" strokeWidth={3} /></svg> Ordinary (invariable)</span>
+        <span><svg viewBox="0 0 34 34" className="vdot"><circle cx={17} cy={17} r={14.5} fill="none" stroke="#4a4034" strokeWidth={1.2} strokeDasharray="3 3" /><circle cx={17} cy={17} r={8.5} fill="#fff" stroke="#4a4034" strokeWidth={3} /></svg> Conditional by rubric</span>
+        <span className="faded">Faded = not travelled in {season}</span>
+      </div>
     </div>
   );
 }
