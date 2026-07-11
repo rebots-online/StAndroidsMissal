@@ -83,10 +83,62 @@ content, its citation, and the supplying source. Filled sections carry
 
 ## Output schema (`assets/missal.db`)
 
-- `nodes(kind ∈ {file, section}, key, title, category, rank_class, rank_num, color, meta)`
-  — keys `file:<path>` / `section:<path>#<Section>`.
-- `edges(src, dst, rel ∈ {HAS_SECTION, CROSS_REF, INCLUDES, EXPANDS}, meta)` —
-  directive text preserved in `meta.directive`.
+- `nodes(kind ∈ {file, section, concept}, key, title, category, rank_class, rank_num, color, meta)`
+  — keys `file:<path>` / `section:<path>#<Section>` / `concept:<id>`.
+  Concept nodes have `category ∈ {curated, auto}` and `meta.description` +
+  `meta.source`.
+- `edges(src, dst, rel ∈ {HAS_SECTION, CROSS_REF, INCLUDES, EXPANDS, INSTANCE_OF, BROADER_THAN}, meta)`
+  — directive text preserved in `meta.directive`.
+  - `INSTANCE_OF`: section → concept (section is an instance of a liturgical concept)
+  - `BROADER_THAN`: parent concept → child concept (taxonomy hierarchy)
 - `text_blocks(node_id, section, latin, english)` — resolved bilingual text.
+  Original text preserved for rendering; never normalized.
 - `embeddings(node_id, dim, vec)` — 128-d hashed-trigram int8, Latin normative.
+  Includes centroid embeddings for concept nodes (average of member section
+  embeddings, L2-normalized).
 - `search` — FTS5 over `(key, section, content)`, meta sections excluded.
+  Content is **normalized** via `normalizeText()` (lowercase, strip diacritics,
+  map ligatures æ→ae / œ→oe, collapse non-letters to spaces) so that user
+  queries without diacritics match corpus text that has them.
+
+## Text normalization (`src/core/text/normalize.ts`)
+
+Every text string entering any search path (FTS5, vector, concept graph,
+future LLM queries) passes through `normalizeText()`:
+
+1. Lowercase
+2. Map liturgical ligatures: æ→ae, ǽ→ae, œ→oe
+3. NFD decompose + strip combining diacritics
+4. Collapse non-letters to spaces
+5. Trim
+
+The **original text is never mutated** — only the indexed/query form is
+normalized. `text_blocks` preserves original Latin/English for rendering;
+FTS5 `search.content` stores the normalized form. `concordance()` in
+`CorpusDb` normalizes the user's query term before FTS5 MATCH. Vector
+embeddings (`embedText()`) normalize internally before trigram hashing.
+
+## Concept taxonomy (`src/core/ontology/concepts.ts`)
+
+A curated taxonomy of ~30 liturgical concepts (Doxology, Collect, Preface,
+Canon, Kyrie, Sanctus, Agnus Dei, etc.) plus auto-derived concepts from
+embedding clustering. Each `ConceptDef` has:
+
+- `id` — stable identifier (e.g. `doxology`)
+- `label` — display name
+- `description` — what the concept means
+- `broader` — optional parent concept id (hierarchy)
+- `sectionNames` — DO section names that map to this concept (e.g. `Collect`, `Oratio`)
+- `patterns` — regex patterns matched against normalized text
+- `keywords` — normalized substrings for fuzzy matching
+
+### Ingest passes
+
+- **Pass 3a (curated):** For each `ConceptDef`, create a concept node, scan
+  all section nodes for matches (by section name, regex, or keyword), create
+  `INSTANCE_OF` edges, compute and store centroid embedding. Create
+  `BROADER_THAN` edges for the hierarchy.
+- **Pass 3b (auto-derived):** Greedy threshold clustering (cosine > 0.85,
+  min cluster size 3) on sections not already tagged by curated concepts.
+  Creates `auto_<n>` concept nodes with `INSTANCE_OF` edges and centroid
+  embeddings.

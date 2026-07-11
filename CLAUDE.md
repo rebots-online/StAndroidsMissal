@@ -45,17 +45,19 @@ VENDORED/divinum-officium/web/www/  (flat-text corpus snapshot, ours to edit)
 - **Latin is normative.** `text_blocks.latin` is the reference column; English is a modular translation and may be NULL. The reader renders Latin first.
 - **Embeddings are deterministic and offline** (`src/core/vector/embed.ts`, 128-d hashed trigrams, int8) — byte-stable across platforms; the `embeddings` table is model-agnostic so a real sentence-transformer can replace it without schema change.
 - **No placeholder data.** Every UI surface renders real corpus rows; content marked as filled/missing is explicitly flagged, never fabricated.
-- **UI:** `src/App.tsx` shell + rail nav routes between `src/ui/` surfaces — `SubwayMap` (SVG Mass map, stations click through to the reader), `ReaderView` (bilingual reader, selection → context menu), `MeaningPanel` (concordance + vector neighbours for a selection), `CalendarView`, `OfficeView`. Annotations live in `src/core/annotations/store.ts` (localStorage v1, schema mirrors a future sync table).
+- **Text normalization** (`src/core/text/normalize.ts`): every search path (FTS5, vector, concept graph) normalizes via `normalizeText()` — lowercase, strip diacritics, map ligatures (æ→ae, œ→oe), collapse non-letters. Original text is preserved for rendering; only indexed/query forms are normalized.
+- **Concept taxonomy** (`src/core/ontology/concepts.ts`): ~30 curated liturgical concepts (Doxology, Collect, Canon, etc.) + auto-derived clusters from embedding similarity. Concepts are ingested as `kind='concept'` nodes with `INSTANCE_OF` edges to sections and `BROADER_THAN` hierarchy edges. `CorpusDb` exposes `conceptsForText()`, `sectionsByConcept()`, `groupedConcordance()`, `groupedSimilarToText()` for concept-grouped search results. `MeaningPanel` renders expandable concept groups instead of flat lists.
+- **UI:** `src/App.tsx` shell + rail nav routes between `src/ui/` surfaces — `SubwayMap` (SVG Mass map, stations click through to the reader), `ReaderView` (bilingual reader, selection → context menu), `MeaningPanel` (concept-grouped concordance + vector neighbours for a selection), `CalendarView`, `OfficeView`. Annotations live in `src/core/annotations/store.ts` (localStorage v1, schema mirrors a future sync table).
 
 ## Contracts
 
 - `DOCS/ARCHITECTURE/StAndroidsMissal-v1.md` — authoritative entity table (names, signatures, file:line), data flow, decisions. New entities get a row there before they're coded.
 - `CHECKLIST.md` — execution contract with state markers: `[ ]` not started · `[/]` in progress · `[X]` implemented · ✅ verified by running code. Only flip to ✅ after actually running the verification.
 - One version string (`0.1.0`) across `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` — keep them in lock-step. App identifier: `mba.robin.standroidsmissal`.
-- CI: `.github/workflows/build-all-platforms.yml` builds web/Windows/Linux/Android.
+- **CI:** `.github/workflows/build-all-platforms.yml` is checked in but **dormant** — all builds are local until public release (TC14). See `DOCS/BUILD.md` for local build instructions.
 
 ## Gotchas
 
 - `public/missal.db` is gitignored and overwritten by the pre-dev/pre-build sync; `assets/missal.db` is the single source — edit nothing in `public/`.
-- The README quick-start's `npm run ingest -- /path/to/...liturgical.db` argument is legacy (ingest v1 from HelloWord). Ingest v2 takes only an optional output-path argument and reads `VENDORED/` unconditionally.
+- `npm run ingest` takes only an optional output-path argument and reads `VENDORED/` unconditionally. The old `-- /path/to/liturgical.db` argument from ingest v1 is gone.
 - `scripts/legacy-file-meta.json` preserves rank/color metadata extracted from the legacy HelloWord db and is consumed by the ingest — don't delete it.

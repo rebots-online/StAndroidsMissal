@@ -26,20 +26,49 @@ databases**, serving a beautiful, exegetical UI:
 ## Platforms (Tauri 2)
 
 Web/PWA · Windows 11 (NSIS) · Linux (deb + AppImage) · Android APK.
-CI: `.github/workflows/build-all-platforms.yml`.
+All builds are **local** — CI is dormant until public release (TC14).
+
+## Prerequisites
+
+- **Node.js ≥ 22.6** (`--experimental-strip-types` for TS test files + ingest)
+- **Rust** (stable, via [rustup](https://rustup.rs))
+- **Linux native:** `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev build-essential pkg-config libssl-dev`
+- **Android:** Android SDK (android-34, build-tools 34.0.0), `cargo-ndk`, Rust Android targets
+
+See `DOCS/BUILD.md` for full prerequisites and platform-specific setup.
 
 ## Quick start
 
 ```bash
-npm install
-npm run ingest -- /path/to/HelloWord/liturgical-api/assets/liturgical.db   # rebuild missal.db (optional; committed)
-npm test              # computus + embedding + ordo tests
-npm run dev           # web dev server
-npm run tauri dev     # desktop
+npm install           # install dependencies
+npm run ingest        # rebuild missal.db from VENDORED/ (optional — committed)
+npm test              # 37 tests: computus + embeddings + ordo + normalize + concepts
+npm run dev           # web dev server (port 5173)
+npm run tauri dev     # desktop shell
 ```
+
+## Native builds
+
+```bash
+# Linux (deb + AppImage)
+./node_modules/.bin/tauri build --bundles deb,appimage
+
+# Android (APK) — requires ANDROID_HOME + cargo-ndk
+./node_modules/.bin/tauri android build
+
+# Or use the kickstart script (idempotent — installs missing prerequisites)
+~/Admin-Manual/scripts/kickstart-tauri-build.sh linux
+~/Admin-Manual/scripts/kickstart-tauri-build.sh android
+```
+
+Artifacts land in `src-tauri/target/release/bundle/` (Linux) or
+`src-tauri/gen/android/app/build/outputs/apk/` (Android).
 
 ## Documentation
 
+- `DOCS/BUILD.md` — full build instructions (all platforms)
+- `DOCS/ARCHITECTURE.md` — authoritative entity table, data flows, decisions
+- `DOCS/CORPUS-SCHEMA.md` — corpus schema, concept taxonomy, text normalization
 - `DOCS/ARCHITECTURE/StAndroidsMissal-v1.md` — entity table, data flows, decisions
 - `CHECKLIST.md` — execution contract and audit trail
 
