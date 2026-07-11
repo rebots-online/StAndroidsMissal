@@ -63,6 +63,27 @@ export class CorpusDb {
     return rows.length ? rowToNode(rows[0]) : null;
   }
 
+  hasFile(path: string): boolean {
+    return this.getFileNode(path) !== null;
+  }
+
+  /** Resolved 1960 kalendar entries for MM-DD (ord 0 = celebration). */
+  getKalendar(mmdd: string): { file: string; title: string | null; rank: number }[] {
+    return this.all('SELECT file, title, rank FROM kalendar WHERE mmdd = ? ORDER BY ord', [mmdd]).map((r) => ({
+      file: String(r.file),
+      title: (r.title as string) ?? null,
+      rank: Number(r.rank ?? 0),
+    }));
+  }
+
+  /** Transfer rows of one Tabulae/Transfer source file ("a"–"g" or "322"–"426"). */
+  getTransfers(source: string): { mmdd: string; target: string }[] {
+    return this.all('SELECT mmdd, target FROM kalendar_transfer WHERE source = ?', [source]).map((r) => ({
+      mmdd: String(r.mmdd),
+      target: String(r.target),
+    }));
+  }
+
   /** All Sancti file nodes for MM-DD (incl. v/r variants), rank DESC. */
   getSanctiForDate(month: number, day: number): GraphNode[] {
     const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -80,6 +101,7 @@ export class CorpusDb {
       rankClass: n.rankClass,
       rankNum: n.rankNum,
       color: n.color,
+      festumDomini: n.meta.festum_domini === true,
     };
   }
 
@@ -155,6 +177,89 @@ export class CorpusDb {
       });
     }
     return map;
+  }
+
+  /**
+   * Public ordered section access for one corpus file (meta sections
+   * excluded) — the office engine's window onto propers/psalter/specials.
+   */
+  getFileSections(path: string): SectionText[] {
+    const rows = this.all(
+      `SELECT tb.section, tb.latin, tb.english
+       FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id
+       WHERE n.key LIKE ? ORDER BY n.id`,
+      [`section:${path}#%`],
+    );
+    const META = new Set(['Rank', 'Rule', 'Name', 'Officium', 'Missa', 'Prelude', 'Comment', 'Rank1960', 'RankNewcal']);
+    return rows
+      .filter((r) => !META.has(String(r.section)))
+      .map((r) => ({
+        nodeKey: `section:${path}#${r.section}`,
+        section: String(r.section),
+        latin: (r.latin as string) ?? null,
+        english: (r.english as string) ?? null,
+        sourcePath: path,
+        fromCommune: false,
+      }));
+  }
+
+  /** One named section of a corpus file (bilingual), or null. */
+  getSection(path: string, section: string): SectionText | null {
+    const rows = this.all(
+      `SELECT tb.latin, tb.english FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id WHERE n.key = ?`,
+      [`section:${path}#${section}`],
+    );
+    if (!rows.length) return null;
+    return {
+      nodeKey: `section:${path}#${section}`,
+      section,
+      latin: (rows[0].latin as string) ?? null,
+      english: (rows[0].english as string) ?? null,
+      sourcePath: path,
+      fromCommune: false,
+    };
+  }
+
+  /** Psalm text by number token ("109", "118i"…), bilingual. */
+  getPsalm(num: string): SectionText | null {
+    return this.getSection(`Psalterium/Psalmorum/Psalm${num}`, 'Psalmus');
+  }
+
+  /** Verbatim Ordinarium script for an hour file (Matutinum, Laudes, Minor…). */
+  getSkeleton(hourFile: string): string[] {
+    return this.all('SELECT line FROM office_skeleton WHERE hour_file = ? ORDER BY ord', [hourFile]).map((r) =>
+      String(r.line ?? ''),
+    );
+  }
+
+  /** Psalter schema slots for a day/hour (office_psalm_schema). */
+  getPsalmSchema(
+    dayKey: string,
+    hour: string,
+  ): { nocturn: number | null; slot: number; antiphonLa: string | null; antiphonEn: string | null; ref: string; festal: boolean }[] {
+    return this.all(
+      'SELECT nocturn, slot_ord, antiphon_la, antiphon_en, psalm_ref, festal_bracket FROM office_psalm_schema WHERE day_key = ? AND hour = ? ORDER BY slot_ord',
+      [dayKey, hour],
+    ).map((r) => ({
+      nocturn: r.nocturn == null ? null : Number(r.nocturn),
+      slot: Number(r.slot_ord),
+      antiphonLa: (r.antiphon_la as string) ?? null,
+      antiphonEn: (r.antiphon_en as string) ?? null,
+      ref: String(r.psalm_ref),
+      festal: Number(r.festal_bracket) === 1,
+    }));
+  }
+
+  /** Nocturn versicles for a day (office_nocturn_versicle). */
+  getNocturnVersicles(dayKey: string): { nocturn: number; la: string; en: string | null }[] {
+    return this.all(
+      'SELECT nocturn, versicle_la, response_la, versicle_en, response_en FROM office_nocturn_versicle WHERE day_key = ? ORDER BY nocturn',
+      [dayKey],
+    ).map((r) => ({
+      nocturn: Number(r.nocturn),
+      la: `V. ${r.versicle_la ?? ''}\nR. ${r.response_la ?? ''}`,
+      en: r.versicle_en ? `V. ${r.versicle_en}\nR. ${r.response_en ?? ''}` : null,
+    }));
   }
 
   /** Graph edges out of / into a file node. */

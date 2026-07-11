@@ -1,7 +1,9 @@
 /**
- * Perpetual universal calendar — Butcher's Easter computus and
- * Divinum Officium week keys. UTC-safe port of HelloWord
- * liturgical-api/lib/calendar.js (same season boundaries and key format).
+ * Perpetual universal calendar — Butcher's Easter computus and Divinum
+ * Officium week keys. `getWeekKey` is a 1:1 port of DO's
+ * DivinumOfficium::Date::getweek (missa flavour), so the returned key IS the
+ * Tempora file stem for the date: "Adv1-0", "Nat26", "Nat02", "Epi1-0",
+ * "Quadp3-3", "Pasc0-0", "Pent05-3", "PentEpi5-0", …
  */
 
 const DAY_MS = 86_400_000;
@@ -60,70 +62,102 @@ function addDays(d: Date, n: number): Date {
   return new Date(d.getTime() + n * DAY_MS);
 }
 
+/** First Sunday of Advent (UTC date). */
+export function getAdvent1(year: number): Date {
+  const christmas = utcDate(year, 12, 25);
+  const dow = christmas.getUTCDay() || 7;
+  return addDays(christmas, -dow - 21);
+}
+
 /**
- * DO week key for a date, e.g. "Adv1-0", "Quadp3-3", "Pasc0-0", "Pent12-4".
- * Format: {prefix}{week}-{dayOfWeek 0=Sunday}; Pent weeks zero-padded.
+ * DO week key = Tempora file stem for a date. Port of Date.pm getweek($missa=1):
+ *  - Advent:            Adv{1-4}-{dow}
+ *  - Dec 25–31:         Nat{dd} weekdays, Nat1-0 for the Sunday in the octave
+ *  - Jan 1 – first Sunday after Epiphany (excl.): Nat{0d} weekdays,
+ *                       Nat2-0 for a Sunday on Jan 2–5
+ *  - then:              Epi{n}-{dow} (Epi1-0 = Holy Family)
+ *  - Pre-Lent:          Quadp{1-3}-{dow}; Lent: Quad{1-6}-{dow}
+ *  - Easter → Whit Sat: Pasc{0-7}-{dow}
+ *  - after:             Pent{01-24}-{dow}, with the final pre-Advent weeks
+ *                       using the resumed Sundays PentEpi{3-6}-{dow}
  */
 export function getWeekKey(date: Date): string {
   const year = date.getUTCFullYear();
-  const month = date.getUTCMonth() + 1;
   const day = date.getUTCDate();
   const dow = date.getUTCDay();
 
-  const easter = getEaster(year);
+  const advent1 = getAdvent1(year);
   const christmas = utcDate(year, 12, 25);
-  const advent1 = addDays(christmas, -christmas.getUTCDay() - 21);
+
+  // Advent → Christmas week
+  if (date >= advent1) {
+    if (date < christmas) {
+      const week = 1 + Math.floor(daysBetween(date, advent1) / 7);
+      return `Adv${week}-${dow}`;
+    }
+    // Dec 25–31: day files; the Sunday within the octave is Nat1-0.
+    if (dow === 0 && day >= 26) return 'Nat1-0';
+    return `Nat${day}`;
+  }
+
+  // January before the first Sunday after Epiphany (exclusive).
+  // ordtime = day-of-year of that Sunday (Jan 7–13).
+  const jan6dow = utcDate(year, 1, 6).getUTCDay();
+  const ordtime = 6 + 7 - (jan6dow === 0 ? 7 : jan6dow);
+  const firstSundayAfterEpiphany = utcDate(year, 1, ordtime);
+
+  if (date.getUTCMonth() === 0 && date < firstSundayAfterEpiphany) {
+    // A Sunday on Jan 2–5 is the feast of the Holy Name (Nat2-0);
+    // the Sunday within the Christmas octave can fall on Jan 1 at the latest
+    // only as the Circumcision (Sancti side). Weekdays are Nat0d day files.
+    if (dow === 0 && day >= 2 && day <= 5) return 'Nat2-0';
+    return `Nat${String(day).padStart(2, '0')}`;
+  }
+
+  const easter = getEaster(year);
   const septuagesima = addDays(easter, -63);
-  const lent1Sunday = addDays(easter, -42);
-  const pentecostOctaveEnd = addDays(easter, 55);
 
-  if (date >= advent1 && date < christmas) {
-    const week = Math.floor(daysBetween(date, advent1) / 7) + 1;
-    return `Adv${Math.min(week, 4)}-${dow}`;
-  }
-
-  // Christmastide: Dec 25 – Jan 13
-  if ((month === 12 && day >= 25) || (month === 1 && day <= 13)) {
-    if (month === 12) return `Nat${Math.floor((day - 25) / 7)}-${dow}`;
-    return `Nat${Math.floor((day + 6) / 7)}-${dow}`;
-  }
-
-  const epiphany = utcDate(year, 1, 6);
-  if (date >= epiphany && date < septuagesima) {
-    const week = Math.floor(daysBetween(date, epiphany) / 7) + 1;
+  if (date < septuagesima) {
+    const week = Math.floor(daysBetween(date, firstSundayAfterEpiphany) / 7) + 1;
     return `Epi${week}-${dow}`;
   }
 
-  // Pre-Lent: Septuagesima through the Saturday before Lent I
-  // (Ash Wednesday and its ferias belong to Quadp3 — Quinquagesima week).
-  if (date >= septuagesima && date < lent1Sunday) {
-    const week = Math.floor(daysBetween(date, septuagesima) / 7) + 1;
-    return `Quadp${week}-${dow}`;
+  if (date < easter) {
+    const lent1 = addDays(easter, -42);
+    if (date < lent1) {
+      const week = Math.floor(daysBetween(date, septuagesima) / 7) + 1;
+      return `Quadp${week}-${dow}`;
+    }
+    const week = 1 + Math.floor(daysBetween(date, lent1) / 7);
+    return `Quad${week}-${dow}`;
   }
 
-  if (date >= lent1Sunday && date < easter) {
-    const week = 1 + Math.floor(daysBetween(date, lent1Sunday) / 7);
-    return `Quad${Math.min(week, 6)}-${dow}`;
-  }
-
-  // Paschaltide: Easter Sunday (Pasc0-0) through Pentecost octave Saturday (Pasc7-6)
-  if (date >= easter && date <= pentecostOctaveEnd) {
+  // Easter Sunday through Saturday in the octave of Pentecost.
+  if (daysBetween(date, easter) < 56) {
     const week = Math.floor(daysBetween(date, easter) / 7);
-    return `Pasc${Math.min(week, 7)}-${dow}`;
+    return `Pasc${week}-${dow}`;
   }
 
-  if (date > pentecostOctaveEnd && date < advent1) {
-    const week = Math.ceil(daysBetween(date, pentecostOctaveEnd) / 7);
-    return `Pent${String(Math.min(week, 24)).padStart(2, '0')}-${dow}`;
-  }
-
-  return `Adv4-${dow}`;
+  // Time after Pentecost. Weeks count from Pentecost Sunday (easter+49).
+  const n = Math.floor(daysBetween(date, addDays(easter, 49)) / 7);
+  if (n < 23) return `Pent${String(n).padStart(2, '0')}-${dow}`;
+  const wdist = Math.floor((daysBetween(advent1, date) + 6) / 7);
+  if (wdist < 2) return `Pent24-${dow}`;
+  if (n === 23) return `Pent23-${dow}`;
+  return `PentEpi${8 - wdist}-${dow}`; // resumed Sundays after Epiphany
 }
 
 export function getSeason(weekKey: string): Season {
   if (!weekKey) return 'Time after Pentecost';
   if (weekKey.startsWith('Adv')) return 'Advent';
-  if (weekKey.startsWith('Nat')) return 'Christmastide';
+  if (/^Nat(\d\d)?$/.test(weekKey) || /^Nat\d\d$/.test(weekKey)) {
+    // Nat25–Nat31 = Christmas week; Nat01–Nat05 = before Epiphany;
+    // Nat07–Nat12 = ferias after Epiphany.
+    const n = Number(weekKey.slice(3));
+    return n >= 7 && n <= 13 ? 'Time after Epiphany' : 'Christmastide';
+  }
+  if (weekKey.startsWith('Nat')) return 'Christmastide'; // Nat1-0, Nat2-0
+  if (weekKey.startsWith('PentEpi')) return 'Time after Pentecost';
   if (weekKey.startsWith('Epi')) return 'Time after Epiphany';
   if (weekKey.startsWith('Quadp')) return 'Pre-Lent';
   if (weekKey.startsWith('Quad')) return 'Lent';
@@ -151,4 +185,19 @@ export function seasonColor(weekKey: string, feast: string | null = null): Litur
     default:
       return 'green';
   }
+}
+
+/**
+ * DO transfer-table keys for a year: the Easter code (mdd) and the
+ * "sunday letter" file — see DivinumOfficium::Directorium::load_transfers.
+ */
+export function transferKeys(year: number): { easterCode: string; letter: string } {
+  const easter = getEaster(year);
+  const code = (easter.getUTCMonth() + 1) * 100 + easter.getUTCDate();
+  const letter = 'abcdefg'[(code - 319 + (easter.getUTCMonth() + 1 === 4 ? 1 : 0)) % 7];
+  return { easterCode: String(code), letter };
+}
+
+export function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }

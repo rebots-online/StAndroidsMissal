@@ -1,5 +1,7 @@
 [Officium]
 Dominica in Palmis
+(sed rubrica 196)
+Dominica II Passionis seu in Palmis
 
 [Rank]
 ;;I classis Semiduplex;;6.91

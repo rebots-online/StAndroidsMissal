@@ -40,4 +40,4 @@ Scriptural gap-fills performed automatically at ingest are logged separately in
 
 | Date | File | Reason |
 | --- | --- | --- |
-| — | — | (none yet) |
+| 2026-07-11 | `web/www/{missa,horas}/{Latin,English}/Tempora/Quad6-0.txt` | `[Officium]` gains the 1960 title variant `(sed rubrica 196) Dominica II Passionis seu in Palmis` — the snapshot predates upstream's rename; verified against divinumofficium.com missa.pl 03-29-2026. |

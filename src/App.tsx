@@ -23,7 +23,15 @@ export default function App() {
   const [db, setDb] = useState<CorpusDb | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('map');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // The user's LOCAL calendar date — never UTC: an evening user in Canada must
+  // see today's feast, not tomorrow's (toISOString would skip ahead at 20:00 EDT).
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  });
   const [focus, setFocus] = useState<{ section: string | null; nonce: number }>({ section: null, nonce: 0 });
   const [action, setAction] = useState<SelectionAction | null>(null);
 

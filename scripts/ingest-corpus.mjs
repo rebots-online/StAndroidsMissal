@@ -25,7 +25,9 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, copyFileSync, readdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, resolve, join, relative } from 'node:path';
 import { embedText, EMBED_DIM } from '../src/core/vector/embed.ts';
+import { applyConditionals, vero, RUBRICS_1960 } from '../src/core/liturgy/conditionals.ts';
 import { parseDOFile, parseRank, ruleVide, CorpusTree, loadPrayers, resolveContent, FillLog, firstCitation } from './do-parse.mjs';
+import { ingestOfficePlane } from './ingest-office.mjs';
 import { Scripture } from './scripture.mjs';
 
 const WWW = resolve('VENDORED/divinum-officium/web/www');
@@ -134,6 +136,37 @@ const prayers = Object.fromEntries(LANGS.map((l) => [l, loadPrayers(WWW, l)]));
 // Sections that are rubrical bookkeeping, not prayed text.
 const META_SECTIONS = new Set(['Rank', 'Rule', 'Name', 'Officium', 'Missa', 'Prelude', 'Comment', 'Rank1960', 'RankNewcal']);
 
+// Rubric context for load-time conditional processing: the version is fixed;
+// runtime-only subjects (season, weekday, hour…) stay deferred in the text.
+const RUBRIC_CTX = { version: RUBRICS_1960 };
+
+/**
+ * Realize a parsed section list under the 1960 rubrics:
+ *  - "[Name] (condition)" headers evaluate; true replaces the plain [Name]
+ *    section, false is dropped, undecidable is preserved under a decorated
+ *    name so the runtime pass can still reach it;
+ *  - conditional LINES inside each section run through the DO processor
+ *    (version facts resolved, runtime facts deferred).
+ */
+function realizeSections(secs) {
+  if (!secs) return null;
+  const order = [];
+  const byName = new Map();
+  for (const s of secs) {
+    let name = s.name;
+    if (s.qualifier != null) {
+      const cond = s.qualifier.replace(/^\s*(?:(?:sed|vero|atque|attamen|si|deinde)\b\s*)*/i, '');
+      const verdict = vero(cond, RUBRIC_CTX);
+      if (verdict === false) continue;
+      if (verdict === null) name = `${s.name} (${s.qualifier})`;
+    }
+    const content = applyConditionals(s.content, RUBRIC_CTX);
+    if (!byName.has(name)) order.push(name);
+    byName.set(name, { name, qualifier: s.qualifier, content });
+  }
+  return order.map((n) => byName.get(n));
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 /**
  * Resolve a raw section for one language: directive expansion + orphan
@@ -216,9 +249,18 @@ for (const src of SOURCES) {
       const path = `${src.prefix}/${rel}`;
       if (corpus.has(path)) continue;
       const treePath = `${src.sub}/${rel}`; // DO-relative (CorpusTree resolves missa→horas)
-      const latSections = trees.Latin.sections(treePath);
+      let latSections = realizeSections(trees.Latin.sections(treePath));
       if (!latSections) continue;
-      const engSections = trees.English.sections(treePath);
+      // Psalm files carry no [Section] headers — synthesize one.
+      if (latSections.length === 0 && rel.startsWith('Psalmorum/')) {
+        const raw = trees.Latin.psalm(rel.replace(/^Psalmorum\/Psalm/, ''));
+        if (raw) latSections = [{ name: 'Psalmus', qualifier: null, content: raw }];
+      }
+      let engSections = realizeSections(trees.English.sections(treePath));
+      if (engSections && engSections.length === 0 && rel.startsWith('Psalmorum/')) {
+        const raw = trees.English.psalm(rel.replace(/^Psalmorum\/Psalm/, ''));
+        if (raw) engSections = [{ name: 'Psalmus', qualifier: null, content: raw }];
+      }
       const engByName = new Map((engSections ?? []).map((s) => [s.name, s]));
 
       const officium = latSections.find((s) => s.name === 'Officium')?.content?.split('\n')[0]?.trim() ?? null;
@@ -226,6 +268,7 @@ for (const src of SOURCES) {
       const rank = parseRank(rankSec?.content ?? '');
       const ruleSec = latSections.find((s) => s.name === 'Rule');
       const vide = rank.vide ?? ruleVide(ruleSec?.content ?? '');
+      const festumDomini = /Festum Domini/i.test(ruleSec?.content ?? '');
       const legacy = legacyMeta[path] ?? {};
 
       const entry = {
@@ -234,6 +277,7 @@ for (const src of SOURCES) {
         rankNum: rank.rankNum || legacy.rankNum || 0,
         color: legacy.color ?? null,
         vide,
+        festumDomini,
         category: src.prefix.split('/')[0],
         sections: new Map(),
       };
@@ -277,8 +321,8 @@ for (const src of SOURCES) {
   const path = 'Ordo/Missae';
   const latP = join(WWW, 'missa', 'Latin', 'Ordo', 'Ordo.txt');
   const engP = join(WWW, 'missa', 'English', 'Ordo', 'Ordo.txt');
-  const lat = existsSync(latP) ? parseOrdoFile(readFileSync(latP, 'utf8')) : [];
-  const eng = existsSync(engP) ? parseOrdoFile(readFileSync(engP, 'utf8')) : [];
+  const lat = existsSync(latP) ? parseOrdoFile(applyConditionals(readFileSync(latP, 'utf8'), RUBRIC_CTX)) : [];
+  const eng = existsSync(engP) ? parseOrdoFile(applyConditionals(readFileSync(engP, 'utf8'), RUBRIC_CTX)) : [];
   const engByName = new Map(eng.map((s) => [s.name, s]));
   const entry = {
     title: 'Ordo Missae — the Ordinary of the Mass',
@@ -312,7 +356,11 @@ let filledCount = 0;
 for (const [path, f] of corpus) {
   const r = insNode.run(
     'file', `file:${path}`, f.title, f.category, f.rankClass, f.rankNum, f.color,
-    JSON.stringify({ office_name: f.title, cross_ref: f.vide ?? null }),
+    JSON.stringify({
+      office_name: f.title,
+      cross_ref: f.vide ?? null,
+      ...(f.festumDomini ? { festum_domini: true } : {}),
+    }),
   );
   nodeId.set(`file:${path}`, Number(r.lastInsertRowid));
 }
@@ -360,6 +408,10 @@ for (const e of pendingEdges) {
 }
 
 out.exec('COMMIT');
+
+// ── Office plane: psalm schemas, hour skeletons, kalendar, transfers ──
+const officeCounts = ingestOfficePlane(out, WWW);
+
 out.exec('VACUUM');
 
 // ── Fill log + summary ──────────────────────────────────────────────
@@ -375,6 +427,7 @@ const counts = {
   fillLogEntries: fillLog.entries.length,
   embeddings: out.prepare('SELECT COUNT(*) c FROM embeddings').get().c,
   edges: out.prepare('SELECT COUNT(*) c FROM edges').get().c,
+  ...officeCounts,
 };
 console.log('ingest v2 complete:', JSON.stringify(counts, null, 2));
 console.log('fill log →', FILL_LOG_PATH);
