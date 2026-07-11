@@ -7,19 +7,10 @@
  * a real sentence-transformer can replace this without schema change.
  */
 
-export const EMBED_DIM = 128;
+import { normalizeText } from '../text/normalize.ts';
+export { normalizeText };
 
-/** Lowercase, strip diacritics (ǽ→ae æ→ae), collapse non-letters to spaces. */
-export function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[æǽ]/g, 'ae')
-    .replace(/[œ]/g, 'oe')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z]+/g, ' ')
-    .trim();
-}
+export const EMBED_DIM = 128;
 
 /** FNV-1a 32-bit hash. */
 function fnv1a(s: string): number {

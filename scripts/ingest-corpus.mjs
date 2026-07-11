@@ -24,11 +24,12 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, copyFileSync, readdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, resolve, join, relative } from 'node:path';
-import { embedText, EMBED_DIM } from '../src/core/vector/embed.ts';
+import { embedText, cosine, EMBED_DIM, normalizeText } from '../src/core/vector/embed.ts';
 import { applyConditionals, vero, RUBRICS_1960 } from '../src/core/liturgy/conditionals.ts';
 import { parseDOFile, parseRank, ruleVide, CorpusTree, loadPrayers, resolveContent, FillLog, firstCitation } from './do-parse.mjs';
 import { ingestOfficePlane } from './ingest-office.mjs';
 import { Scripture } from './scripture.mjs';
+import { CONCEPTS } from '../src/core/ontology/concepts.ts';
 
 const WWW = resolve('VENDORED/divinum-officium/web/www');
 const OUT = process.argv[2] ?? 'assets/missal.db';
@@ -388,7 +389,7 @@ for (const [path, f] of corpus) {
     if (s.filled) filledCount++;
     const isMeta = META_SECTIONS.has(name);
     const embedSource = isMeta ? '' : (s.latin ?? s.english ?? '');
-    const ftsSource = isMeta ? '' : [s.latin, s.english].filter(Boolean).join('\n');
+    const ftsSource = isMeta ? '' : normalizeText([s.latin, s.english].filter(Boolean).join('\n'));
     if (embedSource.trim()) {
       const vec = embedText(embedSource);
       insEmb.run(nid, EMBED_DIM, Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength));
@@ -405,6 +406,195 @@ for (const e of pendingEdges) {
   if (!src || !dst) continue;
   insEdge.run(src, dst, e.rel, 1.0, JSON.stringify({ directive: e.directive }));
   includeEdges++;
+}
+
+out.exec('COMMIT');
+
+// ── Pass 3a: Curated concept nodes + INSTANCE_OF edges + centroids ──
+out.exec('BEGIN');
+let conceptCount = 0;
+let instanceEdgeCount = 0;
+let broaderEdgeCount = 0;
+
+// Build a lookup of all section nodes with their text for concept matching.
+const allSections = out.prepare(
+  `SELECT n.id, n.key, n.title, tb.latin, tb.english
+   FROM nodes n JOIN text_blocks tb ON tb.node_id = n.id
+   WHERE n.kind = 'section'`,
+).all();
+
+// Map concept id → node id for BROADER_THAN edges.
+const conceptNodeId = new Map();
+
+for (const concept of CONCEPTS) {
+  const conceptKey = `concept:${concept.id}`;
+  const meta = JSON.stringify({ description: concept.description, source: 'curated' });
+  const r = insNode.run('concept', conceptKey, concept.label, 'curated', null, null, null, meta);
+  const cid = Number(r.lastInsertRowid);
+  conceptNodeId.set(concept.id, cid);
+  conceptCount++;
+
+  // Match sections to this concept.
+  const matchedSectionIds = new Set();
+  for (const sec of allSections) {
+    const secName = String(sec.title ?? '');
+    const latin = normalizeText(String(sec.latin ?? ''));
+    const english = normalizeText(String(sec.english ?? ''));
+    const combined = `${latin} ${english}`;
+
+    let matched = false;
+
+    // Match by section name.
+    if (concept.sectionNames.includes(secName)) matched = true;
+
+    // Match by regex patterns on normalized text.
+    if (!matched) {
+      for (const pat of concept.patterns) {
+        if (pat.test(combined)) { matched = true; break; }
+      }
+    }
+
+    // Match by keyword substring on normalized text.
+    if (!matched) {
+      for (const kw of concept.keywords) {
+        const normKw = normalizeText(kw);
+        if (normKw && combined.includes(normKw)) { matched = true; break; }
+      }
+    }
+
+    if (matched) matchedSectionIds.add(Number(sec.id));
+  }
+
+  // Create INSTANCE_OF edges.
+  for (const sid of matchedSectionIds) {
+    insEdge.run(sid, cid, 'INSTANCE_OF', 1.0, null);
+    instanceEdgeCount++;
+  }
+
+  // Compute centroid embedding from matched sections' embeddings.
+  if (matchedSectionIds.size > 0) {
+    const placeholders = [...matchedSectionIds].map(() => '?').join(',');
+    const vecRows = out.prepare(
+      `SELECT e.vec FROM embeddings e WHERE e.node_id IN (${placeholders})`,
+    ).all(...matchedSectionIds);
+    if (vecRows.length > 0) {
+      const acc = new Float64Array(EMBED_DIM);
+      for (const vr of vecRows) {
+        const raw = vr.vec;
+        const vec = new Int8Array(raw.buffer, raw.byteOffset, raw.byteLength);
+        for (let i = 0; i < EMBED_DIM; i++) acc[i] += vec[i];
+      }
+      // Average and normalize.
+      const n = vecRows.length;
+      let mag = 0;
+      for (let i = 0; i < EMBED_DIM; i++) { acc[i] /= n; mag += acc[i] * acc[i]; }
+      mag = Math.sqrt(mag) || 1;
+      const centroid = new Int8Array(EMBED_DIM);
+      for (let i = 0; i < EMBED_DIM; i++) {
+        centroid[i] = Math.max(-127, Math.min(127, Math.round((acc[i] / mag) * 127)));
+      }
+      insEmb.run(cid, EMBED_DIM, Buffer.from(centroid.buffer, centroid.byteOffset, centroid.byteLength));
+    }
+  }
+}
+
+// Create BROADER_THAN edges for concept hierarchy.
+for (const concept of CONCEPTS) {
+  if (!concept.broader) continue;
+  const childId = conceptNodeId.get(concept.id);
+  const parentId = conceptNodeId.get(concept.broader);
+  if (childId && parentId) {
+    insEdge.run(parentId, childId, 'BROADER_THAN', 1.0, null);
+    broaderEdgeCount++;
+  }
+}
+
+out.exec('COMMIT');
+
+// ── Pass 3b: Auto-derived concepts via embedding clustering ─────────
+out.exec('BEGIN');
+let autoConceptCount = 0;
+let autoInstanceEdgeCount = 0;
+
+// Load all section embeddings.
+const sectionEmbRows = out.prepare(
+  `SELECT e.node_id, e.vec, n.key, n.title
+   FROM embeddings e JOIN nodes n ON n.id = e.node_id
+   WHERE n.kind = 'section'`,
+).all();
+
+// Build section embedding vectors.
+const sectionVecs = sectionEmbRows.map((r) => {
+  const raw = r.vec;
+  return {
+    nodeId: Number(r.node_id),
+    key: String(r.key),
+    title: String(r.title ?? ''),
+    vec: new Int8Array(raw.buffer, raw.byteOffset, raw.byteLength),
+  };
+});
+
+// Track which sections already have a curated INSTANCE_OF edge.
+const curatedTagged = new Set();
+const instanceRows = out.prepare(
+  `SELECT src FROM edges WHERE rel = 'INSTANCE_OF'`,
+).all();
+for (const r of instanceRows) curatedTagged.add(Number(r.src));
+
+// Greedy threshold clustering: group sections with cosine > 0.85.
+const CLUSTER_THRESHOLD = 0.85;
+const MIN_CLUSTER_SIZE = 3;
+const visited = new Set();
+let autoIdx = 0;
+
+for (let i = 0; i < sectionVecs.length; i++) {
+  if (visited.has(i)) continue;
+  // Skip if this section is already well-covered by curated concepts.
+  if (curatedTagged.has(sectionVecs[i].nodeId)) {
+    visited.add(i);
+    continue;
+  }
+
+  const cluster = [i];
+  visited.add(i);
+  for (let j = i + 1; j < sectionVecs.length; j++) {
+    if (visited.has(j)) continue;
+    if (curatedTagged.has(sectionVecs[j].nodeId)) continue;
+    const sim = cosine(sectionVecs[i].vec, sectionVecs[j].vec);
+    if (sim > CLUSTER_THRESHOLD) {
+      cluster.push(j);
+      visited.add(j);
+    }
+  }
+
+  if (cluster.length < MIN_CLUSTER_SIZE) continue;
+
+  // Create auto concept node.
+  autoIdx++;
+  const autoId = `auto_${autoIdx}`;
+  const autoLabel = `Auto: ${sectionVecs[cluster[0]].title}`;
+  const meta = JSON.stringify({ source: 'auto', clusterSize: cluster.length });
+  const r = insNode.run('concept', `concept:${autoId}`, autoLabel, 'auto', null, null, null, meta);
+  const cid = Number(r.lastInsertRowid);
+  autoConceptCount++;
+
+  // INSTANCE_OF edges + accumulate centroid.
+  const acc = new Float64Array(EMBED_DIM);
+  for (const idx of cluster) {
+    insEdge.run(sectionVecs[idx].nodeId, cid, 'INSTANCE_OF', 1.0, null);
+    autoInstanceEdgeCount++;
+    for (let d = 0; d < EMBED_DIM; d++) acc[d] += sectionVecs[idx].vec[d];
+  }
+  // Centroid embedding.
+  const n = cluster.length;
+  let mag = 0;
+  for (let d = 0; d < EMBED_DIM; d++) { acc[d] /= n; mag += acc[d] * acc[d]; }
+  mag = Math.sqrt(mag) || 1;
+  const centroid = new Int8Array(EMBED_DIM);
+  for (let d = 0; d < EMBED_DIM; d++) {
+    centroid[d] = Math.max(-127, Math.min(127, Math.round((acc[d] / mag) * 127)));
+  }
+  insEmb.run(cid, EMBED_DIM, Buffer.from(centroid.buffer, centroid.byteOffset, centroid.byteLength));
 }
 
 out.exec('COMMIT');
@@ -427,6 +617,11 @@ const counts = {
   fillLogEntries: fillLog.entries.length,
   embeddings: out.prepare('SELECT COUNT(*) c FROM embeddings').get().c,
   edges: out.prepare('SELECT COUNT(*) c FROM edges').get().c,
+  curatedConcepts: conceptCount,
+  conceptInstanceEdges: instanceEdgeCount,
+  conceptBroaderEdges: broaderEdgeCount,
+  autoConcepts: autoConceptCount,
+  autoInstanceEdges: autoInstanceEdgeCount,
   ...officeCounts,
 };
 console.log('ingest v2 complete:', JSON.stringify(counts, null, 2));

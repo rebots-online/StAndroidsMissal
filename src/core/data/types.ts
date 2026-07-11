@@ -58,3 +58,20 @@ export interface CrossRef {
   directive: string | null;
   toTitle: string | null;
 }
+
+export interface ConceptHit {
+  conceptId: string;
+  label: string;
+  description: string;
+  score: number;
+  sectionCount: number;
+}
+
+export interface GroupedHit<T = SimilarHit | ConcordanceHit> {
+  conceptId: string | null;
+  label: string;
+  description: string | null;
+  count: number;
+  representative: T;
+  hits: T[];
+}

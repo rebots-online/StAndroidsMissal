@@ -6,9 +6,9 @@
 
 import initSqlJs, { type Database } from 'sql.js';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
-import { embedText, cosine } from '../vector/embed.ts';
+import { embedText, cosine, normalizeText } from '../vector/embed.ts';
 import { MASS_SECTION_ORDER } from '../model/massOrdo.ts';
-import type { GraphNode, SectionText, SimilarHit, ConcordanceHit, CrossRef } from './types.ts';
+import type { GraphNode, SectionText, SimilarHit, ConcordanceHit, CrossRef, ConceptHit, GroupedHit } from './types.ts';
 import type { DayFileMeta } from '../calendar/precedence.ts';
 
 function rowToNode(r: Record<string, unknown>): GraphNode {
@@ -328,9 +328,9 @@ export class CorpusDb {
 
   /** FTS5 concordance. Malformed input returns [] (guard kept from HelloWord). */
   concordance(term: string, k = 20): ConcordanceHit[] {
-    const safe = term
+    const norm = normalizeText(term);
+    const safe = norm
       .split(/\s+/)
-      .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ''))
       .filter(Boolean)
       .map((w) => `"${w}"`)
       .join(' ');
@@ -348,5 +348,169 @@ export class CorpusDb {
     } catch {
       return [];
     }
+  }
+
+  // ── Concept-graph query API ────────────────────────────────────────
+
+  /** Find concepts whose centroid is closest to the query text. */
+  conceptsForText(text: string, k = 5): ConceptHit[] {
+    const q = embedText(text);
+    const rows = this.all(
+      `SELECT n.id, n.key, n.title, n.meta FROM nodes n WHERE n.kind = 'concept'`,
+    );
+    const scored: ConceptHit[] = [];
+    for (const r of rows) {
+      const embRow = this.all('SELECT vec FROM embeddings WHERE node_id = ?', [Number(r.id)]);
+      if (embRow.length === 0) continue;
+      const raw = embRow[0].vec as Uint8Array;
+      const vec = new Int8Array(raw.buffer, raw.byteOffset, raw.byteLength);
+      const score = cosine(q, vec);
+      let description = '';
+      try {
+        const meta = r.meta ? JSON.parse(String(r.meta)) : {};
+        description = (meta.description as string) ?? '';
+      } catch {
+        description = '';
+      }
+      const conceptId = String(r.key).replace(/^concept:/, '');
+      const sectionCount = this.all(
+        `SELECT COUNT(*) c FROM edges WHERE rel = 'INSTANCE_OF' AND dst = ?`,
+        [Number(r.id)],
+      )[0];
+      scored.push({
+        conceptId,
+        label: (r.title as string) ?? conceptId,
+        description,
+        score,
+        sectionCount: Number(sectionCount?.c ?? 0),
+      });
+    }
+    return scored.sort((a, b) => b.score - a.score).slice(0, k);
+  }
+
+  /** All sections tagged as instances of a concept. */
+  sectionsByConcept(conceptId: string): SimilarHit[] {
+    const conceptRows = this.all(
+      `SELECT id FROM nodes WHERE kind = 'concept' AND key = ?`,
+      [`concept:${conceptId}`],
+    );
+    if (conceptRows.length === 0) return [];
+    const cid = Number(conceptRows[0].id);
+    const sectionRows = this.all(
+      `SELECT n.id, n.key, n.title, e.weight
+       FROM edges e JOIN nodes n ON n.id = e.src
+       WHERE e.rel = 'INSTANCE_OF' AND e.dst = ?`,
+      [cid],
+    );
+    return sectionRows.map((r) => {
+      const tb = this.all(
+        `SELECT tb.latin, tb.english FROM text_blocks tb WHERE tb.node_id = ?`,
+        [Number(r.id)],
+      )[0];
+      return {
+        key: String(r.key),
+        section: (r.title as string) ?? '',
+        title: (r.title as string) ?? null,
+        score: Number(r.weight ?? 0),
+        latin: (tb?.latin as string) ?? null,
+        english: (tb?.english as string) ?? null,
+      };
+    });
+  }
+
+  /** Look up concept memberships for a section node key. */
+  private conceptsForSectionKey(key: string): { conceptId: string; label: string; description: string | null }[] {
+    const rows = this.all(
+      `SELECT n2.key conceptKey, n2.title label, n2.meta
+       FROM edges e
+       JOIN nodes n1 ON n1.id = e.src
+       JOIN nodes n2 ON n2.id = e.dst
+       WHERE e.rel = 'INSTANCE_OF' AND n1.key = ?`,
+      [key],
+    );
+    return rows.map((r) => {
+      let description: string | null = null;
+      try {
+        const meta = r.meta ? JSON.parse(String(r.meta)) : {};
+        description = (meta.description as string) ?? null;
+      } catch {
+        description = null;
+      }
+      return {
+        conceptId: String(r.conceptKey).replace(/^concept:/, ''),
+        label: (r.label as string) ?? String(r.conceptKey),
+        description,
+      };
+    });
+  }
+
+  /** Concordance hits grouped by concept. */
+  groupedConcordance(term: string, k = 30): GroupedHit<ConcordanceHit>[] {
+    const hits = this.concordance(term, k);
+    if (hits.length === 0) return [];
+    const groups = new Map<string, { conceptId: string | null; label: string; description: string | null; hits: ConcordanceHit[] }>();
+    for (const hit of hits) {
+      const concepts = this.conceptsForSectionKey(hit.key);
+      if (concepts.length === 0) {
+        const gKey = '__other__';
+        if (!groups.has(gKey)) {
+          groups.set(gKey, { conceptId: null, label: 'Other occurrences', description: null, hits: [] });
+        }
+        groups.get(gKey)!.hits.push(hit);
+      } else {
+        for (const c of concepts) {
+          const gKey = c.conceptId;
+          if (!groups.has(gKey)) {
+            groups.set(gKey, { conceptId: c.conceptId, label: c.label, description: c.description, hits: [] });
+          }
+          groups.get(gKey)!.hits.push(hit);
+        }
+      }
+    }
+    return [...groups.values()]
+      .map((g) => ({
+        conceptId: g.conceptId,
+        label: g.label,
+        description: g.description,
+        count: g.hits.length,
+        representative: g.hits[0],
+        hits: g.hits,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  /** Vector-similar hits grouped by concept. */
+  groupedSimilarToText(text: string, k = 20, excludeKey?: string): GroupedHit<SimilarHit>[] {
+    const hits = this.similarToText(text, k, excludeKey);
+    if (hits.length === 0) return [];
+    const groups = new Map<string, { conceptId: string | null; label: string; description: string | null; hits: SimilarHit[] }>();
+    for (const hit of hits) {
+      const concepts = this.conceptsForSectionKey(hit.key);
+      if (concepts.length === 0) {
+        const gKey = '__other__';
+        if (!groups.has(gKey)) {
+          groups.set(gKey, { conceptId: null, label: 'Other passages', description: null, hits: [] });
+        }
+        groups.get(gKey)!.hits.push(hit);
+      } else {
+        for (const c of concepts) {
+          const gKey = c.conceptId;
+          if (!groups.has(gKey)) {
+            groups.set(gKey, { conceptId: c.conceptId, label: c.label, description: c.description, hits: [] });
+          }
+          groups.get(gKey)!.hits.push(hit);
+        }
+      }
+    }
+    return [...groups.values()]
+      .map((g) => ({
+        conceptId: g.conceptId,
+        label: g.label,
+        description: g.description,
+        count: g.hits.length,
+        representative: g.hits[0],
+        hits: g.hits,
+      }))
+      .sort((a, b) => b.count - a.count);
   }
 }
