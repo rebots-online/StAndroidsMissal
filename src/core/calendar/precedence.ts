@@ -34,8 +34,8 @@ function isDominica(tempora: DayFileMeta | null): boolean {
 }
 
 export function resolveWinner(
-  dayOfWeek: number,
-  season: Season,
+  _dayOfWeek: number,
+  _season: Season,
   tempora: DayFileMeta | null,
   sancti: DayFileMeta[],
   weekKey = '',

@@ -136,7 +136,7 @@ export default function App() {
           {view === 'calendar' && (
             <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); setView('reader'); setFocus({ section: null, nonce: 0 }); }} />
           )}
-          {view === 'office' && <OfficeView day={day} />}
+          {view === 'office' && <OfficeView db={db} day={day} />}
 
           {action && (
             <MeaningPanel db={db} action={action} onClose={() => setAction(null)} onOpenKey={onOpenKey} />

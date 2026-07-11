@@ -158,7 +158,7 @@ and recorded here with its citation.
 | Tempora/Pent05-0o | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent06-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent06-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent06-1 | Responsory2 | `@TemporaM/Pent01-3:Responsory2` | placeholder | — | — | — |
+| Tempora/Pent06-1 | Responsory2 | `@TemporaM/Pent01-3:Responsory2` | filled-from-commune | Tempora/Pent01-3#Responsory2 | — | R. Exaudísti, Dómine, oratiónem servi tui, ut ædificárem templum nómini tuo:  * Bénedic et sanctífica domum istam in sem |
 | Tempora/Pent07-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent07-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent08-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -1483,7 +1483,7 @@ and recorded here with its citation.
 | Tempora/Pent05-0o | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent06-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent06-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
-| Tempora/Pent06-1 | Responsory2 | `@TemporaM/Pent01-3:Responsory2` | placeholder | — | — | — |
+| Tempora/Pent06-1 | Responsory2 | `@TemporaM/Pent01-3:Responsory2` | filled-from-commune | Tempora/Pent01-3#Responsory2 | — | R. Exaudísti, Dómine, oratiónem servi tui, ut ædificárem templum nómini tuo:  * Bénedic et sanctífica domum istam in sem |
 | Tempora/Pent07-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent07-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
 | Tempora/Pent08-0 | Lectio9 | `&teDeum` | kept-as-rubric-marker | — | — | — |
@@ -2382,8 +2382,8 @@ and recorded here with its citation.
 | Sancti/Bavaria/03-27 | Versum 1 | `@Commune/C5a:Versum 2` | placeholder | — | — | — |
 | Sancti/Bavaria/03-27 | Versum 2 | `@Commune/C5a:Versum 1` | placeholder | — | — | — |
 | Sancti/Bavaria/03-27 | Versum 3 | `@Commune/C5a:Nocturn 2 Versum` | placeholder | — | — | — |
-| Sancti/Bavaria/05-SP | Capitulum Laudes | `@CommuneM/C10` | filled-from-commune | Commune/C11#Capitulum Laudes | Sir 24:14 | !Sir 24:14 v. Ab inítio et ante sǽcula creáta sum, et usque ad futúrum sǽculum non désinam, et in habitatióne sancta cor |
-| Sancti/Bavaria/05-SPr | Capitulum Laudes | `@CommuneM/C10` | filled-from-commune | Commune/C11#Capitulum Laudes | Sir 24:14 | !Sir 24:14 v. Ab inítio et ante sǽcula creáta sum, et usque ad futúrum sǽculum non désinam, et in habitatióne sancta cor |
+| Sancti/Bavaria/05-SP | Capitulum Laudes | `@CommuneM/C10` | filled-from-commune | Commune/C10#Capitulum Laudes | Sir 24:14 | !Sir 24:14 v. Ab inítio et ante sǽcula creáta sum, et usque ad futúrum sǽculum non désinam, et in habitatióne sancta cor |
+| Sancti/Bavaria/05-SPr | Capitulum Laudes | `@CommuneM/C10` | filled-from-commune | Commune/C10#Capitulum Laudes | Sir 24:14 | !Sir 24:14 v. Ab inítio et ante sǽcula creáta sum, et usque ad futúrum sǽculum non désinam, et in habitatióne sancta cor |
 | Sancti/Bavaria/Monacensis/07-31-Bathonis | Versum 1 | `@Commune/C5:Versum 2` | placeholder | — | — | — |
 | Sancti/Bavaria/Monacensis/07-31-Bathonis | Versum 2 | `@Commune/C5:Versum 1` | placeholder | — | — | — |
 | Sancti/Bavaria/Monacensis/09-02 | Versum 1 | `@Commune/C5:Versum 2` | placeholder | — | — | — |

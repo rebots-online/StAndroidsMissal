@@ -304,6 +304,10 @@ export function resolveContent(content, ctx, depth = 0) {
 /** Resolve one @include with the V0.7 fallback chain. */
 function resolveInclude(targetPath, wanted, xform, directive, ctx, depth) {
   const tryPaths = [targetPath];
+  // Monastic/Cistercian/OP tree references missing from the snapshot fall
+  // back to the Roman-tree equivalent (TemporaM/x → Tempora/x, …).
+  const roman = targetPath.replace(/^(Tempora|Sancti|Commune)(M|Cist|OP)\//, '$1/');
+  if (roman !== targetPath) tryPaths.push(roman);
   if (ctx.videPath && targetPath !== ctx.videPath) tryPaths.push(ctx.videPath);
 
   for (const p of tryPaths) {
