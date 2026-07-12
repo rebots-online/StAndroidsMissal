@@ -28,6 +28,7 @@ import { embedText, cosine, EMBED_DIM, normalizeText } from '../src/core/vector/
 import { applyConditionals, vero, RUBRICS_1960 } from '../src/core/liturgy/conditionals.ts';
 import { parseDOFile, parseRank, ruleVide, CorpusTree, loadPrayers, resolveContent, FillLog, firstCitation } from './do-parse.mjs';
 import { ingestOfficePlane } from './ingest-office.mjs';
+import { ingestBiblePlane } from './ingest-bible.mjs';
 import { Scripture } from './scripture.mjs';
 import { CONCEPTS } from '../src/core/ontology/concepts.ts';
 
@@ -602,6 +603,9 @@ out.exec('COMMIT');
 // ── Office plane: psalm schemas, hour skeletons, kalendar, transfers ──
 const officeCounts = ingestOfficePlane(out, WWW);
 
+// ── Bible plane (Pass 4): book/chapter/verse nodes + CITES edges ─────
+const bibleCounts = ingestBiblePlane(out);
+
 out.exec('VACUUM');
 
 // ── Fill log + summary ──────────────────────────────────────────────
@@ -623,6 +627,7 @@ const counts = {
   autoConcepts: autoConceptCount,
   autoInstanceEdges: autoInstanceEdgeCount,
   ...officeCounts,
+  ...bibleCounts,
 };
 console.log('ingest v2 complete:', JSON.stringify(counts, null, 2));
 console.log('fill log →', FILL_LOG_PATH);
