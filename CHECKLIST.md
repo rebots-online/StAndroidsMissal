@@ -385,6 +385,36 @@ Contract: `DOCS/ARCHITECTURE.md` (v0.2, authoritative). v0.1 sections below are 
 - [ ] **W3** Playwright pass: office hour texts render (Laudes, 2026-07-05); lore callout on station + curve hover; planner paint + editor save + calendar indicators; each of the 12 themes applies (`data-theme`/`data-mode` attributes + token change assertion); print stylesheet (emulate media print); export files non-empty; share URL round-trips into a seeded view. Screenshots to `.tmp/w3-*.png`.
 - [ ] **W4** Stanza-level entity comparison per I-22 against `DOCS/ARCHITECTURE.md` §8, then flip verified tasks `[X]→✅` with evidence lines.
 
+## Phase M — Ever-present map strip (HelloWord parity + Office extension)
+
+_Operator directive 2026-07-11: the always-visible subway map at the top of the app (HelloWord's defining affordance — sticky header, `ActualLiturgicalApp.tsx:2168-2219`) was lost in the rewrite; restore its mechanism with our theming. Vertical layouts acceptable where responsive design wants them. The same treatment extends to the breviary (novel — HelloWord had none). Contract: `DOCS/ARCHITECTURE.md` Decision 17 + §8 entity rows (`MapStrip`, `MapFlyout`, `stripStations`, `stationForAnchor`, `stationIncipits`, `STATION_INFO`/`HOUR_INFO`, `massTextsForDay`, `dateForWeekKey`)._
+
+- ✅ **M1 Strip model helpers** — files: `src/core/model/massOrdo.ts`, `tests/mapStrip.test.ts` (new) — entities: `stripStations`, `stationForAnchor`
+  _Evidence 2026-07-11: `node --test tests/mapStrip.test.ts` → 5/5 pass (Lent tract/alleluia switch, Paschal doubled alleluia, slot ordering, skeleton-only, anchor inversion incl. `ordo:` and numbered forms)._
+  - **Do**: append two exported functions. `stripStations(season: Season): Station[]` — `trunkOf('catechumens').filter(s => !s.detail)` with `branchOf('chant').filter(s => stationActive(s, season))` spliced in immediately after the `lectio` station, followed by `trunkOf('faithful').filter(s => !s.detail)`. `stationForAnchor(anchor: string): string | null` — `"ordo:<Sec>"` → first non-detail station id with `ORDO_STATION_SECTION[id] === Sec` (fall back to any); otherwise match `sectionKey === anchor` exactly, then with a trailing ` 2`/` 3` stripped; null if none.
+  - **Verify**: `npm test` green incl. new `tests/mapStrip.test.ts`: strip for 'Lent' contains `tractus` not `alleluia`; strip for 'Paschaltide' contains `graduale-p`; `stationForAnchor('ordo:Canon') === 'canon'`; `stationForAnchor('Oratio 2') === 'oratio'`; `stationForAnchor('ordo:Kyrie') === 'kyrie'`.
+- ✅ **M2 MapStrip component + styles** — files: `src/ui/MapStrip.tsx` (new), `src/styles.css` — entities: `MapStrip`
+  _Evidence 2026-07-11: dev-server walkthrough via chrome-devtools — strip on reader/calendar/office (suppressed on the full-map view and, ≥981px, on office where the side loop shows — operator directive); 20 stations at Pentecost-season date; seg colors + day-accent rings observed; strip scrolls internally (scrollWidth 1188 > clientWidth 696, docOverflow 0 after `.main{min-width:0}` fix)._
+  - **Do**: horizontal strip: station buttons over per-segment colored line (`--line-catechumens` → `--line-faithful`; `--line-office` for the office variant), proper stations = interchange rings in `var(--accent)`, ordinary = ink-ring dots, conditional = dashed ring; index-based past/active/future (active gets pulse halo, future dimmed, seasonally-inactive faded + unclickable); tiny uppercase truncated labels; `overflow-x: auto` with hidden scrollbar; office variant renders `OFFICE_CURSUS` with active-hour ring. `.main` grid becomes `auto auto 1fr`.
+  - **Verify**: strip visible on all four views in the dev server; segment colors and day-accent rings correct; horizontal scroll on narrow viewport.
+- ✅ **M3 Reader scroll-spy** — files: `src/ui/ReaderView.tsx` — entities: `ReaderView`
+  _Evidence 2026-07-11: scrollTo(0) → active = Iudica me; scrollTo(end) → active = Ultimum Evangelium; station click scrolls target section to container top (observed offsets 2–6px = intended padding) with no marker flicker._
+  - **Do**: optional prop `onVisibleSection?: (anchor: string) => void`; IntersectionObserver over `section[data-section]` (root = the scrolling `.content`, rootMargin `'-20% 0px -65% 0px'`, threshold 0) calling it with the intersecting anchor; guard-ref timestamp set by the focus-scroll effect (+900 ms) suppresses observer echoes during programmatic scrolls.
+  - **Verify**: scrolling the reader moves the strip's you-are-here marker; clicking a strip station scrolls the reader without marker flicker.
+- ✅ **M4 App shell wiring** — files: `src/App.tsx`, `src/ui/OfficeView.tsx` — entities: `MapStrip`, `OfficeView`
+  - **Do**: App state `activeStation: string | null` (station clicks set it; `onVisibleSection` maps anchors through `stationForAnchor`) and `officeHour: string` (default `'laudes'`); `<MapStrip …/>` rendered directly after `.masthead`; OfficeView becomes controlled (`hour`/`onHour` replace internal `sel` state).
+  - **Verify**: `npm test`; dev-server walkthrough: strip on every view; station click from calendar/office lands in reader at the right section; office strip ↔ loop selection stays in sync; back navigation unaffected.
+  _Evidence 2026-07-11: npm test 44/44 by session end (37 pre-existing + 5 mapStrip + 2 computus); loop click Vesperae → strip active "Vesperae"; strip click Matutinum → hour card "Matutinum"; calendar-view station click landed in reader with strip marker set._
+
+- ✅ **M5 Map flyouts (hover/focus)** — files: `src/core/model/stationLore.ts` (new), `src/core/data/stationIncipits.ts` (new), `src/ui/MapFlyout.tsx` (new), `src/ui/MapStrip.tsx`, `src/ui/SubwayMap.tsx`, `src/styles.css` — entities: `STATION_INFO`, `HOUR_INFO`, `stationIncipits`, `MapFlyout`
+  _Operator directive: hover flyout on subway maps + breadcrumb strip showing section, first few words, description, and a media slot; dual-language by default. Shipped: strip stations, office hours (lazy `buildHour` incipit) and full-map rows (event delegation on `data-sid`); flyout = Latin+English incipit of the day's real text (English-missing explicitly flagged), 1–2-sentence `about`, planned-media slot (flagged, never fabricated). Evidence: hover Introitus → "Sapiéntia réddidit…"/"Wisdom rendered…"; Canon/Kyrie ordinaries dual-language; Evangelium on full map with video badge; zero console errors._
+- ✅ **M6 Media inventory** — files: `DOCS/MEDIA-PLAN.md` (new)
+  _39 assets enumerated (31 stations + 8 hours; 19 video, 20 photo), IDs matching `STATION_INFO`/`HOUR_INFO`, production brief per row, all `needed`._
+- ✅ **M7 Human search references + in-context open** — files: `src/ui/MeaningPanel.tsx`, `src/App.tsx`, `src/core/calendar/computus.ts` — entities: `MeaningPanel`, `dateForWeekKey`
+  _Operator directive: vector/concordance references must be human-understandable and clickable to display in context. Shipped: `humanRef` (section — feast title · "May 1"/week-key/Commune/Office·…) and `onOpenKey` now navigates to the SOURCE day (Sancti → month-day; Tempora → `dateForWeekKey` inversion; Horas → office view at the named hour). Evidence: hit "Lectio2 — S. Joseph Sponsi B.M.V. · May 1 ↗" click → date 2026-05-01, masthead S. Joseph Opificis (1962 occurrence — rubrical reality), reader open, white accent._
+- ✅ **M8 Operator-reported fixes (live session 2026-07-11)** — files: `src/ui/ReaderView.tsx`, `src/ui/OfficeView.tsx`, `src/ui/MapStrip.tsx`, `src/core/calendar/computus.ts`, `src/core/data/liturgicalDay.ts`, `vite.config.ts`
+  _(a) Strip auto-center now scrolls only its own container (was cancelling the reader's smooth scroll). (b) Reader focus-scroll is explicit `scrollTo` on the container (scrollIntoView landed inconsistently). (c) `seasonColor` title fallback knows Sanguinis/Crucis/Passion/Apostoli/Evangelistæ→red, Cathedra/Mariæ/Angeli→white — July 1 (Precious Blood, color column NULL) now red; tests added. (d) Reader filters seasonal chant switch sections (GradualeP no longer renders in July). (e) `massTextsForDay`: Tempora ferias whose file has Office but no Mass sections delegate to the week's Sunday ("de Dominica"), honestly labelled via sourcePath — fixes empty feria readers and empty proper incipits. (f) Reader + office section headings are accordions (▾/▸, focus-nav auto-unfolds). (g) vite watch excludes VENDORED/ (ENOSPC watcher exhaustion). Evidence: computus tests 6/6 incl. new color+dateForWeekKey cases; 2026-07-11 feria reader shows Pent06-0 Mass labelled `Tempora/Pent06-0`; accordion fold/unfold verified in browser._
+
 ## Backlog (next major — unchanged)
 - [ ] Real sentence-transformer embeddings (schema model-agnostic).
 - [ ] Fine-tuned ecclesiastical-Latin LLM behind the Meaning panel.
@@ -407,6 +437,7 @@ _2026-07-11 status: OA.1–OA.3 shipped (deviations per ARCHITECTURE §8 entity 
 - [X] **OA.3** Seasonal sets: invitatories (`Matutinum Special.txt` `[Invit*]`), `Mariaant.txt`, `Doxologies.txt`, `Benedictions.txt` → `office_seasonal`.
 - [ ] **OA.4** `role_rubrics` from missa `Ordo.txt` `!` prose: role + form classification per sentence subject (Celebrans/Diaconus/Subdiaconus/Ministri; `si est Missa sollemnis / si privata` → form), `source_line` provenance.
 - [ ] **OA.5** Resolution routes S→A→C over the missing-reference register + translation census; write `meta.translationSupplied`; regenerate `DOCS/MISSING-REFERENCES.md`; fix the ~45 `transform-skipped` xform-parser gaps in `do-parse.mjs`. Accept: shipped `textus deest` = 0.
+  _2026-07-11 operator-observed evidence (GradualeP Latin-only on 07-01): translation census run over Mass propers (Sancti+Tempora) — Latin-only rows per section: Communio 79/348, Offertorium 78/342, Evangelium 71/369, Secreta 67/402, Oratio 66/505, Postcommunio 65/405, Introitus 59/334, Lectio 55/356, Graduale 50/353, GradualeP 34/65, Tractus 26/62. Gap is corpus-wide, worst ratio on the paschal/penitential chants._
 - [ ] **OA.6** Ingest tests: schema-table row counts ≥ demo baselines (257/24/3427/22 Latin-side), Day0 Laudes1 = 92/99/62/210/148, invitatory seasonal keys present, role_rubrics provenance non-null.
 
 ## Stanza O-B — Runtime engine
@@ -424,3 +455,50 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 ## Stanza O-D — Gauntlet + release (after ALL v0.2 + v0.3 tasks ✅)
 - [ ] **OD.1** Run DOCS/TEST_RUBRIC.md in full; screencast per TC11 → `dist/rubric-runs/`; run report + attestation → `dist/`.
 - [ ] **OD.2** Manual artifact set staged in canonical `dist/` per I-25: apk + aab + native-debug-symbols zip; deb + AppImage; exe (NSIS) + msi (WiX, windows runner); MSIX code-readiness attestation; `v{VERSION}:` stamped commit; ecosystem production key signing.
+
+---
+
+# v0.4 wave — Bible + Accompaniment plane (ARCHITECTURE §7.6, entity rows P-S)
+
+**Status: stanzas scoped; NOT yet expanded to self-contained coder tasks.** Next architect action (TC13): expand each stanza into wholly self-contained parallel tasks in the v0.2-wave format (inline signatures/DDL/anchors, hermetic Verify, per-task commit), using ARCHITECTURE §7.6 as the entity source. Operator decisions recorded 2026-07-12: (1) one object, four exposures — journal/homily/study/newsletter are differentially-exposed Accompaniments, never separate types; (2) themes are free-form user vocabulary (Commune/concepts = autocomplete suggestions only); (3) chat = the CompanionEngine (not a separate engine) with SOUL.md-style lore memory, journey-companion emphasis; (4) newsletter exposure + ParishProfile header space = institutional entitlement; (5) displayed liturgical text never normalized to verse refs (adapted quotations; prayed text normative) — only `meta.filled` gap-fills become verse references; (6) sidecar becomes SQLite via sql.js (collinear rule extended to user data).
+
+## Stanza B-A — Ingest Pass 4: Bible corpus
+- [ ] **BA.1** `scripts/ingest-bible.mjs`: `BOOK_MAP` (73 books, DR↔vul↔canonical key) + book/chapter/verse nodes, bilingual `text_blocks`, `HAS_CHAPTER`/`HAS_VERSE` edges, verse FTS rows, verse embeddings.
+- [ ] **BA.2** `CITES` edges liturgical-section→verse-range from the existing citation parse, meta `{quality: exact|adapted}`; gap-filled (`meta.filled`) scripture becomes verse references (dedup; fill log rows now cite verse nodes).
+- [ ] **BA.3** `reading_plans`/`plan_day` tables + two seed plans (liturgical-year-aligned, canonical whole-Bible).
+- [ ] **BA.4** `tests/bible.test.ts`: 73 books; canon verse counts per book; Gen 1:1 exact la+en; CITES spot checks; fill-log delta review (Bible pass adds zero fill rows).
+
+## Stanza B-B — BibleView + deep links
+- [ ] **BB.1** `CorpusDb.getBooks/getChapter/getVerseRange/citationsOf` (signatures per entity row).
+- [ ] **BB.2** `src/ui/BibleView.tsx` — rail "Sacred Scripture"; book/chapter nav; bilingual verse reader (SectionReader patterns); selection → MeaningPanel; CITES "appears in the liturgy" panel.
+- [ ] **BB.3** Deep-link routes on `shareLink.ts` (P-F extension): `#/verse/…`, `#/acc/…`, `#/day/…`, `#/section/…` wired into App's layered back-nav.
+
+## Stanza B-C — Accompaniment model + sidecar v2 + editor
+- [ ] **BC.1** `src/core/accompaniment/types.ts` (`Accompaniment`, `OccurrenceSelector`, `Exposure`) + `store.ts` (`SIDECAR_SCHEMA_SQL_V2`, `SidecarDb` v2, platform byte-persistence web OPFS/IndexedDB + Tauri `load_sidecar`/`save_sidecar`); annotations-localStorage migration (old key read-only).
+- [ ] **BC.2** `resolve.ts`: `accompanimentsForDay`/`forAnchor`/`matchesSelector` over computus + recurrence rules.
+- [ ] **BC.3** `AccompanimentEditor.tsx` (TipTap; body_pm + body_html snapshot).
+- [ ] **BC.4** `tests/accompaniment.test.ts`: selector resolution incl. moveable feasts across year boundaries; migration; free-form theme tags.
+
+## Stanza B-D — Exposure surfaces
+- [ ] **BD.1** `JournalView` (date timeline; day-chip today's entries).
+- [ ] **BD.2** `HomilyPlanner` (selector-projected planning calendar; supersedes PlannerView/HomilyEditor rows).
+- [ ] **BD.3** `StudyBuilder` (class centroid: recurrence group + anchors + materials; print stylesheet handouts).
+- [ ] **BD.4** `NewsletterDesk` behind `EntitlementGate('newsletter-desk')` + `parish_profile` masthead (name/logo/letterhead/colors/address); print + email-ready HTML export + share link.
+
+## Stanza B-E — Daily reading programming
+- [ ] **BE.1** Reading-plan surfaces: today's readings on map/home + reading_progress in sidecar; feeds widget + companion context.
+
+## Stanza B-F — Haydock commentary
+- [ ] **BF.1** Vendor `VENDORED/haydock/` (clone-at-home, PROVENANCE.md lock BEFORE assimilation) + ingest pass → verse-keyed commentary blocks; read-only layer in BibleView; `vendored` inserts in StudyBuilder.
+
+## Stanza B-G — Shares
+- [ ] **BG.1** Highlight/accompaniment share: body_html snapshot + deep link via navigator.share/copy; standroid.robin.mba resolves.
+
+## Stanza B-H — Android widget
+- [ ] **BH.1** `MissalWidgetProvider.kt` (today's feast + readings; deep-link intent; data JSON + daily refresh); PWA shortcuts on web. Device render = TEST_RUBRIC operator row.
+
+## Stanza B-I — Companion (journey companion + lore memory)
+- [ ] **BI.1** `CompanionEngine` interface + `OnDeviceEngine` (LiteRT-LM Gemma 4 E2B; WebGPU on web) + `HostedEngine` (metered proxy); entitlement-selected tier; trial = client-side cap on activation.
+- [ ] **BI.2** `CompanionMemory`: lore table + distillation loop (idle/save; size-capped; user-visible/editable) + vector recall over `sidecar_embeddings` (embedText) fused with theme/date facets.
+- [ ] **BI.3** `CompanionView` rail chat: context = persona+lore+memories+position+CITES; replies cite deep links; save-insight → accompaniment(`generated`).
+- [ ] **BI.4** RC config against contract vocabulary (`companion_ondevice`, `companion_hosted`, `institutional`) via RC plugin/MCP or dashboard (key per I-15); `FeatureId` gates wired. On-device model run = TEST_RUBRIC operator row.
