@@ -4,4 +4,4 @@ VENDORED/**/*.png binary
 VENDORED/**/*.jpg binary
 VENDORED/**/*.gif binary
 VENDORED/**/*.ico binary
-assets/missal.db binary -diff
+assets/missal.db filter=lfs diff=lfs merge=lfs -text
