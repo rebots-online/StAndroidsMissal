@@ -225,6 +225,124 @@ export class CorpusDb {
     return this.getSection(`Psalterium/Psalmorum/Psalm${num}`, 'Psalmus');
   }
 
+  // ── Bible plane (§7.6) ──────────────────────────────────────────────
+
+  /** All 73 Bible books in canon order (meta.ord from ingest Pass 4). */
+  getBooks(): { key: string; title: string; chapters: number; testament: 'OT' | 'NT'; hasLatin: boolean }[] {
+    return this.all(`SELECT key, title, meta FROM nodes WHERE kind = 'book'`)
+      .map((r) => {
+        let meta: Record<string, unknown> = {};
+        try {
+          meta = r.meta ? JSON.parse(String(r.meta)) : {};
+        } catch {
+          meta = {};
+        }
+        return {
+          key: String(r.key).replace(/^book:/, ''),
+          title: (r.title as string) ?? '',
+          chapters: Number(meta.chapters ?? 0),
+          testament: (meta.testament as 'OT' | 'NT') ?? 'OT',
+          hasLatin: meta.vulSource !== false,
+          ord: Number(meta.ord ?? 0),
+        };
+      })
+      .sort((a, b) => a.ord - b.ord)
+      .map(({ ord: _ord, ...book }) => book);
+  }
+
+  /** One chapter's verses in order, bilingual (Latin NULL where vul.tsv lacks the book). */
+  getChapter(book: string, chapter: number): SectionText[] {
+    return this.all(
+      `SELECT n.key, tb.section, tb.latin, tb.english
+       FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id
+       WHERE n.key LIKE ? ORDER BY n.id`,
+      [`verse:${book}/${chapter}/%`],
+    ).map((r) => ({
+      nodeKey: String(r.key),
+      section: String(r.section),
+      latin: (r.latin as string) ?? null,
+      english: (r.english as string) ?? null,
+      sourcePath: `Bible/${book}`,
+      fromCommune: false,
+    }));
+  }
+
+  /** Verse range by canonical ref "Gen/1/1" or "Gen/1/1-3". */
+  getVerseRange(ref: string): SectionText[] {
+    const m = ref.match(/^([^/]+)\/(\d+)\/(\d+)(?:-(\d+))?$/);
+    if (!m) return [];
+    const [, book, ch, from, to] = m;
+    const out: SectionText[] = [];
+    for (let v = Number(from); v <= Number(to ?? from); v++) {
+      const rows = this.all(
+        `SELECT tb.section, tb.latin, tb.english FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id WHERE n.key = ?`,
+        [`verse:${book}/${ch}/${v}`],
+      );
+      if (!rows.length) continue;
+      out.push({
+        nodeKey: `verse:${book}/${ch}/${v}`,
+        section: String(rows[0].section),
+        latin: (rows[0].latin as string) ?? null,
+        english: (rows[0].english as string) ?? null,
+        sourcePath: `Bible/${book}`,
+        fromCommune: false,
+      });
+    }
+    return out;
+  }
+
+  /** CITES edges touching a node (section→verses, or verse←sections), meta.citation as directive. */
+  citationsOf(nodeKey: string): CrossRef[] {
+    return this.all(
+      `SELECT n1.key fromKey, n2.key toKey, e.rel, e.meta, n2.title toTitle
+       FROM edges e JOIN nodes n1 ON n1.id = e.src JOIN nodes n2 ON n2.id = e.dst
+       WHERE e.rel = 'CITES' AND (n1.key = ? OR n2.key = ?)`,
+      [nodeKey, nodeKey],
+    ).map((r) => {
+      let directive: string | null = null;
+      try {
+        directive = r.meta ? (JSON.parse(String(r.meta)).citation ?? null) : null;
+      } catch {
+        directive = null;
+      }
+      return {
+        fromKey: String(r.fromKey),
+        toKey: String(r.toKey),
+        rel: String(r.rel),
+        directive,
+        toTitle: (r.toTitle as string) ?? null,
+      };
+    });
+  }
+
+  /** Liturgical sections citing any verse of a chapter — BibleView's "appears in the liturgy" panel. */
+  liturgyCitingChapter(
+    book: string,
+    chapter: number,
+  ): { sectionKey: string; sectionTitle: string | null; sourcePath: string; verseKey: string; quality: string }[] {
+    return this.all(
+      `SELECT n1.key sectionKey, n1.title sectionTitle, n2.key verseKey, e.meta
+       FROM edges e JOIN nodes n1 ON n1.id = e.src JOIN nodes n2 ON n2.id = e.dst
+       WHERE e.rel = 'CITES' AND n2.key LIKE ? ORDER BY n2.id`,
+      [`verse:${book}/${chapter}/%`],
+    ).map((r) => {
+      let quality = 'adapted';
+      try {
+        quality = r.meta ? (JSON.parse(String(r.meta)).quality ?? 'adapted') : 'adapted';
+      } catch {
+        quality = 'adapted';
+      }
+      const key = String(r.sectionKey);
+      return {
+        sectionKey: key,
+        sectionTitle: (r.sectionTitle as string) ?? null,
+        sourcePath: key.replace(/^section:/, '').replace(/#.*$/, ''),
+        verseKey: String(r.verseKey),
+        quality,
+      };
+    });
+  }
+
   /** Verbatim Ordinarium script for an hour file (Matutinum, Laudes, Minor…). */
   getSkeleton(hourFile: string): string[] {
     return this.all('SELECT line FROM office_skeleton WHERE hour_file = ? ORDER BY ord', [hourFile]).map((r) =>

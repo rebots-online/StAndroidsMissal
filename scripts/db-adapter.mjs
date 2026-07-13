@@ -79,6 +79,77 @@ export function openAdapter(dbPath = 'assets/missal.db') {
     getPsalm(num) {
       return this.getSection(`Psalterium/Psalmorum/Psalm${num}`, 'Psalmus');
     },
+    // ── Bible plane (§7.6) — mirrors CorpusDb ─────────────────────
+    getBooks() {
+      return raw.prepare(`SELECT key, title, meta FROM nodes WHERE kind = 'book'`).all()
+        .map((r) => {
+          let meta = {};
+          try { meta = r.meta ? JSON.parse(String(r.meta)) : {}; } catch { meta = {}; }
+          return {
+            key: String(r.key).replace(/^book:/, ''), title: r.title ?? '',
+            chapters: Number(meta.chapters ?? 0), testament: meta.testament ?? 'OT',
+            hasLatin: meta.vulSource !== false, ord: Number(meta.ord ?? 0),
+          };
+        })
+        .sort((a, b) => a.ord - b.ord)
+        .map(({ ord: _ord, ...book }) => book);
+    },
+    getChapter(book, chapter) {
+      return raw.prepare(
+        `SELECT n.key, tb.section, tb.latin, tb.english
+         FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id
+         WHERE n.key LIKE ? ORDER BY n.id`,
+      ).all(`verse:${book}/${chapter}/%`).map((r) => ({
+        nodeKey: String(r.key), section: String(r.section),
+        latin: r.latin ?? null, english: r.english ?? null,
+        sourcePath: `Bible/${book}`, fromCommune: false,
+      }));
+    },
+    getVerseRange(ref) {
+      const m = ref.match(/^([^/]+)\/(\d+)\/(\d+)(?:-(\d+))?$/);
+      if (!m) return [];
+      const [, book, ch, from, to] = m;
+      const out = [];
+      for (let v = Number(from); v <= Number(to ?? from); v++) {
+        const r = raw.prepare(
+          `SELECT tb.section, tb.latin, tb.english FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id WHERE n.key = ?`,
+        ).get(`verse:${book}/${ch}/${v}`);
+        if (!r) continue;
+        out.push({
+          nodeKey: `verse:${book}/${ch}/${v}`, section: String(r.section),
+          latin: r.latin ?? null, english: r.english ?? null,
+          sourcePath: `Bible/${book}`, fromCommune: false,
+        });
+      }
+      return out;
+    },
+    citationsOf(nodeKey) {
+      return raw.prepare(
+        `SELECT n1.key fromKey, n2.key toKey, e.rel, e.meta, n2.title toTitle
+         FROM edges e JOIN nodes n1 ON n1.id = e.src JOIN nodes n2 ON n2.id = e.dst
+         WHERE e.rel = 'CITES' AND (n1.key = ? OR n2.key = ?)`,
+      ).all(nodeKey, nodeKey).map((r) => {
+        let directive = null;
+        try { directive = r.meta ? (JSON.parse(String(r.meta)).citation ?? null) : null; } catch { directive = null; }
+        return { fromKey: String(r.fromKey), toKey: String(r.toKey), rel: String(r.rel), directive, toTitle: r.toTitle ?? null };
+      });
+    },
+    liturgyCitingChapter(book, chapter) {
+      return raw.prepare(
+        `SELECT n1.key sectionKey, n1.title sectionTitle, n2.key verseKey, e.meta
+         FROM edges e JOIN nodes n1 ON n1.id = e.src JOIN nodes n2 ON n2.id = e.dst
+         WHERE e.rel = 'CITES' AND n2.key LIKE ? ORDER BY n2.id`,
+      ).all(`verse:${book}/${chapter}/%`).map((r) => {
+        let quality = 'adapted';
+        try { quality = r.meta ? (JSON.parse(String(r.meta)).quality ?? 'adapted') : 'adapted'; } catch { quality = 'adapted'; }
+        const key = String(r.sectionKey);
+        return {
+          sectionKey: key, sectionTitle: r.sectionTitle ?? null,
+          sourcePath: key.replace(/^section:/, '').replace(/#.*$/, ''),
+          verseKey: String(r.verseKey), quality,
+        };
+      });
+    },
     getSkeleton(hourFile) {
       return raw.prepare('SELECT line FROM office_skeleton WHERE hour_file = ? ORDER BY ord').all(hourFile)
         .map((r) => String(r.line ?? ''));

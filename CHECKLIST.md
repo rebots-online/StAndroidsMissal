@@ -469,7 +469,7 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 - ✅ **BA.4** `tests/bible.test.ts`: 73 books; canon verse counts per book; Gen 1:1 exact la+en; CITES spot checks; fill-log delta review (Bible pass adds zero fill rows). _2026-07-12: 7 tests; suite 51/51; fill log delta = zero._
 
 ## Stanza B-B — BibleView + deep links
-- [ ] **BB.1** `CorpusDb.getBooks/getChapter/getVerseRange/citationsOf` (signatures per entity row).
+- ✅ **BB.1** `CorpusDb.getBooks/getChapter/getVerseRange/citationsOf` (signatures per entity row). _2026-07-12: + `liturgyCitingChapter` (BibleView panel query); mirrored in scripts/db-adapter.mjs; 4 tests, suite 55/55, tsc clean._
 - [ ] **BB.2** `src/ui/BibleView.tsx` — rail "Sacred Scripture"; book/chapter nav; bilingual verse reader (SectionReader patterns); selection → MeaningPanel; CITES "appears in the liturgy" panel.
 - [ ] **BB.3** Deep-link routes on `shareLink.ts` (P-F extension): `#/verse/…`, `#/acc/…`, `#/day/…`, `#/section/…` wired into App's layered back-nav.
 

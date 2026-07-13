@@ -100,3 +100,42 @@ test('verses are searchable via FTS and carry embeddings', { skip: !present }, (
   );
   assert.ok(emb >= 35000, `verse embeddings ${emb}`);
 });
+
+// ── BB.1 — CorpusDb Bible query surface (via the node adapter) ──────
+import { openAdapter } from '../scripts/db-adapter.mjs';
+import type { CorpusDb } from '../src/core/data/corpusDb.ts';
+
+const adapter = () => openAdapter(DB) as unknown as CorpusDb;
+
+test('getBooks: 73 books in canon order, deutero flagged Latin-less', { skip: !present }, () => {
+  const a = adapter();
+  const books = a.getBooks();
+  assert.equal(books.length, 73);
+  assert.equal(books[0].key, 'Gen');
+  assert.equal(books[72].key, 'Apoc');
+  assert.equal(books.find((b) => b.key === 'Sap')?.hasLatin, false);
+  assert.equal(books.find((b) => b.key === 'Ps')?.chapters, 150);
+});
+
+test('getChapter: Gen 1 has 31 ordered bilingual verses', { skip: !present }, () => {
+  const a = adapter();
+  const ch = a.getChapter('Gen', 1);
+  assert.equal(ch.length, 31);
+  assert.equal(ch[0].nodeKey, 'verse:Gen/1/1');
+  assert.match(String(ch[30].latin), /Viditque Deus cuncta quae fecerat/);
+});
+
+test('getVerseRange: Ps/22/1-3 returns three verses', { skip: !present }, () => {
+  const a = adapter();
+  const vs = a.getVerseRange('Ps/22/1-3');
+  assert.equal(vs.length, 3);
+  assert.match(String(vs[0].latin), /Dominus regit me/);
+});
+
+test('citationsOf + liturgyCitingChapter: liturgy↔scripture is bidirectional', { skip: !present }, () => {
+  const a = adapter();
+  const citing = a.liturgyCitingChapter('Ps', 22);
+  assert.ok(citing.length > 0, 'Ps 22 is cited by the liturgy');
+  const back = a.citationsOf(citing[0].sectionKey);
+  assert.ok(back.some((c) => c.toKey.startsWith('verse:Ps/22/')));
+});
