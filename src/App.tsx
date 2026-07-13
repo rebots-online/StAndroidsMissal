@@ -1,22 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CorpusDb } from './core/data/corpusDb.ts';
 import { loadCorpusBytes } from './core/data/loadCorpus.ts';
 import { resolveDay } from './core/data/liturgicalDay.ts';
+import { dateForWeekKey } from './core/calendar/computus.ts';
+import versionInfo from '../version.json';
 import type { DayInfo } from './core/data/types.ts';
-import type { Station } from './core/model/massOrdo.ts';
+import { stationForAnchor, type Station } from './core/model/massOrdo.ts';
 import SubwayMap from './ui/SubwayMap.tsx';
+import MapStrip from './ui/MapStrip.tsx';
 import ReaderView, { type SelectionAction } from './ui/ReaderView.tsx';
 import MeaningPanel from './ui/MeaningPanel.tsx';
 import CalendarView from './ui/CalendarView.tsx';
 import OfficeView from './ui/OfficeView.tsx';
+import BibleView from './ui/BibleView.tsx';
+import { parseHashRoute } from './core/share/shareLink.ts';
 
-type View = 'map' | 'reader' | 'calendar' | 'office';
+type View = 'map' | 'reader' | 'calendar' | 'office' | 'bible';
 
 const NAV: { id: View; ico: string; label: string }[] = [
   { id: 'map', ico: '🚇', label: 'Subway Map' },
   { id: 'reader', ico: '📖', label: 'Missal Reader' },
   { id: 'calendar', ico: '📅', label: 'Perpetual Calendar' },
   { id: 'office', ico: '🕰', label: 'Divine Office' },
+  { id: 'bible', ico: '📜', label: 'Sacred Scripture' },
 ];
 
 export default function App() {
@@ -34,12 +40,35 @@ export default function App() {
   });
   const [focus, setFocus] = useState<{ section: string | null; nonce: number }>({ section: null, nonce: 0 });
   const [action, setAction] = useState<SelectionAction | null>(null);
+  // The map strip's you-are-here (station id) and the office strip's hour.
+  const [activeStation, setActiveStation] = useState<string | null>(null);
+  const [officeHour, setOfficeHour] = useState('laudes');
+  const [aboutOpen, setAboutOpen] = useState(false);
+  // Bible deep-link focus ("Gen/1/5"); nonce bumps so re-navigating re-scrolls.
+  const [bibleFocus, setBibleFocus] = useState<{ ref: string | null; nonce: number }>({ ref: null, nonce: 0 });
 
   useEffect(() => {
     loadCorpusBytes()
       .then((bytes) => CorpusDb.open(bytes))
       .then(setDb)
       .catch((e) => setError(String(e)));
+  }, []);
+
+  // Hash-route deep links (#/verse/…, #/day/…, #/section/… — §7.6 BB.3):
+  // resolved once on load; shares/widgets/companion all target this layer.
+  useEffect(() => {
+    const link = parseHashRoute(location.hash);
+    if (!link) return;
+    if (link.view === 'bible' && link.verseRef) {
+      setBibleFocus({ ref: link.verseRef, nonce: Date.now() });
+      setView('bible');
+    } else if (link.date) {
+      setDate(link.date);
+      setView('reader');
+    } else if (link.sectionKey) {
+      // Route through the same source-day navigation search hits use.
+      onOpenKey(link.sectionKey);
+    }
   }, []);
 
   // ── Layered back navigation ─────────────────────────────────────────
@@ -79,18 +108,65 @@ export default function App() {
   }, [day?.color]);
 
   function onStation(s: Station) {
+    setActiveStation(s.id);
     setFocus({ section: s.sectionKey ?? s.id, nonce: Date.now() });
     setView('reader');
   }
 
+  // Reader scroll-spy → strip marker. Stable identity so the reader's
+  // IntersectionObserver isn't torn down every render.
+  const onVisibleSection = useCallback((anchor: string) => {
+    const id = stationForAnchor(anchor);
+    if (id) setActiveStation(id);
+  }, []);
+
   function onOpenKey(nodeKey: string) {
-    // "section:Sancti/02-25#Introitus" — jump the reader to that source day/section.
+    // Bible verse hit (concordance/vector results now span scripture):
+    // open Sacred Scripture at that verse.
+    const verse = nodeKey.match(/^verse:([A-Za-z0-9]+\/\d+\/\d+)$/);
+    if (verse) {
+      setBibleFocus({ ref: verse[1], nonce: Date.now() });
+      setView('bible');
+      return;
+    }
+    // "section:Sancti/02-25#Introitus" — open the reader ON THAT SOURCE DAY,
+    // not merely at the same-named section of the day already displayed.
     const m = nodeKey.match(/^section:(.+)#(.+)$/);
     if (!m) return;
-    setFocus({ section: m[2], nonce: Date.now() });
+    const [, path, section] = m;
+    const office = path.startsWith('Horas/');
+    const p = office ? path.slice(6) : path;
+    const sancti = p.match(/^Sancti\/(\d\d)-(\d\d)/);
+    const tempora = p.match(/^Tempora\/(.+)$/);
+    if (sancti) {
+      setDate(`${date.slice(0, 4)}-${sancti[1]}-${sancti[2]}`);
+    } else if (tempora) {
+      const iso = dateForWeekKey(tempora[1], date);
+      if (iso) setDate(iso);
+    }
+    if (office) {
+      // Office reference: open the office view at the hour the section names.
+      const hourOf: [RegExp, string][] = [
+        [/matutinum|nocturn|invit|lectio\d/i, 'matutinum'],
+        [/laudes/i, 'laudes'],
+        [/prima/i, 'prima'],
+        [/tertia/i, 'tertia'],
+        [/sexta/i, 'sexta'],
+        [/nona/i, 'nona'],
+        [/vesper/i, 'vesperae'],
+        [/completorium/i, 'completorium'],
+      ];
+      setOfficeHour(hourOf.find(([re]) => re.test(section))?.[1] ?? 'laudes');
+      setView('office');
+      return;
+    }
+    // Commune/Ordo/psalm references stay on the current day (full corpus
+    // browser is the Phase-2 surface). If a feast outranks the referenced
+    // tempora on that date, the reader shows the winner — rubrical reality.
+    setFocus({ section, nonce: Date.now() });
+    const sid = stationForAnchor(section);
+    if (sid) setActiveStation(sid);
     setView('reader');
-    // Note: cross-corpus navigation opens the section within the current day's
-    // reader when the path matches; a full corpus browser lands in Phase 2.
   }
 
   if (error) {
@@ -104,11 +180,16 @@ export default function App() {
     );
   }
   if (!db) {
+    // Loading doubles as the splash screen (mandatory app chrome SOP).
     return (
       <div className="loading">
         <div style={{ textAlign: 'center' }}>
           <span className="rose">✠</span>
+          <h1 className="splash-title">St. Android&apos;s Missal</h1>
           <p>Opening the liturgical corpus…</p>
+          <p className="splash-meta">
+            v{versionInfo.version} · © Robin L. M. Cheung, MBA
+          </p>
         </div>
       </div>
     );
@@ -129,6 +210,10 @@ export default function App() {
           </button>
         ))}
         <div className="spacer" />
+        <button className="nav" onClick={() => setAboutOpen(true)}>
+          <span className="ico">ℹ</span>
+          <span className="label">Help · About</span>
+        </button>
         <div className="day-chip">
           <div className="date-row">
             <span className="swatch" title={`Liturgical color: ${day?.color}`} />
@@ -154,25 +239,75 @@ export default function App() {
           </span>
         </header>
 
+        {view !== 'map' && (
+          <MapStrip
+            db={db}
+            day={day}
+            view={view}
+            activeStation={activeStation}
+            officeHour={officeHour}
+            onStation={onStation}
+            onHour={setOfficeHour}
+          />
+        )}
+
         <div className={action ? 'split' : 'single'}>
           {view === 'map' && (
             <div className="content map-wrap">
-              <SubwayMap day={day} onStation={onStation} />
+              <SubwayMap db={db} day={day} onStation={onStation} />
             </div>
           )}
           {view === 'reader' && day && (
-            <ReaderView db={db} day={day} focusSection={focus.section} focusNonce={focus.nonce} onAction={setAction} />
+            <ReaderView
+              db={db}
+              day={day}
+              focusSection={focus.section}
+              focusNonce={focus.nonce}
+              onAction={setAction}
+              onVisibleSection={onVisibleSection}
+            />
           )}
           {view === 'calendar' && (
             <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); setView('reader'); setFocus({ section: null, nonce: 0 }); }} />
           )}
-          {view === 'office' && <OfficeView db={db} day={day} />}
+          {view === 'office' && <OfficeView db={db} day={day} hour={officeHour} onHour={setOfficeHour} />}
+          {view === 'bible' && (
+            <BibleView
+              db={db}
+              focusRef={bibleFocus.ref}
+              focusNonce={bibleFocus.nonce}
+              onAction={setAction}
+              onOpenKey={onOpenKey}
+            />
+          )}
 
           {action && (
             <MeaningPanel db={db} action={action} onClose={() => history.back()} onOpenKey={onOpenKey} />
           )}
         </div>
       </div>
+
+      {/* Mandatory app chrome: version bottom-right on every surface. */}
+      <div className="version-tag" title={`Build ${versionInfo.buildNumber} · ${versionInfo.buildDate}`}>
+        v{versionInfo.version}
+      </div>
+
+      {aboutOpen && (
+        <div className="about-overlay" onClick={() => setAboutOpen(false)}>
+          <div className="about-card" role="dialog" aria-label="About" onClick={(e) => e.stopPropagation()}>
+            <button className="close" onClick={() => setAboutOpen(false)}>✕</button>
+            <h2>✠ St. Android&apos;s Missal</h2>
+            <p className="tagline">The Traditional Latin Mass and Divine Office as a navigable subway map.</p>
+            <dl>
+              <dt>Version</dt><dd>{versionInfo.version} (code {versionInfo.versionCode})</dd>
+              <dt>Built</dt><dd>{new Date(versionInfo.buildDate).toLocaleString()}</dd>
+              <dt>Corpus</dt><dd>Divinum Officium (László Kiss, MIT) — vendored, re-realized as graph + vector SQLite</dd>
+              <dt>Identifier</dt><dd>{versionInfo.packageName}</dd>
+            </dl>
+            <p className="copyright">© 2026 Robin L. M. Cheung, MBA. All rights reserved.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -91,7 +91,9 @@ body {
 .day-chip .season { color: #bdb09a; margin-top: 3px; }
 
 /* ── Main column ───────────────────────────────────────────── */
-.main { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+/* min-width: 0 — without it the strip's intrinsic width would force the 1fr
+   column past the viewport instead of scrolling inside its own container */
+.main { display: grid; grid-template-rows: auto auto 1fr; overflow: hidden; min-width: 0; }
 .masthead {
   display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
   padding: 16px 26px 12px;
@@ -105,6 +107,108 @@ body {
   background: var(--accent); color: #fff; border-radius: 999px; padding: 3px 10px;
 }
 .content { overflow: auto; padding: 20px 26px 60px; }
+
+/* ── Ever-present map strip (HelloWord parity, our theming) ── */
+.mapstrip {
+  display: flex; align-items: flex-start;
+  padding: 7px 14px 5px;
+  background: linear-gradient(var(--vellum), var(--parchment));
+  border-bottom: 1px solid var(--parchment-deep);
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
+  font-family: var(--sans);
+  user-select: none;
+}
+.mapstrip::-webkit-scrollbar { display: none; }
+.mstation {
+  --seg: var(--line-catechumens);
+  position: relative; flex: 1 0 58px; min-width: 58px; max-width: 110px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font-family: inherit;
+}
+.mstation.seg-faithful { --seg: var(--line-faithful); }
+.mstation.seg-office { --seg: var(--line-office); }
+/* each cell paints its own stretch of the line — segment color changes at the trunk boundary */
+.mstation::before {
+  content: ''; position: absolute; top: 9px; left: 0; right: 0; height: 4px;
+  background: var(--seg);
+}
+.mstation:first-child::before { left: 50%; border-radius: 2px 0 0 2px; }
+.mstation:last-child::before { right: 50%; border-radius: 0 2px 2px 0; }
+.mstation .mdot {
+  position: relative; z-index: 1; box-sizing: border-box;
+  width: 12px; height: 12px; margin-top: 5px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--ink-soft);
+  transition: transform 0.15s;
+}
+.mstation:hover .mdot { transform: scale(1.2); }
+/* propers: interchange rings in the day's liturgical color, with a color core */
+.mstation.proper .mdot { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 2.5px, #fff 2.5px); }
+.mstation.conditional .mdot { border-style: dashed; border-width: 2px; }
+/* index-based journey state — the HelloWord mechanism */
+.mstation.active .mdot { width: 16px; height: 16px; margin-top: 3px; border-width: 4px; }
+.mstation.active .mdot::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: strip-ping 1.8s ease-out infinite;
+}
+.mstation.future { opacity: 0.5; }
+.mstation.future:hover { opacity: 1; }
+@keyframes strip-ping {
+  0% { transform: scale(0.55); opacity: 0.8; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+.mstation .mlabel {
+  font-size: 8.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-faint);
+  max-width: 100%; padding: 0 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mstation.proper .mlabel { color: var(--gold); }
+.mstation.active .mlabel { color: var(--ink); font-weight: 700; }
+/* office variant: eight hours, serif italic labels on the blue office line.
+   Suppressed while the office view's own side loop is visible (wide layouts);
+   below the office-full breakpoint the loop scrolls away and the strip takes over. */
+@media (min-width: 981px) { .mapstrip.office { display: none; } }
+.mapstrip.office .mstation { max-width: none; }
+.mapstrip.office .mlabel {
+  font: italic 10.5px var(--serif); color: var(--ink-soft);
+  text-transform: none; letter-spacing: 0.02em;
+}
+.mapstrip.office .mstation.active .mlabel { color: var(--ink); font-weight: 700; }
+@media (max-width: 640px) {
+  .mstation { flex-basis: 46px; min-width: 46px; }
+  .mstation .mlabel { font-size: 7.5px; }
+}
+
+/* ── Map flyout (strip + full map hover) ───────────────────── */
+.map-flyout {
+  position: fixed; z-index: 60;
+  background: var(--vellum); border: 1px solid var(--parchment-deep);
+  border-top: 3px solid var(--accent);
+  border-radius: 10px; box-shadow: 0 12px 32px #0003;
+  padding: 12px 14px; font-family: var(--sans); font-size: 12.5px;
+  pointer-events: none;
+}
+.map-flyout .fly-title { font: italic 700 15px var(--serif); color: var(--ink); }
+.map-flyout .fly-sub { color: var(--ink-faint); font-size: 11px; margin-top: 1px; }
+.map-flyout .fly-incipit { margin: 8px 0 0; padding: 7px 9px; border-radius: 6px; background: var(--pane-latin-bg); }
+.map-flyout .fly-incipit .la { font: italic 13px var(--serif); color: var(--ink); }
+.map-flyout .fly-incipit .en { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+.map-flyout .fly-incipit .en.missing { font-style: italic; color: var(--ink-faint); }
+.map-flyout .fly-about { margin-top: 8px; color: var(--ink-soft); line-height: 1.45; }
+.map-flyout .fly-media {
+  margin-top: 9px; padding: 8px 9px; border: 1px dashed var(--ink-faint);
+  border-radius: 6px; color: var(--ink-faint); font-size: 11px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.map-flyout .fly-media .badge { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 9.5px; color: var(--gold); }
+
+/* ── Accordion reader sections ─────────────────────────────── */
+.reader-section .head { cursor: pointer; user-select: none; }
+.reader-section .head .chev { color: var(--accent); font-size: 12px; width: 14px; flex: none; }
+.reader-section.collapsed .head { margin-bottom: 0; opacity: 0.75; }
 
 .split { display: grid; grid-template-columns: 1fr 340px; gap: 0; height: 100%; min-height: 0; overflow: hidden; }
 .single { display: grid; grid-template-columns: 1fr; height: 100%; min-height: 0; overflow: hidden; }
@@ -219,7 +323,11 @@ mark.ann { background: #f2d67a88; border-radius: 2px; padding: 0 1px; }
 .exegesis h2 { font-family: var(--serif); font-size: 16px; margin: 0 0 4px; }
 .exegesis .term { color: var(--accent); font-style: italic; font-family: var(--serif); font-size: 18px; }
 .exegesis .hit { background: #fff; border: 1px solid var(--parchment-deep); border-radius: 8px; padding: 9px 11px; margin: 8px 0; }
-.exegesis .hit .where { font: 600 11px var(--sans); color: var(--ink-faint); display: flex; justify-content: space-between; margin-bottom: 4px; }
+.exegesis .hit .where { font: 600 11px var(--sans); color: var(--ink-faint); display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.exegesis .hit.clickable { cursor: pointer; }
+.exegesis .hit.clickable:hover { outline: 2px solid var(--accent); }
+.exegesis .hit .ref-headline { color: var(--accent); }
+.exegesis .hit .open-hint { color: var(--ink-faint); font-weight: 400; white-space: nowrap; }
 .exegesis .hit .score { color: var(--gold); }
 .exegesis .hit .text { font-family: var(--serif); font-size: 13.5px; }
 .exegesis .llm-slot { margin-top: 14px; border: 1px dashed var(--ink-faint); border-radius: 8px; padding: 10px; color: var(--ink-faint); font-size: 12px; }
@@ -284,3 +392,84 @@ mark.ann { background: #f2d67a88; border-radius: 2px; padding: 0 1px; }
 .loading { display: grid; place-items: center; height: 100%; color: var(--ink-faint); font-family: var(--sans); }
 .loading .rose { font-size: 42px; animation: spin 3.2s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.loading .splash-title { font: 700 26px var(--serif); color: var(--ink); margin: 10px 0 2px; }
+.loading .splash-meta { font-size: 11.5px; color: var(--ink-faint); margin-top: 18px; }
+
+/* ── Mandatory app chrome: version tag + About ─────────────── */
+.version-tag {
+  position: fixed; right: 10px; bottom: 6px; z-index: 40;
+  font: 10.5px var(--sans); color: var(--ink-faint); opacity: 0.75;
+  pointer-events: auto; user-select: text;
+}
+.about-overlay {
+  position: fixed; inset: 0; z-index: 70; background: #00000059;
+  display: grid; place-items: center;
+}
+.about-card {
+  position: relative; width: min(440px, 92vw);
+  background: var(--vellum); border: 1px solid var(--parchment-deep);
+  border-top: 4px solid var(--accent); border-radius: 12px;
+  padding: 22px 26px; font-family: var(--sans); font-size: 13.5px;
+  box-shadow: 0 18px 48px #0005;
+}
+.about-card h2 { font-family: var(--serif); margin: 0 0 4px; font-size: 21px; }
+.about-card .tagline { color: var(--ink-soft); font-style: italic; margin: 0 0 14px; }
+.about-card dl { display: grid; grid-template-columns: 88px 1fr; gap: 5px 12px; margin: 0 0 14px; }
+.about-card dt { font-weight: 700; color: var(--ink-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; align-self: baseline; }
+.about-card dd { margin: 0; }
+.about-card .copyright { color: var(--ink-faint); font-size: 11.5px; margin: 0; border-top: 1px dashed var(--parchment-deep); padding-top: 10px; }
+.about-card .close { position: absolute; top: 10px; right: 12px; border: 0; background: none; cursor: pointer; color: var(--ink-faint); font-size: 15px; }
+
+/* ── Concept tags: accordion with linked evidence ──────────── */
+.concept-tag-head {
+  display: flex; align-items: baseline; gap: 6px; width: 100%;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; text-align: left; color: inherit;
+}
+.concept-tag-head .chev { color: var(--accent); font-size: 11px; }
+.auto-badge {
+  font: 600 9px var(--sans); letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--parchment-deep); color: var(--ink-soft);
+  border-radius: 999px; padding: 1px 7px;
+}
+.concept-tag-instances { margin-top: 6px; }
+.concept-tag-more { font: italic 11.5px var(--sans); color: var(--ink-faint); padding: 4px 0; }
+
+/* ── Sacred Scripture (BibleView, §7.6 BB.2) ─────────────────────── */
+.bible-book-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+.bible-book {
+  background: var(--surface-2); color: var(--ink); border: 1px solid var(--card-border);
+  border-radius: 8px; padding: 8px 12px; cursor: pointer; font: inherit;
+}
+.bible-book:hover { border-color: var(--accent); }
+.bible-en-only { font-size: 0.7em; opacity: 0.6; vertical-align: super; }
+.bible-back {
+  background: none; border: none; color: var(--accent); cursor: pointer;
+  font: inherit; padding: 0 8px 0 0;
+}
+.bible-chapter-grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; }
+.bible-chapter {
+  min-width: 42px; padding: 8px 0; text-align: center; cursor: pointer; font: inherit;
+  background: var(--surface-2); color: var(--ink); border: 1px solid var(--card-border); border-radius: 6px;
+}
+.bible-chapter:hover { border-color: var(--accent); }
+.bible-chapter-nav { display: inline-flex; gap: 4px; margin-left: 10px; }
+.bible-chapter-nav button {
+  background: var(--surface-2); color: var(--ink); border: 1px solid var(--card-border);
+  border-radius: 6px; cursor: pointer; padding: 2px 10px; font: inherit;
+}
+.bible-chapter-nav button:disabled { opacity: 0.35; cursor: default; }
+.bible-liturgy { padding: 4px 14px 8px; font-size: 0.9em; }
+.bible-liturgy-toggle {
+  background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; padding: 2px 0;
+}
+.bible-liturgy ul { list-style: none; margin: 4px 0 0; padding: 0 0 0 14px; }
+.bible-liturgy li { margin: 2px 0; }
+.bible-liturgy li > button {
+  background: none; border: none; color: var(--ink); cursor: pointer; font: inherit;
+  text-decoration: underline dotted; padding: 0;
+}
+.bible-liturgy li > button:hover { color: var(--accent); }
+.bible-cite-meta { color: var(--ink-soft); margin-left: 8px; font-size: 0.85em; }
+.bible-verse sup { color: var(--ink-soft); margin-right: 4px; font-size: 0.72em; }
+.bible-verse.focus { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 4px; }

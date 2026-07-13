@@ -470,8 +470,8 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 
 ## Stanza B-B — BibleView + deep links
 - ✅ **BB.1** `CorpusDb.getBooks/getChapter/getVerseRange/citationsOf` (signatures per entity row). _2026-07-12: + `liturgyCitingChapter` (BibleView panel query); mirrored in scripts/db-adapter.mjs; 4 tests, suite 55/55, tsc clean._
-- [ ] **BB.2** `src/ui/BibleView.tsx` — rail "Sacred Scripture"; book/chapter nav; bilingual verse reader (SectionReader patterns); selection → MeaningPanel; CITES "appears in the liturgy" panel.
-- [ ] **BB.3** Deep-link routes on `shareLink.ts` (P-F extension): `#/verse/…`, `#/acc/…`, `#/day/…`, `#/section/…` wired into App's layered back-nav.
+- ✅ **BB.2** `src/ui/BibleView.tsx` — rail "Sacred Scripture"; book/chapter nav; bilingual verse reader (SectionReader patterns); selection → MeaningPanel; CITES "appears in the liturgy" panel. _2026-07-12: browser-verified — Ps 22 renders bilingual w/ verse focus; "In liturgia" lists 10 citing sections w/ verbatim flags; click-through navigated to Quad4-6 (2026-03-21) source day. Annotations + copy-verse-link in ctx menu._
+- [/] **BB.3** Deep-link routes on `shareLink.ts` (P-F extension): `#/verse/…`, `#/acc/…`, `#/day/…`, `#/section/…` wired into App's layered back-nav. _2026-07-12: verse/day/section live (#/verse/Ps/22/2 browser-verified incl. verse highlight+scroll); #/acc/ lands with the B-C store._
 
 ## Stanza B-C — Accompaniment model + sidecar v2 + editor
 - [ ] **BC.1** `src/core/accompaniment/types.ts` (`Accompaniment`, `OccurrenceSelector`, `Exposure`) + `store.ts` (`SIDECAR_SCHEMA_SQL_V2`, `SidecarDb` v2, platform byte-persistence web OPFS/IndexedDB + Tauri `load_sidecar`/`save_sidecar`); annotations-localStorage migration (old key read-only).
