@@ -79,6 +79,12 @@ export function openAdapter(dbPath = 'assets/missal.db') {
     getPsalm(num) {
       return this.getSection(`Psalterium/Psalmorum/Psalm${num}`, 'Psalmus');
     },
+    textOf(nodeKey) {
+      const r = raw.prepare(
+        `SELECT tb.latin, tb.english FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id WHERE n.key = ?`,
+      ).get(nodeKey);
+      return r ? { latin: r.latin ?? null, english: r.english ?? null } : null;
+    },
     // ── Bible plane (§7.6) — mirrors CorpusDb ─────────────────────
     getBooks() {
       return raw.prepare(`SELECT key, title, meta FROM nodes WHERE kind = 'book'`).all()

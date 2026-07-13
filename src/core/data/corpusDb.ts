@@ -225,6 +225,16 @@ export class CorpusDb {
     return this.getSection(`Psalterium/Psalmorum/Psalm${num}`, 'Psalmus');
   }
 
+  /** Bilingual text of ANY node key (section: or verse:) — the aligned pair. */
+  textOf(nodeKey: string): { latin: string | null; english: string | null } | null {
+    const rows = this.all(
+      `SELECT tb.latin, tb.english FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id WHERE n.key = ?`,
+      [nodeKey],
+    );
+    if (!rows.length) return null;
+    return { latin: (rows[0].latin as string) ?? null, english: (rows[0].english as string) ?? null };
+  }
+
   // ── Bible plane (§7.6) ──────────────────────────────────────────────
 
   /** All 73 Bible books in canon order (meta.ord from ingest Pass 4). */

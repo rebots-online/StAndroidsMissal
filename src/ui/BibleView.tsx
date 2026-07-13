@@ -13,6 +13,7 @@ import type { SectionText } from '../core/data/types.ts';
 import type { SelectionAction } from './ReaderView.tsx';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 import { verseHash } from '../core/share/shareLink.ts';
+import { alignSelection, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
 
 interface Props {
   db: CorpusDb;
@@ -52,6 +53,11 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
   const [noteText, setNoteText] = useState('');
   const [annVersion, setAnnVersion] = useState(0);
   const [liturgyOpen, setLiturgyOpen] = useState(false);
+  /** Verse echo: hover/tap/selection lights the aligned verse in BOTH panes. */
+  const [echoVerse, setEchoVerse] = useState<number | null>(null);
+  const [callout, setCallout] = useState<{ x: number; y: number; echo: WordEchoResult } | null>(null);
+  const echoCache = useRef(new Map<string, WordEchoResult | null>());
+  const lastWord = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Deep-link navigation ("Gen/1" or "Gen/1/5").
@@ -116,6 +122,51 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
     });
   }
 
+  const verseFromEvent = (e: React.SyntheticEvent) => {
+    const el = (e.target as HTMLElement).closest?.('[data-verse]') as HTMLElement | null;
+    if (el) setEchoVerse(Number(el.dataset.verse));
+  };
+  const showCallout = (e: React.PointerEvent) => {
+    const word = wordAtPoint(e.clientX, e.clientY);
+    const el = (e.target as HTMLElement).closest?.('[data-nodekey]') as HTMLElement | null;
+    const nodeKey = el?.dataset.nodekey ?? null;
+    if (!word || !nodeKey) {
+      lastWord.current = null;
+      setCallout(null);
+      return;
+    }
+    const cacheKey = `${nodeKey}|${word.toLowerCase()}`;
+    if (lastWord.current === cacheKey) return;
+    lastWord.current = cacheKey;
+    const v = verses.find((x) => x.nodeKey === nodeKey);
+    if (!v) return setCallout(null);
+    let result = echoCache.current.get(cacheKey);
+    if (result === undefined) {
+      result = wordEcho(db, { latin: v.latin, english: v.english }, word);
+      echoCache.current.set(cacheKey, result);
+    }
+    if (result?.word) setCallout({ x: e.clientX, y: e.clientY, echo: result });
+    else setCallout(null);
+  };
+
+  // Drag-selection lights the aligned verse in both panes.
+  useEffect(() => {
+    const onSel = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !rootRef.current) return;
+      let el: Node | null = sel.anchorNode;
+      while (el && el !== rootRef.current) {
+        if (el instanceof HTMLElement && el.dataset.verse !== undefined) {
+          setEchoVerse(Number(el.dataset.verse));
+          return;
+        }
+        el = el.parentNode;
+      }
+    };
+    document.addEventListener('selectionchange', onSel);
+    return () => document.removeEventListener('selectionchange', onSel);
+  }, []);
+
   // ── Book grid ────────────────────────────────────────────────────
   if (!book) {
     return (
@@ -176,6 +227,29 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
       onMouseUp={(e) => {
         if (e.button === 0) openMenu(e);
       }}
+      onPointerOver={(e) => {
+        if (window.matchMedia('(hover: hover)').matches) verseFromEvent(e);
+      }}
+      onPointerMove={(e) => {
+        if (e.pointerType === 'mouse' && window.matchMedia('(hover: hover)').matches) showCallout(e);
+      }}
+      onPointerDown={(e) => {
+        if (e.pointerType !== 'mouse') {
+          verseFromEvent(e);
+          showCallout(e);
+        }
+      }}
+      onPointerUp={(e) => {
+        if (e.pointerType !== 'mouse') {
+          lastWord.current = null;
+          setCallout(null);
+        }
+      }}
+      onPointerLeave={() => {
+        lastWord.current = null;
+        setCallout(null);
+      }}
+      onClick={verseFromEvent}
     >
       <section className="reader-section" data-section={`bible:${book}/${chapter}`}>
         <div className="head">
@@ -221,7 +295,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
             {verses.map((v) => {
               const n = Number(v.nodeKey.split('/').pop());
               return (
-                <p key={v.nodeKey} data-nodekey={v.nodeKey} data-verse={n} className={focusVerse === n ? 'bible-verse focus' : 'bible-verse'}>
+                <p key={v.nodeKey} data-nodekey={v.nodeKey} data-verse={n} className={`bible-verse${focusVerse === n ? ' focus' : ''}${echoVerse === n ? ' xlate-echo' : ''}`}>
                   <sup>{n}</sup> {v.latin ?? <span style={{ opacity: 0.5 }}>—</span>}
                 </p>
               );
@@ -232,7 +306,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
             {verses.map((v) => {
               const n = Number(v.nodeKey.split('/').pop());
               return (
-                <p key={v.nodeKey} data-nodekey={v.nodeKey} data-verse={n} className={focusVerse === n ? 'bible-verse focus' : 'bible-verse'}>
+                <p key={v.nodeKey} data-nodekey={v.nodeKey} data-verse={n} className={`bible-verse${focusVerse === n ? ' focus' : ''}${echoVerse === n ? ' xlate-echo' : ''}`}>
                   <sup>{n}</sup> {v.english ?? <span style={{ opacity: 0.5 }}>—</span>}
                 </p>
               );
@@ -252,6 +326,13 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
           </div>
         )}
       </section>
+
+      {callout && (
+        <div className="xlate-callout" style={{ left: Math.min(callout.x + 12, window.innerWidth - 260), top: callout.y - 44 }}>
+          <b>{callout.echo.word}</b>
+          <span className="xlate-callout-line">{(callout.echo.line ?? '').slice(0, 90)}</span>
+        </div>
+      )}
 
       {menu && (
         <div className="ctx-menu" style={{ left: menu.x, top: menu.y }} onMouseUp={(e) => e.stopPropagation()}>
@@ -295,8 +376,14 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
             <button
               onClick={() => {
                 if (noteFor.nodeKey) {
-                  addAnnotation({ nodeKey: noteFor.nodeKey, quote: noteFor.term, note: noteText, color: 'gold' });
-                  setAnnVersion((v) => v + 1);
+                  const v = verses.find((x) => x.nodeKey === noteFor.nodeKey);
+                  const aligned = v ? alignSelection({ latin: v.latin, english: v.english }, noteFor.term) : null;
+                  addAnnotation({
+                    nodeKey: noteFor.nodeKey, quote: noteFor.term,
+                    quoteAlt: aligned?.dstLine ?? undefined,
+                    note: noteText, color: 'gold',
+                  });
+                  setAnnVersion((v2) => v2 + 1);
                 }
                 setNoteFor(null);
               }}

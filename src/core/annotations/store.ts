@@ -10,6 +10,8 @@ export interface Annotation {
   nodeKey: string;
   /** Exact quoted text the user selected (anchor by content, not offsets). */
   quote: string;
+  /** Aligned counterpart line in the other language (line-level, from align.ts) — highlights both panes. */
+  quoteAlt?: string;
   note: string;
   color: 'gold' | 'rose' | 'sky' | 'moss';
   createdAt: string;
