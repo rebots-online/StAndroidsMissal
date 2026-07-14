@@ -515,8 +515,8 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 - [X] **BJ.3** `src/core/text/dialogue.ts`: `dialogueClass(line)` per entity row; consumed by `BilingualText` to wrap prefix tokens in `.dialogue-p`/`.dialogue-s` spans (render-only; corpus text unmodified). _2026-07-14: module shipped; BilingualText consumption wires in with BK.1._
 
 ## Stanza B-K — Interleaved bilingual mode
-- [ ] **BK.1** Extract `src/ui/BilingualText.tsx` (`BilingualText` + `useNarrow`) from ReaderView's TextBlock; columns mode = behavior parity (echo, quotes `mark.ann`, `data-line`); ReaderView adopts it (ReaderView owner task this wave).
-- [ ] **BK.2** Interleaved mode: `layout='interleaved'` renders Latin/English line pairs per §7.7; `useNarrow(1100)` drives the switch in ReaderView + BibleView (verse-pair granularity); `selectionchange` echo extended to the selection's full line-range in both directions.
+- [X] **BK.1** Extract `src/ui/BilingualText.tsx` (`BilingualText` + `useNarrow`) from ReaderView's TextBlock; columns mode = behavior parity (echo, quotes `mark.ann`, `data-line`); ReaderView adopts it (ReaderView owner task this wave). _2026-07-14: TextLines = old TextBlock verbatim; dialogueClass wired in both layouts (BJ.3 consumption)._
+- [X] **BK.2** Interleaved mode: `layout='interleaved'` renders Latin/English line pairs per §7.7; `useNarrow(1100)` drives the switch in ReaderView + BibleView (verse-pair granularity); `selectionchange` echo extended to the selection's full line-range in both directions. _2026-07-14: echo state → {nodeKey, from, to}; anchor+focus both resolved; BibleView pairs carry bible-verse+il-pair so focus/deep-link/annotate flows unchanged; suite fail 0, tsc clean._
 
 ## Stanza B-L — Similarity UX
 - [X] **BL.1** `src/core/vector/clause.ts`: `Clause`, `splitClauses`, `bestClause` per entity row + `tests/clause.test.ts` (determinism, min-length, argmax). _2026-07-14: linear-scan splitter, exact offsets, 7 tests; suite 62/62._

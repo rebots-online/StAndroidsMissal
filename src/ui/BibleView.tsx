@@ -14,6 +14,7 @@ import type { SelectionAction } from './ReaderView.tsx';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 import { verseHash } from '../core/share/shareLink.ts';
 import { alignSelection, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
+import { useNarrow } from './BilingualText.tsx';
 
 interface Props {
   db: CorpusDb;
@@ -59,6 +60,8 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
   const echoCache = useRef(new Map<string, WordEchoResult | null>());
   const lastWord = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  /** Below 1100px the two verse panes interleave into one column (§7.7). */
+  const narrow = useNarrow(1100);
 
   // Deep-link navigation ("Gen/1" or "Gen/1/5").
   useEffect(() => {
@@ -289,6 +292,35 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
           </div>
         )}
 
+        {narrow ? (
+          // Interleaved verse pairs (§7.7 mobile): Latin verse first, its
+          // English beneath, one .il-pair per verse. The pair carries the
+          // verse's data-nodekey/data-verse so the existing echo, selection,
+          // deep-link scroll and focus mechanics keep working unchanged.
+          <div className="bilingual interleaved">
+            {verses.map((v) => {
+              const n = Number(v.nodeKey.split('/').pop());
+              const echoed = echoVerse === n;
+              return (
+                <p
+                  key={v.nodeKey}
+                  data-nodekey={v.nodeKey}
+                  data-verse={n}
+                  className={`bible-verse il-pair${focusVerse === n ? ' focus' : ''}${echoed ? ' xlate-echo' : ''}`}
+                >
+                  <span className={`il-la${echoed ? ' xlate-echo' : ''}`} data-lang="la" lang="la">
+                    <sup>{n}</sup> {v.latin ?? <span style={{ opacity: 0.5 }}>—</span>}
+                  </span>
+                  {v.english !== null && (
+                    <span className={`il-en${echoed ? ' xlate-echo' : ''}`} data-lang="en" lang="en">
+                      {v.english}
+                    </span>
+                  )}
+                </p>
+              );
+            })}
+          </div>
+        ) : (
         <div className="bilingual">
           <div className="latin" lang="la">
             <span className="lang-tag">Latine</span>
@@ -313,6 +345,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
             })}
           </div>
         </div>
+        )}
 
         {chapterAnns.length > 0 && (
           <div className="ann-list">

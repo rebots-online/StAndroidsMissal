@@ -13,6 +13,7 @@ import type { Season } from '../core/calendar/computus.ts';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 import { massTextsForDay } from '../core/data/liturgicalDay.ts';
 import { alignSelection, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
+import BilingualText, { TextLines, useNarrow } from './BilingualText.tsx';
 
 export interface SelectionAction {
   kind: 'meaning' | 'similar' | 'crossrefs';
@@ -38,43 +39,6 @@ interface Menu {
   nodeKey: string | null;
 }
 
-/** Render corpus text: "!Ps 24:6" verse refs become styled citations. */
-function TextBlock({ text, quotes, echoLine }: { text: string; quotes: string[]; echoLine?: number }) {
-  const lines = text.split('\n');
-  return (
-    <p>
-      {lines.map((line, i) => {
-        if (line.startsWith('!')) {
-          return (
-            <span className="verse-ref" key={i}>
-              {line.slice(1)}
-            </span>
-          );
-        }
-        let rendered: (string | React.ReactElement)[] = [line];
-        for (const q of quotes) {
-          rendered = rendered.flatMap((part) => {
-            if (typeof part !== 'string' || !q || !part.includes(q)) return [part];
-            const bits = part.split(q);
-            const out: (string | React.ReactElement)[] = [];
-            bits.forEach((b, j) => {
-              out.push(b);
-              if (j < bits.length - 1) out.push(<mark className="ann" key={`${i}-${j}-${q.slice(0, 8)}`}>{q}</mark>);
-            });
-            return out;
-          });
-        }
-        return (
-          <span key={i} data-line={i} className={i === echoLine ? 'xlate-echo' : undefined}>
-            {rendered}
-            {i < lines.length - 1 ? '\n' : ''}
-          </span>
-        );
-      })}
-    </p>
-  );
-}
-
 /** One renderable entry of the interleaved full-Mass reader. */
 interface ReaderEntry extends SectionText {
   ordinary: boolean;
@@ -93,16 +57,21 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
   const spyMuteUntil = useRef(0);
   /** Accordion: anchors whose body is folded away (all open by default). */
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  /** Interleave switch: below 1100px the two-pane grid becomes one column. */
+  const narrow = useNarrow(1100);
   /** Live translation echo: the aligned same-index line in the other pane
    *  highlights on hover (desktop), short-tap (touch), or during selection —
-   *  the corpus is line-parallel, so the line IS the in-context translation. */
-  const [echo, setEcho] = useState<{ nodeKey: string; idx: number } | null>(null);
+   *  the corpus is line-parallel, so the line IS the in-context translation.
+   *  The echo is a line RANGE `[from,to]` within one section: hover/tap set a
+   *  one-line range; a live selection sets its full line span (BK.2). */
+  const [echo, setEcho] = useState<{ nodeKey: string; from: number; to: number } | null>(null);
   const echoFromEvent = (e: React.SyntheticEvent) => {
     const t = e.target as HTMLElement;
     const line = t.closest?.('span[data-line]') as HTMLElement | null;
     const sec = t.closest?.('section[data-nodekey]') as HTMLElement | null;
     if (line && sec?.dataset.nodekey) {
-      setEcho({ nodeKey: sec.dataset.nodekey, idx: Number(line.dataset.line) });
+      const idx = Number(line.dataset.line);
+      setEcho({ nodeKey: sec.dataset.nodekey, from: idx, to: idx });
     }
   };
   /** Word callout: hover (desktop) / finger-hold (touch) shows the
@@ -219,20 +188,33 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
     return () => window.removeEventListener('scroll', close, true);
   }, []);
 
-  // Drag-selection echoes too: while selecting, the aligned line highlights
-  // in BOTH panes ("the cursor selects both languages simultaneously").
+  // Drag-selection echoes too: while selecting, every line the selection
+  // spans highlights its counterpart(s) ("the cursor selects both languages
+  // simultaneously"). Anchor AND focus resolve to data-line spans; within
+  // one section the echo covers the full [min,max] line range (BK.2).
   useEffect(() => {
-    const onSel = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !rootRef.current) return;
-      let el: Node | null = sel.anchorNode;
+    const lineAt = (start: Node | null): { nodeKey: string; idx: number } | null => {
+      let el: Node | null = start;
       while (el && el !== rootRef.current) {
         if (el instanceof HTMLElement && el.dataset.line !== undefined) {
           const sec = el.closest('section[data-nodekey]') as HTMLElement | null;
-          if (sec?.dataset.nodekey) setEcho({ nodeKey: sec.dataset.nodekey, idx: Number(el.dataset.line) });
-          return;
+          return sec?.dataset.nodekey ? { nodeKey: sec.dataset.nodekey, idx: Number(el.dataset.line) } : null;
         }
         el = el.parentNode;
+      }
+      return null;
+    };
+    const onSel = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !rootRef.current) return;
+      const a = lineAt(sel.anchorNode);
+      const f = lineAt(sel.focusNode);
+      if (a && f && a.nodeKey === f.nodeKey) {
+        setEcho({ nodeKey: a.nodeKey, from: Math.min(a.idx, f.idx), to: Math.max(a.idx, f.idx) });
+      } else if (a) {
+        setEcho({ nodeKey: a.nodeKey, from: a.idx, to: a.idx });
+      } else if (f) {
+        setEcho({ nodeKey: f.nodeKey, from: f.idx, to: f.idx });
       }
     };
     document.addEventListener('selectionchange', onSel);
@@ -301,7 +283,7 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
       {entries.map((s) => {
         const anns = annotationsFor(s.nodeKey);
         const quotes = anns.flatMap((a) => [a.quote, a.quoteAlt]).filter((q): q is string => Boolean(q));
-        const echoLine = echo?.nodeKey === s.nodeKey ? echo.idx : undefined;
+        const echoRange = echo?.nodeKey === s.nodeKey ? echo : null;
         void annVersion;
         const folded = collapsed.has(s.anchor);
         return (
@@ -325,16 +307,27 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
               </span>
             </div>
             {folded ? null : (<>
+            {narrow ? (
+              <BilingualText
+                layout="interleaved"
+                latin={s.latin}
+                english={s.english}
+                quotes={quotes}
+                echoLine={echoRange?.from}
+                echoTo={echoRange?.to}
+              />
+            ) : (
             <div className="bilingual">
               <div className="latin" lang="la">
                 <span className="lang-tag">Latine</span>
-                {s.latin ? <TextBlock text={s.latin} quotes={quotes} echoLine={echoLine} /> : <p style={{ opacity: 0.5 }}>—</p>}
+                {s.latin ? <TextLines text={s.latin} quotes={quotes} echoLine={echoRange?.from} echoTo={echoRange?.to} /> : <p style={{ opacity: 0.5 }}>—</p>}
               </div>
               <div className="english" lang="en">
                 <span className="lang-tag">English</span>
-                {s.english ? <TextBlock text={s.english} quotes={quotes} echoLine={echoLine} /> : <p style={{ opacity: 0.5 }}>—</p>}
+                {s.english ? <TextLines text={s.english} quotes={quotes} echoLine={echoRange?.from} echoTo={echoRange?.to} /> : <p style={{ opacity: 0.5 }}>—</p>}
               </div>
             </div>
+            )}
             {anns.length > 0 && (
               <div className="ann-list">
                 {anns.map((a: Annotation) => (
