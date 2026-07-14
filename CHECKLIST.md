@@ -474,10 +474,10 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 - [/] **BB.3** Deep-link routes on `shareLink.ts` (P-F extension): `#/verse/…`, `#/acc/…`, `#/day/…`, `#/section/…` wired into App's layered back-nav. _2026-07-12: verse/day/section live (#/verse/Ps/22/2 browser-verified incl. verse highlight+scroll); #/acc/ lands with the B-C store._
 
 ## Stanza B-C — Accompaniment model + sidecar v2 + editor
-- [ ] **BC.1** `src/core/accompaniment/types.ts` (`Accompaniment`, `OccurrenceSelector`, `Exposure`) + `store.ts` (`SIDECAR_SCHEMA_SQL_V2`, `SidecarDb` v2, platform byte-persistence web OPFS/IndexedDB + Tauri `load_sidecar`/`save_sidecar`); annotations-localStorage migration (old key read-only).
-- [ ] **BC.2** `resolve.ts`: `accompanimentsForDay`/`forAnchor`/`matchesSelector` over computus + recurrence rules.
+- [X] **BC.1** `src/core/accompaniment/types.ts` (`Accompaniment`, `OccurrenceSelector`, `Exposure`) + `store.ts` (`SIDECAR_SCHEMA_SQL_V2`, `SidecarDb` v2, platform byte-persistence web OPFS/IndexedDB + Tauri `load_sidecar`/`save_sidecar`); annotations-localStorage migration (old key read-only). _2026-07-14: +`quote_alt` col (§7.7 dual-pane highlight) w/ ensureColumn upgrade; migration reads both `sam.annotations.v1` and the store's real `standroidsmissal.annotations.v1`; Rust cmds cargo-check clean._
+- [X] **BC.2** `resolve.ts`: `accompanimentsForDay`/`forAnchor`/`matchesSelector` over computus + recurrence rules. _2026-07-14: recurrence grammar `weekly:<0-6>` / `nth-weekday:<n>:<0-6>`._
 - [ ] **BC.3** `AccompanimentEditor.tsx` (TipTap; body_pm + body_html snapshot).
-- [ ] **BC.4** `tests/accompaniment.test.ts`: selector resolution incl. moveable feasts across year boundaries; migration; free-form theme tags.
+- [X] **BC.4** `tests/accompaniment.test.ts`: selector resolution incl. moveable feasts across year boundaries; migration; free-form theme tags. _2026-07-14: 10 tests incl. Pasc0-2 2026↔2027 boundary + first-Friday recurrence; suite 73/73._
 
 ## Stanza B-D — Exposure surfaces
 - [ ] **BD.1** `JournalView` (date timeline; day-chip today's entries).
@@ -519,9 +519,9 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 - [ ] **BK.2** Interleaved mode: `layout='interleaved'` renders Latin/English line pairs per §7.7; `useNarrow(1100)` drives the switch in ReaderView + BibleView (verse-pair granularity); `selectionchange` echo extended to the selection's full line-range in both directions.
 
 ## Stanza B-L — Similarity UX
-- [ ] **BL.1** `src/core/vector/clause.ts`: `Clause`, `splitClauses`, `bestClause` per entity row + `tests/clause.test.ts` (determinism, min-length, argmax).
-- [ ] **BL.2** `src/ui/SimilarityGlyph.tsx` + MeaningPanel integration: every similar-hit renders glyph + best-clause emphasis (rest behind "more"); score → tooltip.
-- [ ] **BL.3** `IMAGERY_CONCEPTS` (~15, §7.7 list) merged into `src/core/ontology/concepts.ts`; shared re-ingest with BM.3 (one `assets/missal.db` regeneration; fill-log delta must be zero).
+- [X] **BL.1** `src/core/vector/clause.ts`: `Clause`, `splitClauses`, `bestClause` per entity row + `tests/clause.test.ts` (determinism, min-length, argmax). _2026-07-14: linear-scan splitter, exact offsets, 7 tests; suite 62/62._
+- [X] **BL.2** `src/ui/SimilarityGlyph.tsx` + MeaningPanel integration: every similar-hit renders glyph + best-clause emphasis (rest behind "more"); score → tooltip. _2026-07-14: golden-angle deterministic layout; both grouped-similar call sites + ConceptTag thread query/siblings._
+- [/] **BL.3** `IMAGERY_CONCEPTS` (~15, §7.7 list) merged into `src/core/ontology/concepts.ts`; shared re-ingest with BM.3 (one `assets/missal.db` regeneration; fill-log delta must be zero). _2026-07-14: 15 concepts + `sacred_imagery` parent appended, flow into CONCEPTS verified (46 ids); re-ingest pending Wave B._
 
 ## Stanza B-M — Interpretive layer (PD vendoring + commentary ingest)
 - [ ] **BM.1** Vendor `VENDORED/haydock/` (fulfils BF.1): clone-at-home, PROVENANCE.md (source URL + commit/edition + date + license note) BEFORE assimilation; additive only.
