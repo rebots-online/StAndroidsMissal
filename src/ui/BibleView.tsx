@@ -100,6 +100,10 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
     () => (book && chapter ? db.getChapter(book, chapter) : []),
     [db, book, chapter],
   );
+  const commentary = useMemo(
+    () => (book && chapter ? db.commentaryFor(book, chapter) : []),
+    [db, book, chapter],
+  );
   const citing = useMemo(() => {
     if (!book || !chapter) return [];
     // Group CITES rows by citing section; keep verse coverage + best quality.
@@ -289,7 +293,6 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
 
   // ── Chapter reader ───────────────────────────────────────────────
   const chapterAnns = verses.flatMap((v) => annotationsFor(v.nodeKey));
-  const commentary = useMemo(() => (book && chapter ? db.commentaryFor(book, chapter) : []), [db, book, chapter]);
   const verseQuotes = new Map(
     verses.map((verse) => {
       const highlights = sidecar?.forAnchor(verse.nodeKey) ?? [];
