@@ -31,7 +31,7 @@ import { ingestOfficePlane } from './ingest-office.mjs';
 import { ingestBiblePlane } from './ingest-bible.mjs';
 import { ingestCommentary } from './ingest-commentary.mjs';
 import { Scripture } from './scripture.mjs';
-import { CONCEPTS } from '../src/core/ontology/concepts.ts';
+import { CONCEPTS, IMAGERY_CONCEPTS } from '../src/core/ontology/concepts.ts';
 
 const WWW = resolve('VENDORED/divinum-officium/web/www');
 const OUT = process.argv[2] ?? 'assets/missal.db';
@@ -607,6 +607,50 @@ const officeCounts = ingestOfficePlane(out, WWW);
 // ── Bible plane (Pass 4): book/chapter/verse nodes + CITES edges ─────
 const bibleCounts = ingestBiblePlane(out);
 
+// ── Pass 4b: imagery concepts × Bible verses (§7.7) ─────────────────
+// Pass 3a matched concepts before verse nodes existed; the imagery layer
+// additionally tags verses so meaning-first Scripture navigation
+// (CorpusDb.conceptVerseCounts / the Imagery Atlas) spans OT/Psalms/NT.
+// Keywords match at WORD boundaries here — verses are short, and substring
+// hits on terse Latin keywords ("via" in "deviant") would pollute counts.
+let verseInstanceEdges = 0;
+{
+  const allVerses = out.prepare(
+    `SELECT n.id, tb.latin, tb.english
+     FROM nodes n JOIN text_blocks tb ON tb.node_id = n.id
+     WHERE n.kind = 'verse'`,
+  ).all();
+  const verseNorm = allVerses.map((v) => ({
+    id: Number(v.id),
+    padded: ` ${normalizeText(String(v.latin ?? ''))} ${normalizeText(String(v.english ?? ''))} `,
+  }));
+  out.exec('BEGIN');
+  for (const concept of IMAGERY_CONCEPTS) {
+    const cid = conceptNodeId.get(concept.id);
+    if (!cid) continue;
+    const kws = concept.keywords
+      .map((k) => normalizeText(k))
+      .filter(Boolean)
+      .map((k) => (k.includes(' ') ? k : ` ${k} `));
+    for (const v of verseNorm) {
+      let matched = false;
+      for (const pat of concept.patterns) {
+        if (pat.test(v.padded)) { matched = true; break; }
+      }
+      if (!matched) {
+        for (const kw of kws) {
+          if (v.padded.includes(kw)) { matched = true; break; }
+        }
+      }
+      if (matched) {
+        insEdge.run(v.id, cid, 'INSTANCE_OF', 1.0, null);
+        verseInstanceEdges++;
+      }
+    }
+  }
+  out.exec('COMMIT');
+}
+
 // ── Interpretive layer (§7.7): vendored commentary → COMMENTS_ON edges ─
 // Guarded: an absent VENDORED source dir warns and skips; never breaks.
 let commentaryCounts = {};
@@ -636,6 +680,7 @@ const counts = {
   conceptBroaderEdges: broaderEdgeCount,
   autoConcepts: autoConceptCount,
   autoInstanceEdges: autoInstanceEdgeCount,
+  verseInstanceEdges,
   ...officeCounts,
   ...bibleCounts,
   ...commentaryCounts,
