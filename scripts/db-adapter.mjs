@@ -156,6 +156,70 @@ export function openAdapter(dbPath = 'assets/missal.db') {
         };
       });
     },
+    // ── Interpretive layer (§7.7) — mirrors CorpusDb ────────────────
+    commentaryFor(book, ch, verse) {
+      const rows = verse == null
+        ? raw.prepare(
+            `SELECT DISTINCT c.key, c.title, c.meta, tb.section, tb.latin, tb.english
+             FROM edges e
+             JOIN nodes c ON c.id = e.src
+             JOIN nodes v ON v.id = e.dst
+             JOIN text_blocks tb ON tb.node_id = c.id
+             WHERE e.rel = 'COMMENTS_ON' AND c.kind = 'commentary' AND v.key LIKE ?`,
+          ).all(`verse:${book}/${ch}/%`)
+        : raw.prepare(
+            `SELECT DISTINCT c.key, c.title, c.meta, tb.section, tb.latin, tb.english
+             FROM edges e
+             JOIN nodes c ON c.id = e.src
+             JOIN nodes v ON v.id = e.dst
+             JOIN text_blocks tb ON tb.node_id = c.id
+             WHERE e.rel = 'COMMENTS_ON' AND c.kind = 'commentary' AND v.key = ?`,
+          ).all(`verse:${book}/${ch}/${verse}`);
+      return rows
+        .map((r) => {
+          const key = String(r.key);
+          const m = key.match(/^commentary:([^/]+)\/[^/]+\/\d+\/(\d+)$/);
+          return {
+            hit: {
+              nodeKey: key, section: String(r.section ?? ''),
+              latin: null, english: r.english ?? null,
+              sourcePath: `Commentary/${m?.[1] ?? ''}`, fromCommune: false,
+            },
+            source: m?.[1] ?? '',
+            verseStart: Number(m?.[2] ?? 0),
+          };
+        })
+        .sort((a, b) => a.source.localeCompare(b.source) || a.verseStart - b.verseStart)
+        .map((x) => x.hit);
+    },
+    conceptVerseCounts() {
+      return raw.prepare(
+        `SELECT c.key, c.title, COUNT(*) cnt
+         FROM edges e
+         JOIN nodes c ON c.id = e.dst
+         JOIN nodes v ON v.id = e.src
+         WHERE e.rel = 'INSTANCE_OF' AND c.kind = 'concept' AND v.kind = 'verse'
+         GROUP BY c.id ORDER BY cnt DESC`,
+      ).all().map((r) => ({
+        conceptId: String(r.key).replace(/^concept:/, ''),
+        label: r.title ?? String(r.key),
+        count: Number(r.cnt ?? 0),
+      }));
+    },
+    chapterCiteCounts(book) {
+      const rows = raw.prepare(
+        `SELECT v.key FROM edges e JOIN nodes v ON v.id = e.dst
+         WHERE e.rel = 'CITES' AND v.key LIKE ?`,
+      ).all(`verse:${book}/%`);
+      const out = new Map();
+      for (const r of rows) {
+        const m = String(r.key).match(/^verse:[^/]+\/(\d+)\//);
+        if (!m) continue;
+        const ch = Number(m[1]);
+        out.set(ch, (out.get(ch) ?? 0) + 1);
+      }
+      return out;
+    },
     getSkeleton(hourFile) {
       return raw.prepare('SELECT line FROM office_skeleton WHERE hour_file = ? ORDER BY ord').all(hourFile)
         .map((r) => String(r.line ?? ''));

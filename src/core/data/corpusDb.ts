@@ -353,6 +353,90 @@ export class CorpusDb {
     });
   }
 
+  // ── Interpretive layer (§7.7) ──────────────────────────────────────
+
+  /**
+   * Vendored commentary on a verse (or a whole chapter when verse is omitted):
+   * commentary nodes reached over COMMENTS_ON edges into the verse range,
+   * ordered by source id then verseStart. english = the commentary text,
+   * latin = NULL (PD translations are English — §7.7).
+   */
+  commentaryFor(book: string, ch: number, verse?: number): SectionText[] {
+    const rows =
+      verse == null
+        ? this.all(
+            `SELECT DISTINCT c.key, c.title, c.meta, tb.section, tb.latin, tb.english
+             FROM edges e
+             JOIN nodes c ON c.id = e.src
+             JOIN nodes v ON v.id = e.dst
+             JOIN text_blocks tb ON tb.node_id = c.id
+             WHERE e.rel = 'COMMENTS_ON' AND c.kind = 'commentary' AND v.key LIKE ?`,
+            [`verse:${book}/${ch}/%`],
+          )
+        : this.all(
+            `SELECT DISTINCT c.key, c.title, c.meta, tb.section, tb.latin, tb.english
+             FROM edges e
+             JOIN nodes c ON c.id = e.src
+             JOIN nodes v ON v.id = e.dst
+             JOIN text_blocks tb ON tb.node_id = c.id
+             WHERE e.rel = 'COMMENTS_ON' AND c.kind = 'commentary' AND v.key = ?`,
+            [`verse:${book}/${ch}/${verse}`],
+          );
+    return rows
+      .map((r) => {
+        const key = String(r.key);
+        // commentary:<source>/<Book>/<ch>/<verseStart>
+        const m = key.match(/^commentary:([^/]+)\/[^/]+\/\d+\/(\d+)$/);
+        return {
+          hit: {
+            nodeKey: key,
+            section: String(r.section ?? ''),
+            latin: null,
+            english: (r.english as string) ?? null,
+            sourcePath: `Commentary/${m?.[1] ?? ''}`,
+            fromCommune: false,
+          } as SectionText,
+          source: m?.[1] ?? '',
+          verseStart: Number(m?.[2] ?? 0),
+        };
+      })
+      .sort((a, b) => a.source.localeCompare(b.source) || a.verseStart - b.verseStart)
+      .map((x) => x.hit);
+  }
+
+  /** Concepts counted by INSTANCE_OF edges landing on verse: nodes (imagery layer). */
+  conceptVerseCounts(): { conceptId: string; label: string; count: number }[] {
+    return this.all(
+      `SELECT c.key, c.title, COUNT(*) cnt
+       FROM edges e
+       JOIN nodes c ON c.id = e.dst
+       JOIN nodes v ON v.id = e.src
+       WHERE e.rel = 'INSTANCE_OF' AND c.kind = 'concept' AND v.kind = 'verse'
+       GROUP BY c.id ORDER BY cnt DESC`,
+    ).map((r) => ({
+      conceptId: String(r.key).replace(/^concept:/, ''),
+      label: (r.title as string) ?? String(r.key),
+      count: Number(r.cnt ?? 0),
+    }));
+  }
+
+  /** CITES edges per chapter of a book — the liturgical heat-map of a book. */
+  chapterCiteCounts(book: string): Map<number, number> {
+    const rows = this.all(
+      `SELECT v.key FROM edges e JOIN nodes v ON v.id = e.dst
+       WHERE e.rel = 'CITES' AND v.key LIKE ?`,
+      [`verse:${book}/%`],
+    );
+    const out = new Map<number, number>();
+    for (const r of rows) {
+      const m = String(r.key).match(/^verse:[^/]+\/(\d+)\//);
+      if (!m) continue;
+      const ch = Number(m[1]);
+      out.set(ch, (out.get(ch) ?? 0) + 1);
+    }
+    return out;
+  }
+
   /** Verbatim Ordinarium script for an hour file (Matutinum, Laudes, Minor…). */
   getSkeleton(hourFile: string): string[] {
     return this.all('SELECT line FROM office_skeleton WHERE hour_file = ? ORDER BY ord', [hourFile]).map((r) =>

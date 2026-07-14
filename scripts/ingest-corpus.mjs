@@ -29,6 +29,7 @@ import { applyConditionals, vero, RUBRICS_1960 } from '../src/core/liturgy/condi
 import { parseDOFile, parseRank, ruleVide, CorpusTree, loadPrayers, resolveContent, FillLog, firstCitation } from './do-parse.mjs';
 import { ingestOfficePlane } from './ingest-office.mjs';
 import { ingestBiblePlane } from './ingest-bible.mjs';
+import { ingestCommentary } from './ingest-commentary.mjs';
 import { Scripture } from './scripture.mjs';
 import { CONCEPTS } from '../src/core/ontology/concepts.ts';
 
@@ -606,6 +607,15 @@ const officeCounts = ingestOfficePlane(out, WWW);
 // ── Bible plane (Pass 4): book/chapter/verse nodes + CITES edges ─────
 const bibleCounts = ingestBiblePlane(out);
 
+// ── Interpretive layer (§7.7): vendored commentary → COMMENTS_ON edges ─
+// Guarded: an absent VENDORED source dir warns and skips; never breaks.
+let commentaryCounts = {};
+try {
+  commentaryCounts = ingestCommentary(out, console);
+} catch (err) {
+  console.warn('ingest-commentary skipped:', err.message);
+}
+
 out.exec('VACUUM');
 
 // ── Fill log + summary ──────────────────────────────────────────────
@@ -628,6 +638,7 @@ const counts = {
   autoInstanceEdges: autoInstanceEdgeCount,
   ...officeCounts,
   ...bibleCounts,
+  ...commentaryCounts,
 };
 console.log('ingest v2 complete:', JSON.stringify(counts, null, 2));
 console.log('fill log →', FILL_LOG_PATH);
