@@ -32,31 +32,47 @@ interface Props {
 export default function ScriptureAtlas({ db, mode, onOpenKey }: Props) {
   const [expandedConcept, setExpandedConcept] = useState<string | null>(null);
 
-  if (mode === 'imagery') {
-    const counts = useMemo(() => {
-      const m = new Map(db.conceptVerseCounts().map((c) => [c.conceptId, c.count]));
-      return IMAGERY_CONCEPTS.filter((c) => IMAGERY_CLUSTER[c.id]).map((c) => ({
-        ...c,
-        count: m.get(c.id) ?? 0,
-      }));
-    }, [db]);
+  const counts = useMemo(() => {
+    const m = new Map(db.conceptVerseCounts().map((c) => [c.conceptId, c.count]));
+    return IMAGERY_CONCEPTS.filter((c) => IMAGERY_CLUSTER[c.id]).map((c) => ({
+      ...c,
+      count: m.get(c.id) ?? 0,
+    }));
+  }, [db]);
 
-    const groupedByCluster = useMemo(() => {
-      const groups = new Map<string, typeof counts>();
-      for (const c of counts) {
-        const clusterId = IMAGERY_CLUSTER[c.id];
-        if (!groups.has(clusterId)) {
-          groups.set(clusterId, []);
-        }
-        groups.get(clusterId)!.push(c);
+  const imageryByCluster = useMemo(() => {
+    const groups = new Map<string, typeof counts>();
+    for (const c of counts) {
+      const clusterId = IMAGERY_CLUSTER[c.id];
+      if (!groups.has(clusterId)) {
+        groups.set(clusterId, []);
       }
-      return groups;
-    }, [counts]);
+      groups.get(clusterId)!.push(c);
+    }
+    return groups;
+  }, [counts]);
 
+  const citeByBook = useMemo(
+    () => new Map(['Matt', 'Marc', 'Luc', 'Joann'].map((b) => [b, db.chapterCiteCounts(b)])),
+    [db],
+  );
+
+  const parallelsByCluster = useMemo(() => {
+    const groups = new Map<string, typeof PERICOPES>();
+    for (const p of PERICOPES) {
+      if (!groups.has(p.cluster)) {
+        groups.set(p.cluster, []);
+      }
+      groups.get(p.cluster)!.push(p);
+    }
+    return groups;
+  }, []);
+
+  if (mode === 'imagery') {
     return (
       <div className="atlas">
         {SCENARIO_CLUSTERS.slice(0, 4).map((cluster) => {
-          const concepts = groupedByCluster.get(cluster.id) ?? [];
+          const concepts = imageryByCluster.get(cluster.id) ?? [];
           if (concepts.length === 0) return null;
           return (
             <section key={cluster.id}>
@@ -96,22 +112,6 @@ export default function ScriptureAtlas({ db, mode, onOpenKey }: Props) {
   }
 
   if (mode === 'parallels') {
-    const citeByBook = useMemo(
-      () => new Map(['Matt', 'Marc', 'Luc', 'Joann'].map((b) => [b, db.chapterCiteCounts(b)])),
-      [db],
-    );
-
-    const groupedByCluster = useMemo(() => {
-      const groups = new Map<string, typeof PERICOPES>();
-      for (const p of PERICOPES) {
-        if (!groups.has(p.cluster)) {
-          groups.set(p.cluster, []);
-        }
-        groups.get(p.cluster)!.push(p);
-      }
-      return groups;
-    }, []);
-
     const parseRef = (ref: string | undefined) => {
       if (!ref) return null;
       const m = ref.match(/^(\d+):(\d+)/);
@@ -122,7 +122,7 @@ export default function ScriptureAtlas({ db, mode, onOpenKey }: Props) {
     return (
       <div className="atlas">
         {SCENARIO_CLUSTERS.slice(4).map((cluster) => {
-          const pericopes = groupedByCluster.get(cluster.id) ?? [];
+          const pericopes = parallelsByCluster.get(cluster.id) ?? [];
           if (pericopes.length === 0) return null;
           return (
             <section key={cluster.id}>

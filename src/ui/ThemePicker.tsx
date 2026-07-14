@@ -19,6 +19,7 @@ import {
 interface SettingsStore {
   getSetting(key: string): string | null;
   setSetting(key: string, value: string): void;
+  persist(): Promise<void>;
 }
 
 interface Props {
@@ -58,12 +59,32 @@ export default function ThemePicker({ sidecar }: Props) {
   const [init] = useState(() => readPersisted(sidecar));
   const [family, setFamily] = useState<ThemeFamily>(init.family);
   const [mode, setMode] = useState<ModePref>(init.mode);
+  const [hydratedSidecar, setHydratedSidecar] = useState<SettingsStore | null>(null);
+
+  useEffect(() => {
+    if (!sidecar) {
+      setHydratedSidecar(null);
+      return;
+    }
+
+    const storedFamily = sidecar.getSetting('theme.family');
+    const storedMode = sidecar.getSetting('theme.mode');
+    if (storedFamily !== null && FAMILY_IDS.includes(storedFamily)) {
+      setFamily(storedFamily as ThemeFamily);
+    }
+    if (storedMode === 'light' || storedMode === 'dark' || storedMode === 'system') {
+      setMode(storedMode);
+    }
+    setHydratedSidecar(sidecar);
+  }, [sidecar]);
 
   useEffect(() => {
     applyTheme(family, mode === 'system' ? systemMode() : mode);
     if (sidecar) {
+      if (hydratedSidecar !== sidecar) return;
       sidecar.setSetting('theme.family', family);
       sidecar.setSetting('theme.mode', mode);
+      void sidecar.persist();
     } else {
       try {
         localStorage.setItem(LS_KEY, JSON.stringify({ family, mode }));
@@ -71,7 +92,7 @@ export default function ThemePicker({ sidecar }: Props) {
         /* storage unavailable (private mode) — theme still applies */
       }
     }
-  }, [family, mode, sidecar]);
+  }, [family, mode, sidecar, hydratedSidecar]);
 
   const cycleMode = () =>
     setMode((m) => (m === 'light' ? 'dark' : m === 'dark' ? 'system' : 'light'));
