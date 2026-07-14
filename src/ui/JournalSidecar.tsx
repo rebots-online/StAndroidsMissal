@@ -76,6 +76,7 @@ interface ConnectionCard {
   openKey: string | null;
   addKey: string;
   sourceHtml: string;
+  tier?: 'further';
 }
 
 export function ConnectionsPanel({
@@ -108,6 +109,56 @@ export function ConnectionsPanel({
   const cards = useMemo<ConnectionCard[]>(() => {
     if (!query) return [];
     const out: ConnectionCard[] = [];
+    const further: ConnectionCard[] = [];
+
+    // (a) Losslessly nucleated corpus vectors. High-context representatives
+    // lead; the complete remainder is retained for the expandable tail.
+    const set = db.nucleatedSimilarToText(query, {
+      candidateK: 64,
+      nucleusK: 5,
+      excludeKey: anchor ?? undefined,
+    });
+    const nuclei = new Map(
+      set.groups
+        .filter((group) => group.nucleus !== null)
+        .map((group) => [group.nucleus!.key, group.nucleus!] as const),
+    );
+    for (const group of set.groups) {
+      for (const item of group.representatives) {
+        const sourceTitle = corpusSourceTitle(item.hit);
+        out.push({
+          id: `c:${item.hit.key}`,
+          heading: sourceTitle,
+          body: <><b className="clause-hit">{item.clause}</b></>,
+          chips: [
+            group.nucleus ? `${group.nucleus.source} · ${group.nucleus.authorityKind}` : `concept · ${group.label}`,
+            'atomic corpus clause',
+          ],
+          bridge: `Bridge: corpus vector ${item.hit.score.toFixed(3)} → ${group.label} → context ${item.contextScore.toFixed(3)}`,
+          openKey: item.hit.key,
+          addKey: item.hit.key,
+          sourceHtml: blockquoteHtml(item.clause, sourceTitle),
+        });
+      }
+    }
+    for (const item of set.tail) {
+      const sourceTitle = corpusSourceTitle(item.hit);
+      const nucleus = item.nucleusKey ? nuclei.get(item.nucleusKey) ?? null : null;
+      further.push({
+        id: `c:${item.hit.key}`,
+        heading: sourceTitle,
+        body: <><b className="clause-hit">{item.clause}</b></>,
+        chips: [
+          nucleus ? `${nucleus.source} · ${nucleus.authorityKind}` : 'stable concept grouping',
+          'further association',
+        ],
+        bridge: `Bridge: corpus vector ${item.hit.score.toFixed(3)} → ${nucleus?.title ?? 'related passage'} → context ${item.contextScore.toFixed(3)}`,
+        openKey: item.hit.key,
+        addKey: item.hit.key,
+        sourceHtml: blockquoteHtml(item.clause, sourceTitle),
+        tier: 'further',
+      });
+    }
 
     // (c) Vendored commentary on the captured verse (CorpusDb.commentaryFor,
     // §7.7 interpretive layer — landed by the parallel BN wave, called directly).
@@ -117,16 +168,13 @@ export function ConnectionsPanel({
       for (const cm of db.commentaryFor(v[1], Number(v[2]), Number(v[3])).slice(0, 2)) {
         const source = cm.sourcePath.replace(/^Commentary\//, '') || 'commentary';
         const full = cm.english ?? '';
-        const excerpt = full.slice(0, 240);
+        const excerpt = bestClause(full, query)?.text ?? full;
         if (!excerpt) continue;
         out.push({
           id: `m:${cm.nodeKey}`,
           heading: `${source} on ${verseRef}`,
           body: (
-            <>
-              {excerpt}
-              {full.length > 240 ? '…' : ''}
-            </>
+            <><b className="clause-hit">{excerpt}</b></>
           ),
           chips: [`vendored · ${source}`, 'COMMENTS_ON'],
           bridge: `Bridge: ${verseRef} → COMMENTS_ON edge → ${source} (vendored commentary)`,
@@ -160,44 +208,38 @@ export function ConnectionsPanel({
       });
     }
 
-    // (a) Corpus vector hits grouped by concept — fill the remainder.
-    const seen = new Set<string>();
-    for (const g of db.groupedSimilarToText(query, 12, anchor ?? undefined)) {
-      for (const hit of g.hits) {
-        if (seen.has(hit.key)) continue;
-        seen.add(hit.key);
-        const full = hit.latin ?? hit.english ?? '';
-        if (!full) continue;
-        const clause = bestClause(full, query);
-        const sourceTitle = corpusSourceTitle(hit);
-        const chips = [hit.key.startsWith('verse:') ? 'scripture' : 'liturgy', 'corpus vector'];
-        if (g.conceptId) chips.unshift(`concept: ${g.label}`);
-        out.push({
-          id: `c:${hit.key}`,
-          heading: sourceTitle,
-          body: clause ? (
-            <>
-              <b className="clause-hit">{clause.text}</b>
-              {full.length > clause.text.length ? ' …' : ''}
-            </>
-          ) : (
-            <>
-              {full.slice(0, 200)}
-              {full.length > 200 ? '…' : ''}
-            </>
-          ),
-          chips,
-          bridge: `Bridge: selected passage → ${g.label} → ${sourceTitle}`,
-          openKey: hit.key,
-          addKey: hit.key,
-          sourceHtml: blockquoteHtml(clause?.text ?? full.slice(0, 200), sourceTitle),
-        });
-      }
-    }
-    return out;
+    return [...out, ...further];
   }, [db, sidecar, query, anchor, excludeId]);
 
-  const visible = cards.filter((c) => !dismissed.has(c.id)).slice(0, 8);
+  const visible = cards.filter((c) => !dismissed.has(c.id));
+  const primary = visible.filter((card) => card.tier !== 'further');
+  const further = visible.filter((card) => card.tier === 'further');
+
+  const renderCard = (c: ConnectionCard) => (
+    <article className="jsc-card" key={c.id}>
+      <span aria-hidden="true">›</span>
+      <div>
+        {c.openKey ? (
+          <b className="clickable" onClick={() => onOpenKey(c.openKey!)} title="Open in the reader, in context">
+            {c.heading} ↗
+          </b>
+        ) : (
+          <b>{c.heading}</b>
+        )}
+        <div className="jsc-evidence">
+          {c.chips.map((chip) => (
+            <span className="chip" key={chip}>{chip}</span>
+          ))}
+        </div>
+        <div>{c.body}</div>
+        <div className="jsc-why">{c.bridge}</div>
+        <div className="jsc-toolbar">
+          <button type="button" onClick={() => onAddSource(c.addKey, c.sourceHtml)}>Add as source</button>
+          <button type="button" onClick={() => setDismissed((prev) => new Set(prev).add(c.id))}>Not useful</button>
+        </div>
+      </div>
+    </article>
+  );
 
   return (
     <section className="jsc-related" aria-label="Connections">
@@ -218,37 +260,16 @@ export function ConnectionsPanel({
         </div>
       )}
       {visible.length === 0 && <div className="jsc-why">No connections found for this text yet.</div>}
-      {visible.map((c) => (
-        <article className="jsc-card" key={c.id}>
-          <span aria-hidden="true">›</span>
-          <div>
-            {c.openKey ? (
-              <b className="clickable" onClick={() => onOpenKey(c.openKey!)} title="Open in the reader, in context">
-                {c.heading} ↗
-              </b>
-            ) : (
-              <b>{c.heading}</b>
-            )}
-            <div className="jsc-evidence">
-              {c.chips.map((chip) => (
-                <span className="chip" key={chip}>
-                  {chip}
-                </span>
-              ))}
-            </div>
-            <div>{c.body}</div>
-            <div className="jsc-why">{c.bridge}</div>
-            <div className="jsc-toolbar">
-              <button type="button" onClick={() => onAddSource(c.addKey, c.sourceHtml)}>
-                Add as source
-              </button>
-              <button type="button" onClick={() => setDismissed((prev) => new Set(prev).add(c.id))}>
-                Not useful
-              </button>
-            </div>
-          </div>
-        </article>
-      ))}
+      {primary.map(renderCard)}
+      {further.length > 0 && (
+        <details className="concept-group">
+          <summary className="concept-header">
+            <span className="concept-label">Further associations</span>
+            <span className="concept-count">{further.length}</span>
+          </summary>
+          {further.map(renderCard)}
+        </details>
+      )}
     </section>
   );
 }
@@ -293,6 +314,27 @@ export default function JournalSidecar({
 
   const mode = sidecar.getSetting('mode') ?? 'priest';
   const seedLabel = mode === 'laity' ? 'Promote to reflection seed' : 'Promote to homily seed';
+  const themeSuggestions = useMemo(() => {
+    const unique = new Map<string, { value: string; label: string; evidence: string }>();
+    const set = db.nucleatedSimilarToText(capture.quote, {
+      candidateK: 64,
+      nucleusK: 5,
+      excludeKey: capture.anchor ?? undefined,
+    });
+    for (const group of set.groups) {
+      if (!group.nucleus) continue;
+      for (const concept of group.nucleus.concepts) {
+        if (!unique.has(concept.conceptId)) {
+          unique.set(concept.conceptId, {
+            value: concept.conceptId,
+            label: concept.label,
+            evidence: `${group.nucleus.source}: ${group.nucleus.clause}`,
+          });
+        }
+      }
+    }
+    return [...unique.values()];
+  }, [db, capture.quote, capture.anchor]);
 
   function showToast(msg: string) {
     setToast({ msg, key: Date.now() });
@@ -344,6 +386,7 @@ export default function JournalSidecar({
         acc={null}
         day={day}
         capture={capture}
+        themeSuggestions={themeSuggestions}
         onSaved={(a) => setSavedId(a.id)}
         onReady={(api) => {
           apiRef.current = api;

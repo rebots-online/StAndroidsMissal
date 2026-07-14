@@ -9,7 +9,12 @@
 import { useMemo, useState } from 'react';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { SelectionAction } from './ReaderView.tsx';
-import type { ConcordanceHit, SimilarHit } from '../core/data/types.ts';
+import type {
+  ConcordanceHit,
+  InterpretiveNucleus,
+  NucleatedSimilarityHit,
+  SimilarHit,
+} from '../core/data/types.ts';
 import { bestClause } from '../core/vector/clause.ts';
 import SimilarityGlyph from './SimilarityGlyph.tsx';
 
@@ -120,6 +125,116 @@ function SimilarHitRow({
         )}
       </div>
     </div>
+  );
+}
+
+function NucleatedHitRow({
+  db,
+  item,
+  siblings,
+  nucleus,
+  onOpenKey,
+}: {
+  db: CorpusDb;
+  item: NucleatedSimilarityHit;
+  siblings: number[];
+  nucleus: InterpretiveNucleus | null;
+  onOpenKey: (k: string) => void;
+}) {
+  const ref = humanRef(db, item.hit.key);
+  return (
+    <div className="hit clickable" onClick={() => onOpenKey(item.hit.key)} title="Open in the reader, in context">
+      <div className="where">
+        <span className="ref-headline">
+          <SimilarityGlyph score={item.contextScore} siblings={siblings} />{' '}
+          {ref.headline}
+        </span>
+        <span className="open-hint">{ref.where} ↗</span>
+      </div>
+      <div className="text"><b className="clause-hit">{item.clause}</b></div>
+      <div className="jsc-why">
+        Bridge: corpus vector {item.hit.score.toFixed(3)} →{' '}
+        {nucleus ? `${nucleus.source} nucleus affinity ${item.nucleusAffinity.toFixed(3)}` : 'stable concept grouping'}
+      </div>
+      <div className="jsc-evidence">
+        <span className="chip">atomic clause</span>
+        <span className="chip">
+          {nucleus ? `${nucleus.source} · ${nucleus.authorityKind}` : 'corpus concept'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function NucleatedResults({
+  db,
+  term,
+  excludeKey,
+  onOpenKey,
+}: {
+  db: CorpusDb;
+  term: string;
+  excludeKey?: string;
+  onOpenKey: (k: string) => void;
+}) {
+  const set = db.nucleatedSimilarToText(term, { candidateK: 64, nucleusK: 5, excludeKey });
+  if (set.candidateCount === 0) return <div className="hit">No similar passages found.</div>;
+  const nuclei = new Map(
+    set.groups
+      .filter((group) => group.nucleus !== null)
+      .map((group) => [group.nucleus!.key, group.nucleus!] as const),
+  );
+  return (
+    <>
+      {set.groups.map((group) => {
+        const siblings = group.representatives.map((item) => item.contextScore);
+        return (
+          <div className="concept-group" key={group.nucleus?.key ?? group.label}>
+            <div className="concept-header">
+              <span className="concept-label">{group.label}</span>
+              <span className="concept-count">{group.representatives.length}</span>
+            </div>
+            {group.nucleus && (
+              <div className="concept-desc">
+                <b>{group.nucleus.source}:</b> {group.nucleus.clause}
+              </div>
+            )}
+            <div className="concept-hits">
+              {group.representatives.map((item) => (
+                <NucleatedHitRow
+                  key={item.hit.key}
+                  db={db}
+                  item={item}
+                  siblings={siblings}
+                  nucleus={group.nucleus}
+                  onOpenKey={onOpenKey}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {set.tail.length > 0 && (
+        <details className="concept-group">
+          <summary className="concept-header">
+            <span className="concept-label">Further associations</span>
+            <span className="concept-count">{set.tail.length}</span>
+          </summary>
+          <div className="concept-hits">
+            {set.tail.map((item) => (
+              <NucleatedHitRow
+                key={item.hit.key}
+                db={db}
+                item={item}
+                siblings={set.tail.map((tailItem) => tailItem.contextScore)}
+                nucleus={item.nucleusKey ? nuclei.get(item.nucleusKey) ?? null : null}
+                onOpenKey={onOpenKey}
+              />
+            ))}
+          </div>
+        </details>
+      )}
+    </>
   );
 }
 
@@ -253,23 +368,7 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
           })()}
 
           <div className="group-title">Nearest by meaning (vector)</div>
-          {(() => {
-            const groups = db.groupedSimilarToText(term, 20, nodeKey ?? undefined);
-            if (groups.length === 0) {
-              return <div className="hit">No similar passages found.</div>;
-            }
-            return groups.map((g, i) => (
-              <ConceptGroup
-                key={i}
-                label={g.label}
-                description={g.description}
-                count={g.count}
-                hits={g.hits}
-                renderHit={(hit, ok) => <SimilarHitRow db={db} hit={hit} query={term} siblings={g.hits.map((h) => h.score)} onOpenKey={ok} />}
-                onOpenKey={onOpenKey}
-              />
-            ));
-          })()}
+          <NucleatedResults db={db} term={term} excludeKey={nodeKey ?? undefined} onOpenKey={onOpenKey} />
 
           <div className="llm-slot">
             ✠ <b>Next major:</b> a fine-tuned model on ecclesiastical Latin and Catholic
@@ -283,23 +382,7 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
         <>
           <h2>Similar passages</h2>
           <div className="term">“{term.slice(0, 120)}”</div>
-          {(() => {
-            const groups = db.groupedSimilarToText(term, 20, nodeKey ?? undefined);
-            if (groups.length === 0) {
-              return <div className="hit">No similar passages found.</div>;
-            }
-            return groups.map((g, i) => (
-              <ConceptGroup
-                key={i}
-                label={g.label}
-                description={g.description}
-                count={g.count}
-                hits={g.hits}
-                renderHit={(hit, ok) => <SimilarHitRow db={db} hit={hit} query={term} siblings={g.hits.map((h) => h.score)} onOpenKey={ok} />}
-                onOpenKey={onOpenKey}
-              />
-            ));
-          })()}
+          <NucleatedResults db={db} term={term} excludeKey={nodeKey ?? undefined} onOpenKey={onOpenKey} />
         </>
       )}
 

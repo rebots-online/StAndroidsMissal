@@ -7,9 +7,31 @@
 import initSqlJs, { type Database } from 'sql.js';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { embedText, cosine, normalizeText } from '../vector/embed.ts';
+import { bestClause } from '../vector/clause.ts';
 import { MASS_SECTION_ORDER } from '../model/massOrdo.ts';
-import type { GraphNode, SectionText, SimilarHit, ConcordanceHit, CrossRef, ConceptHit, GroupedHit } from './types.ts';
+import type {
+  GraphNode,
+  SectionText,
+  SimilarHit,
+  ConcordanceHit,
+  CrossRef,
+  ConceptHit,
+  GroupedHit,
+  InterpretiveNucleus,
+  NucleatedSimilarityGroup,
+  NucleatedSimilarityHit,
+  NucleatedSimilaritySet,
+} from './types.ts';
 import type { DayFileMeta } from '../calendar/precedence.ts';
+
+export type {
+  InterpretiveNucleus,
+  NucleatedSimilarityGroup,
+  NucleatedSimilarityHit,
+  NucleatedSimilaritySet,
+  NucleusAuthorityKind,
+  NucleusSourceManifest,
+} from './types.ts';
 
 function rowToNode(r: Record<string, unknown>): GraphNode {
   let meta: Record<string, unknown> = {};
@@ -402,6 +424,177 @@ export class CorpusDb {
       })
       .sort((a, b) => a.source.localeCompare(b.source) || a.verseStart - b.verseStart)
       .map((x) => x.hit);
+  }
+
+  /**
+   * Short, query-matching clauses from authoritative interpretive sources.
+   * Haydock is the active v0.5 provider; the source filter keeps the method
+   * ready for independently delivered catechetical and magisterial modules.
+   */
+  interpretiveNucleiForText(
+    text: string,
+    opts: { k?: number; sources?: string[] } = {},
+  ): InterpretiveNucleus[] {
+    const k = Math.max(0, opts.k ?? 5);
+    const sources = new Set(opts.sources ?? ['haydock']);
+    if (!text.trim() || k === 0 || sources.size === 0) return [];
+
+    const queryVec = embedText(text);
+    const coarse = this.all(
+      `SELECT n.id, n.key, n.title, tb.english, e.vec
+       FROM nodes n
+       JOIN text_blocks tb ON tb.node_id = n.id
+       JOIN embeddings e ON e.node_id = n.id
+       WHERE n.kind = 'commentary' AND tb.english IS NOT NULL`,
+    )
+      .map((row) => {
+        const key = String(row.key);
+        const source = key.match(/^commentary:([^/]+)\//)?.[1] ?? '';
+        if (!sources.has(source)) return null;
+        const raw = row.vec as Uint8Array;
+        const vec = new Int8Array(raw.buffer, raw.byteOffset, raw.byteLength);
+        return {
+          id: Number(row.id),
+          key,
+          title: (row.title as string) ?? key,
+          english: String(row.english ?? ''),
+          source,
+          score: cosine(queryVec, vec),
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((a, b) => b.score - a.score || a.key.localeCompare(b.key))
+      .slice(0, Math.max(k * 4, k));
+
+    return coarse
+      .flatMap((row): InterpretiveNucleus[] => {
+        const clause = bestClause(row.english, text);
+        if (!clause || clause.text.length >= row.english.length) return [];
+        const anchors = this.all(
+          `SELECT DISTINCT v.key
+           FROM edges e JOIN nodes v ON v.id = e.dst
+           WHERE e.rel = 'COMMENTS_ON' AND e.src = ?
+           ORDER BY v.key`,
+          [row.id],
+        ).map((anchor) => String(anchor.key));
+        const concepts = this.all(
+          `SELECT DISTINCT c.key, c.title
+           FROM edges comments
+           JOIN edges instances ON instances.src = comments.dst AND instances.rel = 'INSTANCE_OF'
+           JOIN nodes c ON c.id = instances.dst
+           WHERE comments.rel = 'COMMENTS_ON' AND comments.src = ? AND c.kind = 'concept'
+           ORDER BY c.key`,
+          [row.id],
+        ).map((concept) => ({
+          conceptId: String(concept.key).replace(/^concept:/, ''),
+          label: (concept.title as string) ?? String(concept.key).replace(/^concept:/, ''),
+        }));
+        return [{
+          key: row.key,
+          title: row.title,
+          clause: clause.text,
+          queryScore: clause.score,
+          anchors,
+          concepts,
+          source: row.source,
+          authorityKind: 'scriptural-commentary',
+        }];
+      })
+      .sort((a, b) => b.queryScore - a.queryScore || a.key.localeCompare(b.key))
+      .slice(0, k);
+  }
+
+  /**
+   * Losslessly organise the ordinary vector horizon around interpretive
+   * nuclei. Representatives are the high-signal front; every other candidate
+   * remains available in the ordered tail for association and inspiration.
+   */
+  nucleatedSimilarToText(
+    text: string,
+    opts: { candidateK?: number; nucleusK?: number; excludeKey?: string } = {},
+  ): NucleatedSimilaritySet {
+    const candidateK = Math.max(0, opts.candidateK ?? 64);
+    const nucleusK = Math.max(0, opts.nucleusK ?? 5);
+    const candidates = this.similarToText(text, candidateK, opts.excludeKey);
+    const nuclei = this.interpretiveNucleiForText(text, { k: nucleusK });
+
+    type DraftGroup = {
+      key: string;
+      nucleus: InterpretiveNucleus | null;
+      label: string;
+      hits: NucleatedSimilarityHit[];
+    };
+    const drafts = new Map<string, DraftGroup>();
+
+    for (const hit of candidates) {
+      const full = hit.english ?? hit.latin ?? '';
+      const clause = bestClause(full, text)?.text ?? full;
+      let nucleus: InterpretiveNucleus | null = null;
+      let nucleusKey: string | null = null;
+      let nucleusAffinity = 0;
+      let groupKey = 'related';
+      let label = 'Related passages';
+
+      if (nuclei.length > 0) {
+        const clauseVec = embedText(clause);
+        const ranked = nuclei
+          .map((candidate) => ({
+            nucleus: candidate,
+            affinity: cosine(clauseVec, embedText(candidate.clause)),
+          }))
+          .sort((a, b) => b.affinity - a.affinity || a.nucleus.key.localeCompare(b.nucleus.key));
+        nucleus = ranked[0].nucleus;
+        nucleusKey = nucleus.key;
+        nucleusAffinity = ranked[0].affinity;
+        groupKey = nucleus.key;
+        label = nucleus.title;
+      } else {
+        const primary = this.conceptsForSectionKey(hit.key)
+          .sort((a, b) => a.conceptId.localeCompare(b.conceptId))[0];
+        if (primary) {
+          nucleusKey = `concept:${primary.conceptId}`;
+          groupKey = nucleusKey;
+          label = primary.label;
+        }
+      }
+
+      const atomic: NucleatedSimilarityHit = {
+        hit,
+        clause,
+        nucleusKey,
+        nucleusAffinity,
+        contextScore: 0.7 * hit.score + 0.3 * nucleusAffinity,
+      };
+      const draft = drafts.get(groupKey) ?? { key: groupKey, nucleus, label, hits: [] };
+      draft.hits.push(atomic);
+      drafts.set(groupKey, draft);
+    }
+
+    const ordered = [...drafts.values()]
+      .map((group) => ({
+        ...group,
+        hits: group.hits.sort(
+          (a, b) => b.contextScore - a.contextScore || a.hit.key.localeCompare(b.hit.key),
+        ),
+      }))
+      .sort(
+        (a, b) =>
+          (b.hits[0]?.contextScore ?? -Infinity) - (a.hits[0]?.contextScore ?? -Infinity) ||
+          a.key.localeCompare(b.key),
+      );
+    const selected = ordered.slice(0, 5);
+    const representativeKeys = new Set<string>();
+    const groups: NucleatedSimilarityGroup[] = selected.map((group) => {
+      const representatives = group.hits.slice(0, 3);
+      representatives.forEach((hit) => representativeKeys.add(hit.hit.key));
+      return { nucleus: group.nucleus, label: group.label, representatives };
+    });
+    const tail = ordered
+      .flatMap((group) => group.hits)
+      .filter((hit) => !representativeKeys.has(hit.hit.key))
+      .sort((a, b) => b.contextScore - a.contextScore || a.hit.key.localeCompare(b.hit.key));
+
+    return { candidateCount: candidates.length, groups, tail };
   }
 
   /** Concepts counted by INSTANCE_OF edges landing on verse: nodes (imagery layer). */

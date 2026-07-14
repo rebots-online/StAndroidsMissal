@@ -52,6 +52,7 @@ interface Props {
   acc: Accompaniment | null;
   day?: DayInfo | null;
   capture?: { quote: string; quoteAlt?: string | null; anchor: string | null } | null;
+  themeSuggestions?: { value: string; label: string; evidence: string }[];
   onSaved?: (a: Accompaniment) => void;
   onReady?: (api: AccompanimentEditorApi) => void;
   onClose: () => void;
@@ -68,7 +69,16 @@ function initialContent(acc: Accompaniment | null): JSONContent | string {
   return acc?.bodyHtml ?? '';
 }
 
-export default function AccompanimentEditor({ sidecar, acc, day, capture, onSaved, onReady, onClose }: Props) {
+export default function AccompanimentEditor({
+  sidecar,
+  acc,
+  day,
+  capture,
+  themeSuggestions = [],
+  onSaved,
+  onReady,
+  onClose,
+}: Props) {
   const [title, setTitle] = useState(acc?.title ?? '');
   const [exposure, setExposure] = useState<Exposure>(acc?.exposure ?? 'journal');
   const [tags, setTags] = useState<string[]>(acc?.tags ?? []);
@@ -210,6 +220,28 @@ export default function AccompanimentEditor({ sidecar, acc, day, capture, onSave
         </button>
       </div>
       <EditorContent editor={editor} />
+      {themeSuggestions.length > 0 && (
+        <div className="jsc-evidence" aria-label="Suggested themes" style={{ margin: '8px 0 0' }}>
+          {themeSuggestions.map((suggestion) => {
+            const adopted = tags.includes(suggestion.value);
+            return (
+              <button
+                type="button"
+                className="chip"
+                key={suggestion.value}
+                disabled={adopted}
+                title={suggestion.evidence}
+                onClick={() => {
+                  if (!adopted) setTags((prev) => [...prev, suggestion.value]);
+                  scheduleSave();
+                }}
+              >
+                {adopted ? '✓ ' : '+ '}{suggestion.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="jsc-evidence" style={{ margin: '8px 0', alignItems: 'center' }}>
         {tags.map((t) => (
           <span className="chip" key={t}>
