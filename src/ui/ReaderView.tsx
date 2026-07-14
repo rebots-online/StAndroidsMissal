@@ -11,6 +11,7 @@ import type { DayInfo, SectionText } from '../core/data/types.ts';
 import { MASS_ORDO, READER_ORDER, ORDO_STATION_SECTION, stationActive } from '../core/model/massOrdo.ts';
 import type { Season } from '../core/calendar/computus.ts';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
+import type { SidecarDb } from '../core/accompaniment/store.ts';
 import { massTextsForDay } from '../core/data/liturgicalDay.ts';
 import { alignSelection, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
 import BilingualText, { TextLines, useNarrow } from './BilingualText.tsx';
@@ -28,6 +29,8 @@ interface Props {
   /** Bumped on every navigation request so re-clicking the same station re-scrolls. */
   focusNonce: number;
   onAction: (a: SelectionAction) => void;
+  sidecar?: SidecarDb | null;
+  onCapture?: (capture: { quote: string; quoteAlt?: string; anchor: string | null }) => void;
   /** Scroll-spy: reports the section anchor under the reading band (for the map strip). */
   onVisibleSection?: (anchor: string) => void;
 }
@@ -47,11 +50,21 @@ interface ReaderEntry extends SectionText {
   anchor: string;
 }
 
-export default function ReaderView({ db, day, focusSection, focusNonce, onAction, onVisibleSection }: Props) {
+export default function ReaderView({
+  db,
+  day,
+  focusSection,
+  focusNonce,
+  onAction,
+  sidecar,
+  onCapture,
+  onVisibleSection,
+}: Props) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [noteFor, setNoteFor] = useState<Menu | null>(null);
   const [noteText, setNoteText] = useState('');
   const [annVersion, setAnnVersion] = useState(0);
+  const [sidecarVersion, setSidecarVersion] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   /** Until this timestamp the scroll-spy stays quiet — programmatic scrolls must not echo. */
   const spyMuteUntil = useRef(0);
@@ -228,6 +241,30 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
     setMenu({ x: Math.min(e.clientX, window.innerWidth - 270), y: Math.min(e.clientY + 6, window.innerHeight - 220), term: sel.slice(0, 300), nodeKey });
   }
 
+  function captureFrom(m: Menu) {
+    const src = entries.find((entry) => entry.nodeKey === m.nodeKey);
+    const aligned = src ? alignSelection({ latin: src.latin, english: src.english }, m.term) : null;
+    return {
+      quote: m.term,
+      quoteAlt: aligned?.dstLine ?? undefined,
+      anchor: m.nodeKey,
+    };
+  }
+
+  async function highlightBoth(m: Menu) {
+    if (!sidecar || !m.nodeKey) return;
+    const capture = captureFrom(m);
+    sidecar.save({
+      exposure: 'journal',
+      anchors: [m.nodeKey],
+      quote: capture.quote,
+      quoteAlt: capture.quoteAlt ?? null,
+      color: 'gold',
+    });
+    await sidecar.persist();
+    setSidecarVersion((version) => version + 1);
+  }
+
   if (entries.length === 0) {
     return (
       <div className="content reader" ref={rootRef}>
@@ -239,6 +276,8 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
       </div>
     );
   }
+
+  void sidecarVersion;
 
   return (
     <div
@@ -282,7 +321,12 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
     >
       {entries.map((s) => {
         const anns = annotationsFor(s.nodeKey);
-        const quotes = anns.flatMap((a) => [a.quote, a.quoteAlt]).filter((q): q is string => Boolean(q));
+        const highlights = sidecar?.forAnchor(s.nodeKey) ?? [];
+        const quotes = [...new Set(
+          [...anns, ...highlights]
+            .flatMap((a) => [a.quote, a.quoteAlt])
+            .filter((q): q is string => Boolean(q)),
+        )];
         const echoRange = echo?.nodeKey === s.nodeKey ? echo : null;
         void annVersion;
         const folded = collapsed.has(s.anchor);
@@ -366,6 +410,16 @@ export default function ReaderView({ db, day, focusSection, focusNonce, onAction
           <button onClick={() => { setNoteFor(menu); setNoteText(''); setMenu(null); }}>
             ✎ Annotate
           </button>
+          {onCapture && (
+            <button onClick={() => { onCapture(captureFrom(menu)); setMenu(null); }}>
+              ✎ Add to Journal/Homily notes
+            </button>
+          )}
+          {sidecar && menu.nodeKey && (
+            <button onClick={() => { void highlightBoth(menu); setMenu(null); }}>
+              🖍 Highlight both panes
+            </button>
+          )}
         </div>
       )}
 

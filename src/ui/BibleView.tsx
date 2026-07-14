@@ -7,9 +7,10 @@
  * open the citing section on its own source day via onOpenKey.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { SectionText } from '../core/data/types.ts';
+import type { SidecarDb } from '../core/accompaniment/store.ts';
 import type { SelectionAction } from './ReaderView.tsx';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 import { verseHash } from '../core/share/shareLink.ts';
@@ -22,6 +23,8 @@ interface Props {
   focusRef: string | null;
   focusNonce: number;
   onAction: (a: SelectionAction) => void;
+  sidecar?: SidecarDb | null;
+  onCapture?: (capture: { quote: string; quoteAlt?: string; anchor: string | null }) => void;
   /** Open a citing liturgical section on its source day (App.onOpenKey). */
   onOpenKey: (nodeKey: string) => void;
 }
@@ -44,7 +47,23 @@ function nodeKeyFromSelection(root: HTMLElement | null): string | null {
   return null;
 }
 
-export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKey }: Props) {
+function markedText(text: string, quotes: string[]): (string | ReactElement)[] {
+  let rendered: (string | ReactElement)[] = [text];
+  for (const quote of quotes) {
+    rendered = rendered.flatMap((part) => {
+      if (typeof part !== 'string' || !quote || !part.includes(quote)) return [part];
+      const bits = part.split(quote);
+      return bits.flatMap((bit, index) =>
+        index < bits.length - 1
+          ? [bit, <mark className="ann" key={`${quote.slice(0, 12)}-${index}`}>{quote}</mark>]
+          : [bit],
+      );
+    });
+  }
+  return rendered;
+}
+
+export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar, onCapture, onOpenKey }: Props) {
   const books = useMemo(() => db.getBooks(), [db]);
   const [book, setBook] = useState<string | null>(null);
   const [chapter, setChapter] = useState<number | null>(null);
@@ -53,6 +72,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
   const [noteFor, setNoteFor] = useState<Menu | null>(null);
   const [noteText, setNoteText] = useState('');
   const [annVersion, setAnnVersion] = useState(0);
+  const [sidecarVersion, setSidecarVersion] = useState(0);
   const [liturgyOpen, setLiturgyOpen] = useState(false);
   /** Verse echo: hover/tap/selection lights the aligned verse in BOTH panes. */
   const [echoVerse, setEchoVerse] = useState<number | null>(null);
@@ -123,6 +143,30 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
       term: sel.slice(0, 300),
       nodeKey: nodeKeyFromSelection(rootRef.current),
     });
+  }
+
+  function captureFrom(m: Menu) {
+    const verse = verses.find((entry) => entry.nodeKey === m.nodeKey);
+    const aligned = verse ? alignSelection({ latin: verse.latin, english: verse.english }, m.term) : null;
+    return {
+      quote: m.term,
+      quoteAlt: aligned?.dstLine ?? undefined,
+      anchor: m.nodeKey,
+    };
+  }
+
+  async function highlightBoth(m: Menu) {
+    if (!sidecar || !m.nodeKey) return;
+    const capture = captureFrom(m);
+    sidecar.save({
+      exposure: 'journal',
+      anchors: [m.nodeKey],
+      quote: capture.quote,
+      quoteAlt: capture.quoteAlt ?? null,
+      color: 'gold',
+    });
+    await sidecar.persist();
+    setSidecarVersion((version) => version + 1);
   }
 
   const verseFromEvent = (e: React.SyntheticEvent) => {
@@ -221,7 +265,19 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
 
   // ── Chapter reader ───────────────────────────────────────────────
   const chapterAnns = verses.flatMap((v) => annotationsFor(v.nodeKey));
+  const verseQuotes = new Map(
+    verses.map((verse) => {
+      const highlights = sidecar?.forAnchor(verse.nodeKey) ?? [];
+      const quotes = [...new Set(
+        [...annotationsFor(verse.nodeKey), ...highlights]
+          .flatMap((item) => [item.quote, item.quoteAlt])
+          .filter((quote): quote is string => Boolean(quote)),
+      )];
+      return [verse.nodeKey, quotes] as const;
+    }),
+  );
   void annVersion;
+  void sidecarVersion;
   return (
     <div
       className="content reader"
@@ -301,6 +357,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
             {verses.map((v) => {
               const n = Number(v.nodeKey.split('/').pop());
               const echoed = echoVerse === n;
+              const quotes = verseQuotes.get(v.nodeKey) ?? [];
               return (
                 <p
                   key={v.nodeKey}
@@ -309,11 +366,11 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
                   className={`bible-verse il-pair${focusVerse === n ? ' focus' : ''}${echoed ? ' xlate-echo' : ''}`}
                 >
                   <span className={`il-la${echoed ? ' xlate-echo' : ''}`} data-lang="la" lang="la">
-                    <sup>{n}</sup> {v.latin ?? <span style={{ opacity: 0.5 }}>—</span>}
+                    <sup>{n}</sup> {v.latin ? markedText(v.latin, quotes) : <span style={{ opacity: 0.5 }}>—</span>}
                   </span>
                   {v.english !== null && (
                     <span className={`il-en${echoed ? ' xlate-echo' : ''}`} data-lang="en" lang="en">
-                      {v.english}
+                      {markedText(v.english, quotes)}
                     </span>
                   )}
                 </p>
@@ -326,9 +383,10 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
             <span className="lang-tag">Latine</span>
             {verses.map((v) => {
               const n = Number(v.nodeKey.split('/').pop());
+              const quotes = verseQuotes.get(v.nodeKey) ?? [];
               return (
                 <p key={v.nodeKey} data-nodekey={v.nodeKey} data-verse={n} className={`bible-verse${focusVerse === n ? ' focus' : ''}${echoVerse === n ? ' xlate-echo' : ''}`}>
-                  <sup>{n}</sup> {v.latin ?? <span style={{ opacity: 0.5 }}>—</span>}
+                  <sup>{n}</sup> {v.latin ? markedText(v.latin, quotes) : <span style={{ opacity: 0.5 }}>—</span>}
                 </p>
               );
             })}
@@ -337,9 +395,10 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
             <span className="lang-tag">English</span>
             {verses.map((v) => {
               const n = Number(v.nodeKey.split('/').pop());
+              const quotes = verseQuotes.get(v.nodeKey) ?? [];
               return (
                 <p key={v.nodeKey} data-nodekey={v.nodeKey} data-verse={n} className={`bible-verse${focusVerse === n ? ' focus' : ''}${echoVerse === n ? ' xlate-echo' : ''}`}>
-                  <sup>{n}</sup> {v.english ?? <span style={{ opacity: 0.5 }}>—</span>}
+                  <sup>{n}</sup> {v.english ? markedText(v.english, quotes) : <span style={{ opacity: 0.5 }}>—</span>}
                 </p>
               );
             })}
@@ -382,6 +441,16 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, onOpenKe
           <button onClick={() => { setNoteFor(menu); setNoteText(''); setMenu(null); }}>
             ✎ Annotate
           </button>
+          {onCapture && (
+            <button onClick={() => { onCapture(captureFrom(menu)); setMenu(null); }}>
+              ✎ Add to Journal/Homily notes
+            </button>
+          )}
+          {sidecar && menu.nodeKey && (
+            <button onClick={() => { void highlightBoth(menu); setMenu(null); }}>
+              🖍 Highlight both panes
+            </button>
+          )}
           <button
             onClick={() => {
               const n = menu.nodeKey?.match(/^verse:[^/]+\/(\d+)\/(\d+)$/);
