@@ -630,6 +630,26 @@ export class CorpusDb {
     return out;
   }
 
+  /** Verse refs for a concept (imagery layer) — sorted by key. */
+  versesByConcept(conceptId: string): { book: string; chapter: number; verse: number }[] {
+    const rows = this.all(
+      `SELECT v.key FROM edges e
+       JOIN nodes v ON v.id = e.src
+       JOIN nodes c ON c.id = e.dst
+       WHERE e.rel = ? AND c.kind = ? AND c.key = ?
+       ORDER BY v.key`,
+      ['INSTANCE_OF', 'concept', `concept:${conceptId}`],
+    );
+    const out: { book: string; chapter: number; verse: number }[] = [];
+    for (const r of rows) {
+      const key = String(r.key);
+      const m = key.match(/^verse:([^/]+)\/(\d+)\/(\d+)$/);
+      if (!m) continue;
+      out.push({ book: m[1], chapter: Number(m[2]), verse: Number(m[3]) });
+    }
+    return out;
+  }
+
   /** Verbatim Ordinarium script for an hour file (Matutinum, Laudes, Minor…). */
   getSkeleton(hourFile: string): string[] {
     return this.all('SELECT line FROM office_skeleton WHERE hour_file = ? ORDER BY ord', [hourFile]).map((r) =>

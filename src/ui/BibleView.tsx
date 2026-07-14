@@ -16,6 +16,7 @@ import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from
 import { verseHash } from '../core/share/shareLink.ts';
 import { alignSelection, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
 import { useNarrow } from './BilingualText.tsx';
+import ScriptureAtlas, { type AtlasMode } from './ScriptureAtlas.tsx';
 
 interface Props {
   db: CorpusDb;
@@ -74,6 +75,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
   const [annVersion, setAnnVersion] = useState(0);
   const [sidecarVersion, setSidecarVersion] = useState(0);
   const [liturgyOpen, setLiturgyOpen] = useState(false);
+  const [atlasMode, setAtlasMode] = useState<AtlasMode>('canonical');
   /** Verse echo: hover/tap/selection lights the aligned verse in BOTH panes. */
   const [echoVerse, setEchoVerse] = useState<number | null>(null);
   const [callout, setCallout] = useState<{ x: number; y: number; echo: WordEchoResult } | null>(null);
@@ -216,8 +218,30 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
 
   // ── Book grid ────────────────────────────────────────────────────
   if (!book) {
+    const isCanonical = atlasMode === 'canonical';
+    const isImagery = atlasMode === 'imagery';
+    const isParallels = atlasMode === 'parallels';
+    
+    if (!isCanonical) {
+      const mode: AtlasMode = isImagery ? 'imagery' : 'parallels';
+      return (
+        <div className="content reader">
+          <div className="atlas-mode-switch">
+            <button className={isCanonical ? 'active' : ''} onClick={() => setAtlasMode('canonical')}>Canonical 📖</button>
+            <button className={isImagery ? 'active' : ''} onClick={() => setAtlasMode('imagery')}>Imagery ✦</button>
+            <button className={isParallels ? 'active' : ''} onClick={() => setAtlasMode('parallels')}>Parallels ⑃</button>
+          </div>
+          <ScriptureAtlas db={db} mode={mode} onOpenKey={onOpenKey} />
+        </div>
+      );
+    }
     return (
       <div className="content reader">
+        <div className="atlas-mode-switch">
+          <button className={isCanonical ? 'active' : ''} onClick={() => setAtlasMode('canonical')}>Canonical 📖</button>
+          <button className={isImagery ? 'active' : ''} onClick={() => setAtlasMode('imagery')}>Imagery ✦</button>
+          <button className={isParallels ? 'active' : ''} onClick={() => setAtlasMode('parallels')}>Parallels ⑃</button>
+        </div>
         {(['OT', 'NT'] as const).map((t) => (
           <section className="reader-section" key={t}>
             <div className="head">
@@ -265,6 +289,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
 
   // ── Chapter reader ───────────────────────────────────────────────
   const chapterAnns = verses.flatMap((v) => annotationsFor(v.nodeKey));
+  const commentary = useMemo(() => (book && chapter ? db.commentaryFor(book, chapter) : []), [db, book, chapter]);
   const verseQuotes = new Map(
     verses.map((verse) => {
       const highlights = sidecar?.forAnchor(verse.nodeKey) ?? [];
@@ -415,6 +440,24 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
                 {a.note && <div>{a.note}</div>}
               </div>
             ))}
+          </div>
+        )}
+        {commentary.length > 0 && (
+          <div className="atlas-commentary">
+            <div className="group-title">Commentary</div>
+            {commentary.map((cm) => {
+              const src = cm.sourcePath.replace(/^Commentary\//, '');
+              const vv = cm.nodeKey.match(/\/(\d+)$/)?.[1];
+              return (
+                <div className="atlas-comm" key={cm.nodeKey}>
+                  <div className="jsc-evidence">
+                    <span className="chip">{src}</span>
+                    {vv && <span className="chip">{book} {chapter}:{vv}</span>}
+                  </div>
+                  <div>{cm.english}</div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
