@@ -1,0 +1,40 @@
+# Orchestrator handoff — v0.5 wave (2026-07-14, Fable→GLM-5.2)
+
+**You are the orchestrator for the v0.5 presentation & meaning plane.** Contract: `DOCS/ARCHITECTURE.md` §7.7 (fourth re-attestation) + `CHECKLIST.md` "v0.5 wave" stanzas B-J…B-O. Operator approved the full plan (all six workstreams); execution is mid-flight. Run `/sesh resume` equivalent first (git log + CHECKLIST frontier is the truth); everything below was true at handoff time — **verify disk state before dispatching anything**, because one subagent was still running when this handoff was written.
+
+## Done, committed, pushed (both remotes; HEAD `adc20316` at handoff)
+
+| Commit | Content | Markers |
+|---|---|---|
+| `086f8e7f` | §7.7 contract + BJ–BO stanzas, 4th re-attestation | — |
+| `594c2ddc` | BL.1/BL.2 clause focus + SimilarityGlyph + imagery concepts | BL.1 BL.2 `[X]` |
+| `957f7517` | BC.1/BC.2/BC.4 sidecar v2 (store/resolve/Tauri cmds/tests) | `[X]` |
+| `457c9277` | BJ.1–3 theme system + sanctissimissa + token refactor | `[X]` |
+| `8265e90c` | BK.1/BK.2 BilingualText + mobile interleave + range echo | `[X]` |
+| `c447a93d` | BM.1/2/4 + BM.3 code — Haydock+Catena vendored, commentary ingest, 79-pericope parallels | `[X]` |
+| `adc20316` | Shared re-ingest: db 193 MB (LFS), 20,915 commentary nodes, 9,316 verse imagery edges (new ingest Pass 4b), fill-log delta zero | BL.3 BM.3 `[X]` |
+
+Suite at handoff: **79/79**, `npx tsc -b` clean, `npm run build` clean.
+
+## In flight at handoff (CHECK DISK FIRST)
+
+A subagent ("C1") was resumed in the dying Fable session to finish the journal workspace components. Already on disk: TipTap `^3.27.4` in package.json + `src/ui/AccompanimentEditor.tsx`. It was writing: `src/ui/JournalSidecar.tsx` (+ exported `ConnectionsPanel`), `src/ui/JournalView.tsx`, `src/ui/HomilyPlanner.tsx`. **If those files exist and tsc/tests pass, verify semantically against the P-T/P-S entity rows, flip BC.3/BO.2/BD.1/BD.2 component-halves, commit scoped (include package.json+package-lock TipTap lines — but check `git diff package.json` for unrelated pre-existing edits first). If absent/partial, author them yourself per stanza B-O + the entity rows + `DOCS/standroids-journal-sidecar-standalone.html` + the PRD.**
+
+## Remaining work (in order)
+
+1. **C1 remainder** (above).
+2. **BO.1** — ReaderView + BibleView ctx-menus: "✎ Add to Journal/Homily notes" (opens JournalSidecar with quote + `alignSelection` counterpart + anchor nodeKey) and "🖍 Highlight both panes" (lightweight accompaniment quote+quoteAlt → renders via existing `mark.ann` in both panes; `quote_alt` column exists in sidecar v2).
+3. **BO.3** — App integration (single owner of App.tsx): `View` + `'journal'`; NAV entry "Journal & Homilies" (✎); open SidecarDb at App level (`SidecarDb.open()` + `migrateLocalStorageAnnotations`) and thread `sidecar` to views; mount `ThemePicker` in the rail (init theme on boot from settings); `#/acc/<id>` hash route (completes BB.3 — see `parseHashRoute` in `src/core/share/shareLink.ts`); JournalView/HomilyPlanner as tabs of the journal view; JournalSidecar opens via the same `.split` layout MeaningPanel uses (`action` state gains a `capture` variant or a parallel state — architect's choice, document it).
+4. **BN.1** — `src/ui/ScriptureAtlas.tsx` (`AtlasMode = 'canonical'|'imagery'|'parallels'`) + BibleView mode switch + commentary read-only layer beneath verses. Data is ALL live in the committed db: `CorpusDb.conceptVerseCounts()` (imagery counts, e.g. king_kingdom 2791), `chapterCiteCounts(book)`, `commentaryFor(book, ch, verse?)`, `PERICOPES`/`SCENARIO_CLUSTERS` in `src/core/ontology/parallels.ts` (Gospel keys `Matt/Marc/Luc/Joann`). CSS classes `.atlas-*` already in styles.css. Differential font sizing: `font-size ∝ √count` inline, weight ∝ CITES.
+5. **Verification pass** — `npm test`, `npx tsc -b`, `npm run build`, then `npm run dev` browser pass: theme toggle (skeuomorphic/sanctissimissa × light/dark × seasonal colors), ≤1100px interleave with dual-language selection highlight, capture→edit→connect→destination round-trip persisting across reload (IndexedDB `standroidsmissal`/`blobs`/`sidecar.db`), MeaningPanel glyph+clause hits, Atlas modes click-through to `#/verse/…`, commentary under verses with source attribution.
+6. **Commit/push discipline**: scoped per task, `[ ]→[X]` only after semantic verification (I-12 — no grep-as-done), push `origin` AND `github` every handback (TC10).
+
+## Standing notes for the successor
+
+- **Dirty working tree**: pre-existing modifications (icons, README, DOCS/BUILD.md, package.json version fields, computus.ts, OfficeView.tsx, vite.config.ts, tauri.conf.json, etc.) predate this wave — do NOT sweep them into v0.5 commits; scoped adds only.
+- **RevenueCat**: MCP server registered user-scope (`https://mcp.revenuecat.ai/mcp`, Bearer key from `~/Admin-Manual/CREDENTIALS/RevenueCat/credentials.env`); project `projaba0bd94` now has app `app8f455368d3` (mba.robin.standroidsmissal) + entitlements `companion_ondevice`/`companion_hosted`/`institutional`; catalog doc updated+pushed. Devin-IDE RC work had landed nothing at check time — if it appears later, reconcile to THESE lookup keys. Products/offerings + public SDK key remain open under BI.4.
+- **Known data gap (BA follow-up, not this wave):** `VENDORED/douay-rheims/EntireBible-DR.json` is missing trailing chapters in several books (Num 36, Jos 23–24, Judg 18–21, Ruth 3–4, Judith 12–16, Esth 11+, Eccli 49–51…), stranding 865 Haydock records as ingest skips; they attach automatically on re-ingest once the DR source is completed. Recorded in BM.3's checklist note.
+- **Ingest**: deterministic, ~2 min; re-run only if you change concepts/commentary/parsers; fill-log delta must stay zero; db is LFS on forgejo only (never GitHub LFS — CC13).
+- Plan file (operator-approved): `~/.claude/plans/can-you-create-an-jolly-simon.md`.
+
+— Handoff authored by Claude Fable 5 (claude-fable-5), orchestrator seat, at operator direction (Fable quota 86%). 2026-07-14.
