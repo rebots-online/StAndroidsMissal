@@ -15,8 +15,13 @@ import OfficeView from './ui/OfficeView.tsx';
 import BibleView from './ui/BibleView.tsx';
 import { parseHashRoute } from './core/share/shareLink.ts';
 import { APP_LINKS } from './core/model/appLinks.ts';
+import { SidecarDb } from './core/accompaniment/store.ts';
+import JournalSidecar from './ui/JournalSidecar.tsx';
+import JournalView from './ui/JournalView.tsx';
+import HomilyPlanner from './ui/HomilyPlanner.tsx';
+import ThemePicker from './ui/ThemePicker.tsx';
 
-type View = 'map' | 'reader' | 'calendar' | 'office' | 'bible';
+type View = 'map' | 'reader' | 'calendar' | 'office' | 'bible' | 'journal';
 
 const NAV: { id: View; ico: string; label: string }[] = [
   { id: 'map', ico: '🚇', label: 'Subway Map' },
@@ -24,6 +29,7 @@ const NAV: { id: View; ico: string; label: string }[] = [
   { id: 'calendar', ico: '📅', label: 'Perpetual Calendar' },
   { id: 'office', ico: '🕰', label: 'Divine Office' },
   { id: 'bible', ico: '📜', label: 'Sacred Scripture' },
+  { id: 'journal', ico: '✎', label: 'Journal & Homilies' },
 ];
 
 export default function App() {
@@ -47,12 +53,21 @@ export default function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   // Bible deep-link focus ("Gen/1/5"); nonce bumps so re-navigating re-scrolls.
   const [bibleFocus, setBibleFocus] = useState<{ ref: string | null; nonce: number }>({ ref: null, nonce: 0 });
+  const [sidecar, setSidecar] = useState<SidecarDb | null>(null);
+  const [capture, setCapture] = useState<{ quote: string; quoteAlt?: string; anchor: string | null } | null>(null);
+  const [journalTab, setJournalTab] = useState<'timeline' | 'planner'>('timeline');
 
   useEffect(() => {
     loadCorpusBytes()
       .then((bytes) => CorpusDb.open(bytes))
       .then(setDb)
       .catch((e) => setError(String(e)));
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    SidecarDb.open().then((s) => { if (alive) setSidecar(s); }).catch(() => { if (alive) setSidecar(null); });
+    return () => { alive = false; };
   }, []);
 
   // Hash-route deep links (#/verse/…, #/day/…, #/section/… — §7.6 BB.3):
@@ -69,6 +84,8 @@ export default function App() {
     } else if (link.sectionKey) {
       // Route through the same source-day navigation search hits use.
       onOpenKey(link.sectionKey);
+    } else if (link.view === 'journal' && link.accId) {
+      setView('journal');
     }
   }, []);
 
@@ -84,12 +101,15 @@ export default function App() {
       const st = (e.state as { view?: View; panel?: boolean } | null) ?? { view: 'map', panel: false };
       fromPop.current = true;
       setView((st.view as View) ?? 'map');
-      if (!st.panel) setAction(null);
+      if (!st.panel) {
+        setAction(null);
+        setCapture(null);
+      }
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
-  const panelOpen = action !== null;
+  const panelOpen = action !== null || capture !== null;
   useEffect(() => {
     if (!navReady.current) {
       navReady.current = true;
@@ -101,6 +121,15 @@ export default function App() {
     }
     history.pushState({ view, panel: panelOpen }, '');
   }, [view, panelOpen]);
+
+  const openAction = (a: SelectionAction) => {
+    setCapture(null);
+    setAction(a);
+  };
+  const openCapture = (c: { quote: string; quoteAlt?: string; anchor: string | null }) => {
+    setAction(null);
+    setCapture(c);
+  };
 
   const day: DayInfo | null = useMemo(() => (db ? resolveDay(db, date) : null), [db, date]);
 
@@ -210,6 +239,7 @@ export default function App() {
             <span className="label">{n.label}</span>
           </button>
         ))}
+        <ThemePicker sidecar={sidecar} />
         <div className="spacer" />
         <button className="nav" onClick={() => setAboutOpen(true)}>
           <span className="ico">ℹ</span>
@@ -252,7 +282,7 @@ export default function App() {
           />
         )}
 
-        <div className={action ? 'split' : 'single'}>
+        <div className={action || capture ? 'split' : 'single'}>
           {view === 'map' && (
             <div className="content map-wrap">
               <SubwayMap db={db} day={day} onStation={onStation} />
@@ -264,7 +294,9 @@ export default function App() {
               day={day}
               focusSection={focus.section}
               focusNonce={focus.nonce}
-              onAction={setAction}
+              sidecar={sidecar}
+              onAction={openAction}
+              onCapture={openCapture}
               onVisibleSection={onVisibleSection}
             />
           )}
@@ -277,13 +309,30 @@ export default function App() {
               db={db}
               focusRef={bibleFocus.ref}
               focusNonce={bibleFocus.nonce}
-              onAction={setAction}
+              sidecar={sidecar}
+              onAction={openAction}
+              onCapture={openCapture}
               onOpenKey={onOpenKey}
             />
+          )}
+          {view === 'journal' && sidecar && (
+            <div className="content">
+              <div className="cal-head">
+                <button className={journalTab==='timeline'?'active':''} onClick={() => setJournalTab('timeline')}>Journal timeline</button>
+                <button className={journalTab==='planner'?'active':''} onClick={() => setJournalTab('planner')}>Homily planner</button>
+              </div>
+              {journalTab==='timeline' ? <JournalView db={db} sidecar={sidecar} day={day} onOpenKey={onOpenKey} /> : <HomilyPlanner db={db} sidecar={sidecar} day={day} />}
+            </div>
+          )}
+          {view === 'journal' && !sidecar && (
+            <div className="content"><p>Opening your journal…</p></div>
           )}
 
           {action && (
             <MeaningPanel db={db} action={action} onClose={() => history.back()} onOpenKey={onOpenKey} />
+          )}
+          {capture && sidecar && (
+            <JournalSidecar db={db} sidecar={sidecar} capture={capture} day={day} onClose={() => setCapture(null)} onOpenKey={onOpenKey} />
           )}
         </div>
       </div>

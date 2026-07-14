@@ -7,13 +7,15 @@
  */
 
 export interface DeepLink {
-  view: 'bible' | 'reader';
+  view: 'bible' | 'reader' | 'journal';
   /** "Gen/1" or "Gen/1/5" for bible; undefined otherwise. */
   verseRef?: string;
   /** ISO date for day links. */
   date?: string;
   /** "section:<path>#<name>" node key for section links. */
   sectionKey?: string;
+  /** Accompaniment ID for journal deep links. */
+  accId?: string;
 }
 
 export function parseHashRoute(hash: string): DeepLink | null {
@@ -24,6 +26,8 @@ export function parseHashRoute(hash: string): DeepLink | null {
   if (m) return { view: 'reader', date: m[1] };
   m = h.match(/^\/section\/(.+)$/);
   if (m) return { view: 'reader', sectionKey: `section:${m[1]}` };
+  m = h.match(/^\/acc\/([A-Za-z0-9-]+)$/);
+  if (m) return { view: 'journal', accId: m[1] };
   return null;
 }
 
