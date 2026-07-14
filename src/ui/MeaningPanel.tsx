@@ -6,10 +6,12 @@
  * then no generated commentary is fabricated.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { SelectionAction } from './ReaderView.tsx';
 import type { ConcordanceHit, SimilarHit } from '../core/data/types.ts';
+import { bestClause } from '../core/vector/clause.ts';
+import SimilarityGlyph from './SimilarityGlyph.tsx';
 
 interface Props {
   db: CorpusDb;
@@ -26,25 +28,97 @@ function sectionOf(key: string): string {
   return m ? m[1] : '';
 }
 
-function ConcordanceHitRow({ hit, onOpenKey }: { hit: ConcordanceHit; onOpenKey: (k: string) => void }) {
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Human reference for a section node key: feast/day title + readable source. */
+function humanRef(db: CorpusDb, key: string): { headline: string; where: string } {
+  const path = pathOf(key);
+  const section = sectionOf(key);
+  const title = db.getFileNode(path)?.title ?? null;
+  const office = path.startsWith('Horas/');
+  const p = office ? path.slice(6) : path;
+  let when = p;
+  const sm = p.match(/^Sancti\/(\d\d)-(\d\d)/);
+  if (sm) when = `${MONTHS[Number(sm[1]) - 1]} ${Number(sm[2])}`;
+  else if (p.startsWith('Tempora/')) when = p.slice(8);
+  else if (p.startsWith('Commune/')) when = `Commune ${p.slice(8)}`;
+  else if (p.startsWith('Ordo/')) when = 'Ordinary of the Mass';
+  else if (p.startsWith('Psalterium/')) when = 'Psalter';
+  return {
+    headline: title ? `${section} — ${title}` : `${section} — ${p}`,
+    where: office ? `Office · ${when}` : when,
+  };
+}
+
+function ConcordanceHitRow({ db, hit, onOpenKey }: { db: CorpusDb; hit: ConcordanceHit; onOpenKey: (k: string) => void }) {
+  const ref = humanRef(db, hit.key);
   return (
-    <div className="hit" onClick={() => onOpenKey(hit.key)} style={{ cursor: 'pointer' }}>
+    <div className="hit clickable" onClick={() => onOpenKey(hit.key)} title="Open in the reader, in context">
       <div className="where">
-        <span>{pathOf(hit.key)} · {sectionOf(hit.key)}</span>
+        <span className="ref-headline">{ref.headline}</span>
+        <span className="open-hint">{ref.where} ↗</span>
       </div>
       <div className="text" dangerouslySetInnerHTML={{ __html: hit.snippet.replace(/«/g, '<b>«').replace(/»/g, '»</b>') }} />
     </div>
   );
 }
 
-function SimilarHitRow({ hit, onOpenKey }: { hit: SimilarHit; onOpenKey: (k: string) => void }) {
+function SimilarHitRow({
+  db, hit, query, siblings, onOpenKey,
+}: {
+  db: CorpusDb; hit: SimilarHit; query: string; siblings: number[]; onOpenKey: (k: string) => void;
+}) {
+  const ref = humanRef(db, hit.key);
+  const [expanded, setExpanded] = useState(false);
+  const full = hit.latin ?? hit.english ?? '';
+  const clause = useMemo(() => bestClause(full, query), [full, query]);
+  const before = clause ? full.slice(0, clause.start) : '';
+  const after = clause ? full.slice(clause.end) : '';
+  const hasContext = before.trim().length > 0 || after.trim().length > 0;
   return (
-    <div className="hit" onClick={() => onOpenKey(hit.key)} style={{ cursor: 'pointer' }}>
+    <div className="hit clickable" onClick={() => onOpenKey(hit.key)} title="Open in the reader, in context">
       <div className="where">
-        <span>{pathOf(hit.key)} · {hit.section}</span>
-        <span className="score">{hit.score.toFixed(2)}</span>
+        <span className="ref-headline">
+          <SimilarityGlyph score={hit.score} siblings={siblings} />{' '}
+          {ref.headline}
+        </span>
+        <span className="open-hint">{ref.where} ↗</span>
       </div>
-      <div className="text">{(hit.latin ?? hit.english ?? '').slice(0, 200)}…</div>
+      <div className="text">
+        {clause ? (
+          expanded ? (
+            <>
+              {before}
+              <b className="clause-hit">{clause.text}</b>
+              {after}
+              {hasContext && (
+                <button
+                  className="clause-toggle"
+                  onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
+                  title="Collapse to the closest clause"
+                >
+                  less
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <b className="clause-hit">{clause.text}</b>
+              {hasContext && (
+                <button
+                  className="clause-toggle"
+                  onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+                  title="Show the full passage around this clause"
+                >
+                  … more
+                </button>
+              )}
+            </>
+          )
+        ) : (
+          `${full.slice(0, 200)}…`
+        )}
+      </div>
     </div>
   );
 }
@@ -93,6 +167,47 @@ function ConceptGroup<T extends ConcordanceHit | SimilarHit>({
   );
 }
 
+/**
+ * One "relates to" concept — an accordion whose body is the actual linked
+ * instances (never a bare count: every claim expands to its evidence).
+ */
+function ConceptTag({
+  db, conceptId, label, description, sectionCount, query, onOpenKey,
+}: {
+  db: CorpusDb; conceptId: string; label: string; description: string | null;
+  sectionCount: number; query: string; onOpenKey: (k: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const auto = label.startsWith('Auto: ');
+  const cleanLabel = auto ? label.slice(6).replace(/_+$/, '').trim() : label;
+  const instances = useMemo(
+    () => (open ? db.sectionsByConcept(conceptId).sort((a, b) => b.score - a.score) : []),
+    [db, conceptId, open],
+  );
+  return (
+    <div className="concept-tag">
+      <button className="concept-tag-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="chev">{open ? '▾' : '▸'}</span>
+        <b>{cleanLabel}</b>
+        {auto && <span className="auto-badge" title="Auto-derived cluster from embedding similarity">auto</span>}
+        {sectionCount > 0 && <span className="concept-tag-count"> · {sectionCount} instances</span>}
+      </button>
+      {description && <div className="concept-tag-desc">{description}</div>}
+      {open && (
+        <div className="concept-tag-instances">
+          {instances.slice(0, 20).map((hit, i, shown) => (
+            <SimilarHitRow key={i} db={db} hit={hit} query={query} siblings={shown.map((h) => h.score)} onOpenKey={onOpenKey} />
+          ))}
+          {instances.length > 20 && (
+            <div className="concept-tag-more">…and {instances.length - 20} more (see concordance below)</div>
+          )}
+          {instances.length === 0 && <div className="concept-tag-more">No stored instances for this cluster.</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) {
   const { kind, term, nodeKey } = action;
 
@@ -112,11 +227,7 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
               <div className="concept-summary">
                 <div className="group-title">This text relates to</div>
                 {concepts.map((c) => (
-                  <div key={c.conceptId} className="concept-tag">
-                    <b>{c.label}</b>
-                    {c.sectionCount > 0 && <span className="concept-tag-count"> · {c.sectionCount} instances</span>}
-                    {c.description && <div className="concept-tag-desc">{c.description}</div>}
-                  </div>
+                  <ConceptTag key={c.conceptId} db={db} conceptId={c.conceptId} label={c.label} description={c.description} sectionCount={c.sectionCount} query={term} onOpenKey={onOpenKey} />
                 ))}
               </div>
             );
@@ -135,7 +246,7 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
                 description={g.description}
                 count={g.count}
                 hits={g.hits}
-                renderHit={(hit, ok) => <ConcordanceHitRow hit={hit} onOpenKey={ok} />}
+                renderHit={(hit, ok) => <ConcordanceHitRow db={db} hit={hit} onOpenKey={ok} />}
                 onOpenKey={onOpenKey}
               />
             ));
@@ -154,7 +265,7 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
                 description={g.description}
                 count={g.count}
                 hits={g.hits}
-                renderHit={(hit, ok) => <SimilarHitRow hit={hit} onOpenKey={ok} />}
+                renderHit={(hit, ok) => <SimilarHitRow db={db} hit={hit} query={term} siblings={g.hits.map((h) => h.score)} onOpenKey={ok} />}
                 onOpenKey={onOpenKey}
               />
             ));
@@ -184,7 +295,7 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
                 description={g.description}
                 count={g.count}
                 hits={g.hits}
-                renderHit={(hit, ok) => <SimilarHitRow hit={hit} onOpenKey={ok} />}
+                renderHit={(hit, ok) => <SimilarHitRow db={db} hit={hit} query={term} siblings={g.hits.map((h) => h.score)} onOpenKey={ok} />}
                 onOpenKey={onOpenKey}
               />
             ));

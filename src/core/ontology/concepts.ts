@@ -350,3 +350,214 @@ export const CONCEPTS: ConceptDef[] = [
     keywords: [],
   },
 ];
+
+/**
+ * Imagery / metaphor / typology concepts — the great scriptural images that
+ * recur across Mass and Office texts. Keyword seeds are given in BOTH Latin
+ * and English so detection works on either column of a text block.
+ * Merged into CONCEPTS below, so the ingest (scripts/ingest-corpus.mjs, which
+ * imports CONCEPTS) picks these up automatically on the next re-ingest.
+ */
+export const IMAGERY_CONCEPTS: ConceptDef[] = [
+  {
+    id: 'sacred_imagery',
+    label: 'Sacred Imagery',
+    description: 'The recurring scriptural images, metaphors, and types through which the liturgy speaks of God and salvation — light, shepherd, vine, water, bread, lamb, and their kin.',
+    sectionNames: [],
+    patterns: [],
+    keywords: [],
+  },
+  {
+    id: 'light_darkness',
+    label: 'Light & Darkness',
+    description: 'The image of God and Christ as light dispelling the darkness of sin and death — from the creation of light through John\'s prologue to the Paschal candle.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /lumen de lumine/i,
+      /light of light/i,
+    ],
+    keywords: ['lux', 'lumen', 'tenebrae', 'illumina', 'light', 'darkness', 'lumen christi', 'light of the world', 'lux mundi'],
+  },
+  {
+    id: 'shepherd_flock',
+    label: 'Shepherd & Flock',
+    description: 'Christ the Good Shepherd and the faithful as His flock — Psalm 22 (23), Ezekiel 34, and John 10.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /dominus regit me/i,
+      /ego sum pastor bonus/i,
+      /the lord is my shepherd/i,
+    ],
+    keywords: ['pastor', 'ovis', 'oves', 'grex', 'agni', 'shepherd', 'sheep', 'flock', 'pastor bonus', 'good shepherd'],
+  },
+  {
+    id: 'vine_vineyard',
+    label: 'Vine & Vineyard',
+    description: 'Israel and the Church as God\'s vineyard, and Christ the true vine whose branches bear fruit — Isaiah 5, Psalm 79 (80), and John 15.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /ego sum vitis vera/i,
+      /i am the true vine/i,
+    ],
+    keywords: ['vitis', 'vinea', 'palmes', 'palmites', 'vine', 'vineyard', 'branches', 'vinea domini'],
+  },
+  {
+    id: 'water_baptism',
+    label: 'Water & Baptism',
+    description: 'Water as the sign of cleansing and rebirth — the Red Sea passage, the rock in the desert, the living water of John 4, and the font of Baptism.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /vidi aquam/i,
+      /aqua viva/i,
+      /living water/i,
+    ],
+    keywords: ['aqua', 'aquae', 'fons', 'baptisma', 'baptismum', 'water', 'fountain', 'baptism', 'font', 'wellspring'],
+  },
+  {
+    id: 'bread_from_heaven',
+    label: 'Bread from Heaven',
+    description: 'The manna of the Exodus fulfilled in the Eucharist — Christ the living bread come down from heaven in John 6.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /panem de caelo/i,
+      /panis vivus/i,
+      /bread from heaven/i,
+    ],
+    keywords: ['panis', 'manna', 'panis angelicus', 'panem de caelo', 'bread', 'bread from heaven', 'living bread', 'bread of life'],
+  },
+  {
+    id: 'lamb_sacrifice',
+    label: 'Lamb & Sacrifice',
+    description: 'Christ the Paschal Lamb whose sacrifice takes away sin — the Passover lamb of Exodus 12, Isaiah 53, and the Lamb of the Apocalypse.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /ecce agnus dei/i,
+      /behold the lamb of god/i,
+    ],
+    keywords: ['agnus', 'hostia', 'victima', 'immolatus', 'sacrificium', 'lamb', 'sacrifice', 'paschal lamb', 'victim', 'oblation'],
+  },
+  {
+    id: 'king_kingdom',
+    label: 'King & Kingdom',
+    description: 'Christ as King and the reign of God — the royal psalms, the kingship of David fulfilled, and the kingdom proclaimed in the Gospels.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /rex regum/i,
+      /king of kings/i,
+      /adveniat regnum tuum/i,
+    ],
+    keywords: ['rex', 'regnum', 'thronus', 'rex gloriae', 'king', 'kingdom', 'throne', 'reign', 'king of glory'],
+  },
+  {
+    id: 'bridegroom_bride',
+    label: 'Bridegroom & Bride',
+    description: 'Christ the Bridegroom and the Church (or the soul) His bride — the Canticle of Canticles, Psalm 44 (45), and the wedding feast of the Lamb.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /ecce sponsus venit/i,
+      /behold the bridegroom/i,
+    ],
+    keywords: ['sponsus', 'sponsa', 'nuptiae', 'thalamus', 'bridegroom', 'bride', 'wedding feast', 'marriage', 'espoused'],
+  },
+  {
+    id: 'desert_exile',
+    label: 'Desert & Exile',
+    description: 'The wilderness as the place of testing, purification, and longing for the promised land — the forty years of the Exodus, the Babylonian exile, and Christ\'s forty days.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /super flumina babylonis/i,
+      /by the waters of babylon/i,
+    ],
+    keywords: ['desertum', 'eremus', 'solitudo', 'exsilium', 'peregrinatio', 'desert', 'wilderness', 'exile', 'pilgrimage', 'sojourn'],
+  },
+  {
+    id: 'mountain_of_god',
+    label: 'Mountain of God',
+    description: 'The holy mountain as the place of encounter with God — Sinai, Sion, Tabor, and Calvary.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /in monte sancto/i,
+      /mons sion/i,
+      /holy mountain/i,
+    ],
+    keywords: ['mons', 'montes', 'mons sanctus', 'sion', 'mountain', 'holy mountain', 'mount sion', 'hill of the lord'],
+  },
+  {
+    id: 'temple_dwelling',
+    label: 'Temple & Dwelling',
+    description: 'God dwelling among His people — the tabernacle of the desert, the temple of Jerusalem, Christ\'s body as temple, and the faithful as living stones.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /domus dei/i,
+      /templum dei/i,
+      /house of god/i,
+    ],
+    keywords: ['templum', 'tabernaculum', 'domus dei', 'habitatio', 'sanctuarium', 'temple', 'tabernacle', 'dwelling', 'house of god', 'sanctuary'],
+  },
+  {
+    id: 'harvest_vintage',
+    label: 'Harvest & Vintage',
+    description: 'Sowing and reaping as the image of God\'s word bearing fruit and of the final judgment — the parable of the sower and the harvest at the end of the age.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /messis quidem multa/i,
+      /the harvest indeed is great/i,
+    ],
+    keywords: ['messis', 'seges', 'vindemia', 'fructus', 'primitiae', 'harvest', 'vintage', 'firstfruits', 'reap', 'sow'],
+  },
+  {
+    id: 'way_journey',
+    label: 'The Way / Journey',
+    description: 'The life of faith as a road walked with God — the paths of the psalms, the Emmaus road, and Christ who is Himself the Way.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /ego sum via/i,
+      /vias tuas domine/i,
+      /i am the way/i,
+    ],
+    keywords: ['via', 'viae', 'iter', 'semita', 'semitae', 'way', 'path', 'journey', 'walk', 'shew me thy ways'],
+  },
+  {
+    id: 'rock_foundation',
+    label: 'Rock & Foundation',
+    description: 'God as the rock of refuge and Christ the cornerstone rejected by the builders — Psalm 17 (18), Matthew 7 and 16, and 1 Peter 2.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /lapis angularis/i,
+      /super hanc petram/i,
+      /corner ?stone/i,
+    ],
+    keywords: ['petra', 'lapis', 'fundamentum', 'firmamentum', 'rock', 'stone', 'foundation', 'cornerstone', 'upon this rock'],
+  },
+  {
+    id: 'fire_spirit',
+    label: 'Fire & Spirit',
+    description: 'Fire as the sign of God\'s presence and of the Holy Ghost — the burning bush, the pillar of fire, and the tongues of flame at Pentecost.',
+    broader: 'sacred_imagery',
+    sectionNames: [],
+    patterns: [
+      /ignis divini amoris/i,
+      /tongues.*of fire/i,
+      /veni sancte spiritus/i,
+    ],
+    keywords: ['ignis', 'flamma', 'spiritus sanctus', 'pentecostes', 'fire', 'flame', 'holy ghost', 'pentecost', 'tongues of fire'],
+  },
+];
+
+// Merge into the aggregate the ingest consumes — scripts/ingest-corpus.mjs
+// imports CONCEPTS, so a future re-ingest picks these up automatically.
+CONCEPTS.push(...IMAGERY_CONCEPTS);
