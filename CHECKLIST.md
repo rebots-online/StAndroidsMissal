@@ -476,12 +476,12 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 ## Stanza B-C — Accompaniment model + sidecar v2 + editor
 - [X] **BC.1** `src/core/accompaniment/types.ts` (`Accompaniment`, `OccurrenceSelector`, `Exposure`) + `store.ts` (`SIDECAR_SCHEMA_SQL_V2`, `SidecarDb` v2, platform byte-persistence web OPFS/IndexedDB + Tauri `load_sidecar`/`save_sidecar`); annotations-localStorage migration (old key read-only). _2026-07-14: +`quote_alt` col (§7.7 dual-pane highlight) w/ ensureColumn upgrade; migration reads both `sam.annotations.v1` and the store's real `standroidsmissal.annotations.v1`; Rust cmds cargo-check clean._
 - [X] **BC.2** `resolve.ts`: `accompanimentsForDay`/`forAnchor`/`matchesSelector` over computus + recurrence rules. _2026-07-14: recurrence grammar `weekly:<0-6>` / `nth-weekday:<n>:<0-6>`._
-- [ ] **BC.3** `AccompanimentEditor.tsx` (TipTap; body_pm + body_html snapshot).
+- [X] **BC.3** `AccompanimentEditor.tsx` (TipTap; body_pm + body_html snapshot). _2026-07-14: @tiptap/react+starter-kit ^3.27.4; tags→theme selectors; debounced persist._
 - [X] **BC.4** `tests/accompaniment.test.ts`: selector resolution incl. moveable feasts across year boundaries; migration; free-form theme tags. _2026-07-14: 10 tests incl. Pasc0-2 2026↔2027 boundary + first-Friday recurrence; suite 73/73._
 
 ## Stanza B-D — Exposure surfaces
-- [ ] **BD.1** `JournalView` (date timeline; day-chip today's entries).
-- [ ] **BD.2** `HomilyPlanner` (selector-projected planning calendar; supersedes PlannerView/HomilyEditor rows).
+- [X] **BD.1** `JournalView` (date timeline; day-chip today's entries). _2026-07-14: component shipped; rail reachability lands with BO.3._
+- [X] **BD.2** `HomilyPlanner` (selector-projected planning calendar; supersedes PlannerView/HomilyEditor rows). _2026-07-14: month grid projects selectors via matchesSelector; "this Sunday's drafts"; reachability lands with BO.3._
 - [ ] **BD.3** `StudyBuilder` (class centroid: recurrence group + anchors + materials; print stylesheet handouts).
 - [ ] **BD.4** `NewsletterDesk` behind `EntitlementGate('newsletter-desk')` + `parish_profile` masthead (name/logo/letterhead/colors/address); print + email-ready HTML export + share link.
 
@@ -534,5 +534,5 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 
 ## Stanza B-O — Journal sidecar workspace (after B-C core)
 - [ ] **BO.1** Capture + highlight context actions: ReaderView/BibleView ctx-menus gain "✎ Add to Journal/Homily notes" (opens JournalSidecar with quote + `alignSelection` counterpart + anchor) and "🖍 Highlight both panes" (lightweight accompaniment, quote+quoteAlt through `mark.ann` in both panes).
-- [ ] **BO.2** `src/ui/JournalSidecar.tsx` (`JournalSidecar` + `ConnectionsPanel` per entity rows): source block, `AccompanimentEditor` embed, connections cards (corpus vectors + own accompaniments via `sidecar_embeddings` + commentary; why-bridge + evidence chips + add/dismiss), destinations → exposure/selectors, toast.
+- [X] **BO.2** `src/ui/JournalSidecar.tsx` (`JournalSidecar` + `ConnectionsPanel` per entity rows): source block, `AccompanimentEditor` embed, connections cards (corpus vectors + own accompaniments via `sidecar_embeddings` + commentary; why-bridge + evidence chips + add/dismiss), destinations → exposure/selectors, toast. _2026-07-14: 3-source connections (corpus/personal/vendored commentary); opens via BO.1 ctx-menu (pending)._
 - [ ] **BO.3** Integration (App owner): `View` gains `'journal'`; NAV "Journal & Homilies" (✎); `#/acc/<id>` route resolves (completes BB.3); ThemePicker mounted in rail; JournalView/HomilyPlanner (BD.1/BD.2) reachable from the journal view's tabs.
