@@ -14,6 +14,7 @@ import CalendarView from './ui/CalendarView.tsx';
 import OfficeView from './ui/OfficeView.tsx';
 import BibleView from './ui/BibleView.tsx';
 import { parseHashRoute } from './core/share/shareLink.ts';
+import { APP_LINKS } from './core/model/appLinks.ts';
 
 type View = 'map' | 'reader' | 'calendar' | 'office' | 'bible';
 
@@ -304,6 +305,12 @@ export default function App() {
               <dt>Corpus</dt><dd>Divinum Officium (László Kiss, MIT) — vendored, re-realized as graph + vector SQLite</dd>
               <dt>Identifier</dt><dd>{versionInfo.packageName}</dd>
             </dl>
+            <p className="about-links">
+              <a href={APP_LINKS.appSite} target="_blank" rel="noreferrer">✠ {APP_LINKS.appSiteLabel}</a>
+              {APP_LINKS.blog && (
+                <a href={APP_LINKS.blog} target="_blank" rel="noreferrer">✎ {APP_LINKS.blogLabel}</a>
+              )}
+            </p>
             <p className="copyright">© 2026 Robin L. M. Cheung, MBA. All rights reserved.</p>
           </div>
         </div>

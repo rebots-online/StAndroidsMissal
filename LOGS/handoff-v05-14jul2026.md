@@ -36,4 +36,10 @@ C1 completed: `AccompanimentEditor.tsx`, `JournalSidecar.tsx` (+`ConnectionsPane
 - **Ingest**: deterministic, ~2 min; re-run only if you change concepts/commentary/parsers; fill-log delta must stay zero; db is LFS on forgejo only (never GitHub LFS — CC13).
 - Plan file (operator-approved): `~/.claude/plans/can-you-create-an-jolly-simon.md`.
 
+## Late additions (operator, end of Fable session)
+
+- **v0.6 wave scoped** (CHECKLIST stanzas B-P/B-Q; ARCHITECTURE decisions 18+19): Android base corpus = fast-follow asset pack; **module system** (content modules = same-schema SQLite via `CorpusDb.attachModule`; feature modules = lazy rail routes; `MODULE_GATES` data-only); commentary leaves missal.db (base → ~140 MB) — **Haydock free sample**, rest gated on `study_library` (**RC `entl4b9a9925f8` created**); roadmap modules recorded (chant, Liber Usualis alignment, Publishing Desk, Latin lessons, choir media, altar-server training). **Portability mandate: module core is host-agnostic — practice run for EnZIME.** Stanzas are scoped, NOT expanded to coder tasks — that's an architect pass (TC13 pattern).
+- **About links**: `src/core/model/appLinks.ts` + About card render two slots. App site = `https://sanctissimissa.online` (operator: this app rightfully usurps the domain from HelloWord — the DNS/nginx cutover on CT 123 to the standroid deploy is a pending ops task). **Blog slot is '' (hidden) — ask the operator for the personal-blog URL and set it**; robin.mba is NOT it (verified: serves an unrelated page).
+- RC catalog doc in Admin-Manual needs a `study_library` row appended (not yet done — one line).
+
 — Handoff authored by Claude Fable 5 (claude-fable-5), orchestrator seat, at operator direction (Fable quota 86%). 2026-07-14.

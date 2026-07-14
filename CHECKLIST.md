@@ -534,5 +534,19 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 
 ## Stanza B-O — Journal sidecar workspace (after B-C core)
 - [ ] **BO.1** Capture + highlight context actions: ReaderView/BibleView ctx-menus gain "✎ Add to Journal/Homily notes" (opens JournalSidecar with quote + `alignSelection` counterpart + anchor) and "🖍 Highlight both panes" (lightweight accompaniment, quote+quoteAlt through `mark.ann` in both panes).
+---
+
+# v0.6 wave — Modular delivery + module system (ARCHITECTURE decisions 18+19)
+
+**Status: stanzas scoped; NOT yet expanded to self-contained coder tasks** (v0.4-wave pattern). Operator decisions 2026-07-14: (1) Android base corpus = Play Asset Delivery **fast-follow** pack, sideload keeps embed via `SAM_EMBED_CORPUS=1` (d.18); (2) **module system** — content modules (same-schema SQLite attached via `CorpusDb.attachModule`) + feature modules (lazy rail routes), `MODULE_GATES` data-only per B-1/B-4 (d.19); (3) commentary leaves `missal.db` (base back to ~140 MB): **Haydock free sample**, Catena + PD roadmap gated on `study_library` (RC `entl4b9a9925f8`, created); (4) roadmap modules: Gregorian chant, Liber Usualis↔Mass alignment, Publishing Desk (articles over the vector reference store), Latin lessons/translator, choir media post-production, altar-server training; (5) **portability mandate**: module core is host-agnostic — the practice run for EnZIME and siblings.
+
+## Stanza B-P — Android fast-follow base corpus (d.18)
+- [ ] **BP.1** `corpus_pack` fast-follow asset pack (gradle module, stamped db copy), `CorpusPackPlugin` (Kotlin: getPackLocation + progress events), cfg-gated Android `load_corpus`, splash download-progress state, `SAM_EMBED_CORPUS=1` sideload flag.
+
+## Stanza B-Q — Module system core (d.19)
+- [ ] **BQ.1** `Module` registry types + `MODULE_GATES` + rail integration (feature modules lazy-load into NAV); host-agnostic core package boundary (EnZIME lift).
+- [ ] **BQ.2** Split commentary out of `missal.db` → `modules/haydock.db` + `modules/catena-aurea.db` (ingest emits per-module dbs); `CorpusDb.attachModule(id, bytes)`; base db regen (~140 MB); commentaryFor spans attached modules.
+- [ ] **BQ.3** Delivery + gating plumbing: Play on-demand packs; web/desktop/sideload CC12-stamped downloads from standroid.robin.mba with cache; `study_library` gate wired (Haydock `null` gate = free sample).
+
 - [X] **BO.2** `src/ui/JournalSidecar.tsx` (`JournalSidecar` + `ConnectionsPanel` per entity rows): source block, `AccompanimentEditor` embed, connections cards (corpus vectors + own accompaniments via `sidecar_embeddings` + commentary; why-bridge + evidence chips + add/dismiss), destinations → exposure/selectors, toast. _2026-07-14: 3-source connections (corpus/personal/vendored commentary); opens via BO.1 ctx-menu (pending)._
 - [ ] **BO.3** Integration (App owner): `View` gains `'journal'`; NAV "Journal & Homilies" (✎); `#/acc/<id>` route resolves (completes BB.3); ThemePicker mounted in rail; JournalView/HomilyPlanner (BD.1/BD.2) reachable from the journal view's tabs.
