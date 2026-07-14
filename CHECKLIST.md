@@ -502,3 +502,37 @@ _2026-07-11 status: engine shipped as `src/core/liturgy/conditionals.ts` (OB.1 g
 - [ ] **BI.2** `CompanionMemory`: lore table + distillation loop (idle/save; size-capped; user-visible/editable) + vector recall over `sidecar_embeddings` (embedText) fused with theme/date facets.
 - [ ] **BI.3** `CompanionView` rail chat: context = persona+lore+memories+position+CITES; replies cite deep links; save-insight → accompaniment(`generated`).
 - [ ] **BI.4** RC config against contract vocabulary (`companion_ondevice`, `companion_hosted`, `institutional`) via RC plugin/MCP or dashboard (key per I-15); `FeatureId` gates wired. On-device model run = TEST_RUBRIC operator row.
+
+---
+
+# v0.5 wave — Presentation & meaning plane (ARCHITECTURE §7.7, entity rows P-T)
+
+**Operator decisions recorded 2026-07-14:** (1) `sanctissimissa` is a **selectable alternate** family — `DEFAULT_FAMILY` stays `skeuomorphic`; background colouring retained from the framework; (2) mobile bilingual = interleaved Latin-bold / English-inset rows with dual-language selection highlight — stacked full columns are a defect; (3) similarity results must be clause-atomic with a relative-distance glyph and imagery/metaphor grouping; (4) Scripture navigation goes meaning-first (imagery/scenarios, Gospel parallels, differential sizing) additively over canonical; (5) interpretive data = **vendored public-domain sources** per `DOCS/ScripturalReferences-PublicDomain.md` (this wave Haydock + Catena Aurea; 13-source roadmap over the same schema); (6) Journal/HMS per the sidecar prototype + PRD. Shared-file owners for this wave: `styles.css` → BJ.2 · `App.tsx` → BO.3 · `ReaderView.tsx` → BK.1 (BO.1 follow-up) · `BibleView.tsx` → BN.1 (BO.1 follow-up).
+
+## Stanza B-J — Theme system + sanctissimissa family (E1 foundation + §7.7)
+- [ ] **BJ.1** `src/core/theme/themes.ts` per E1 spec with `ThemeFamily` incl. `'sanctissimissa'`; `THEME_FAMILIES` (7 entries), `DEFAULT_FAMILY='skeuomorphic'`, `applyTheme`, `systemMode`. + `src/ui/ThemePicker.tsx` (family × mode per entity row; persists `theme.family`/`theme.mode` to sidecar settings, localStorage fallback `sam.theme.v1` until BC.1 merges).
+- [ ] **BJ.2** `src/styles.css` (single owner this wave): refactor onto semantic tokens (`--surface --surface-2 --ink --ink-soft --accent --pane-latin-bg --pane-english-bg --rail-bg --card-border` + §7.7 `--card --card-shadow --rubric --dialogue-p --dialogue-s`); default `skeuomorphic` light block = current values byte-for-byte visual parity; `sanctissimissa` light+dark blocks (white elevated cards, accordion heads, propers gold-left-border + warm tint); dark `skeuomorphic` block; **plus all §7.7 component CSS**: `.bilingual-interleaved` (`.il-la` bold / `.il-en` indent-italic-faint / pair gap), `.sim-glyph`, `.atlas-*` (label field, pericope rows), `.jsidecar-*` (workspace, source block, connections cards, evidence chips, destinations, toast).
+- [ ] **BJ.3** `src/core/text/dialogue.ts`: `dialogueClass(line)` per entity row; consumed by `BilingualText` to wrap prefix tokens in `.dialogue-p`/`.dialogue-s` spans (render-only; corpus text unmodified).
+
+## Stanza B-K — Interleaved bilingual mode
+- [ ] **BK.1** Extract `src/ui/BilingualText.tsx` (`BilingualText` + `useNarrow`) from ReaderView's TextBlock; columns mode = behavior parity (echo, quotes `mark.ann`, `data-line`); ReaderView adopts it (ReaderView owner task this wave).
+- [ ] **BK.2** Interleaved mode: `layout='interleaved'` renders Latin/English line pairs per §7.7; `useNarrow(1100)` drives the switch in ReaderView + BibleView (verse-pair granularity); `selectionchange` echo extended to the selection's full line-range in both directions.
+
+## Stanza B-L — Similarity UX
+- [ ] **BL.1** `src/core/vector/clause.ts`: `Clause`, `splitClauses`, `bestClause` per entity row + `tests/clause.test.ts` (determinism, min-length, argmax).
+- [ ] **BL.2** `src/ui/SimilarityGlyph.tsx` + MeaningPanel integration: every similar-hit renders glyph + best-clause emphasis (rest behind "more"); score → tooltip.
+- [ ] **BL.3** `IMAGERY_CONCEPTS` (~15, §7.7 list) merged into `src/core/ontology/concepts.ts`; shared re-ingest with BM.3 (one `assets/missal.db` regeneration; fill-log delta must be zero).
+
+## Stanza B-M — Interpretive layer (PD vendoring + commentary ingest)
+- [ ] **BM.1** Vendor `VENDORED/haydock/` (fulfils BF.1): clone-at-home, PROVENANCE.md (source URL + commit/edition + date + license note) BEFORE assimilation; additive only.
+- [ ] **BM.2** Vendor `VENDORED/catena-aurea/` (Newman tr., PD): same regime.
+- [ ] **BM.3** `scripts/ingest-commentary.mjs` (`COMMENTARY_SOURCES`, wired into `ingest-corpus.mjs`): `commentary:<source>/<Book>/<ch>/<v>` nodes, English text_blocks, `COMMENTS_ON` edges, embeddings + FTS; `CorpusDb.commentaryFor` + adapter mirror; run shared re-ingest (with BL.3); fill-log delta zero; LFS push.
+- [ ] **BM.4** `src/core/ontology/parallels.ts`: `Pericope`/`PERICOPES` (~60 spine, cross-checked against vendored Catena) + `SCENARIO_CLUSTERS`; `tests/parallels.test.ts` (refs parse, books exist in BOOK_MAP).
+
+## Stanza B-N — Scripture Atlas
+- [ ] **BN.1** `src/ui/ScriptureAtlas.tsx` (`AtlasMode`, imagery label-field + parallels aligned rows per §7.7) + BibleView mode switch + commentary read-only layer beneath verses (BibleView owner task) + `CorpusDb.conceptVerseCounts`/`chapterCiteCounts`.
+
+## Stanza B-O — Journal sidecar workspace (after B-C core)
+- [ ] **BO.1** Capture + highlight context actions: ReaderView/BibleView ctx-menus gain "✎ Add to Journal/Homily notes" (opens JournalSidecar with quote + `alignSelection` counterpart + anchor) and "🖍 Highlight both panes" (lightweight accompaniment, quote+quoteAlt through `mark.ann` in both panes).
+- [ ] **BO.2** `src/ui/JournalSidecar.tsx` (`JournalSidecar` + `ConnectionsPanel` per entity rows): source block, `AccompanimentEditor` embed, connections cards (corpus vectors + own accompaniments via `sidecar_embeddings` + commentary; why-bridge + evidence chips + add/dismiss), destinations → exposure/selectors, toast.
+- [ ] **BO.3** Integration (App owner): `View` gains `'journal'`; NAV "Journal & Homilies" (✎); `#/acc/<id>` route resolves (completes BB.3); ThemePicker mounted in rail; JournalView/HomilyPlanner (BD.1/BD.2) reachable from the journal view's tabs.
