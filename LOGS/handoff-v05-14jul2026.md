@@ -43,3 +43,8 @@ C1 completed: `AccompanimentEditor.tsx`, `JournalSidecar.tsx` (+`ConnectionsPane
 - RC catalog doc in Admin-Manual needs a `study_library` row appended (not yet done — one line).
 
 — Handoff authored by Claude Fable 5 (claude-fable-5), orchestrator seat, at operator direction (Fable quota 86%). 2026-07-14.
+
+## Doctrine recorded at sign-off (binding context for all v0.5/v0.6 decisions)
+
+- **Incubator principle** (`~/forgejo/admin/DOCS/IDEOLOGIES/church-products-as-live-incubator.md`): this product line is the live guinea pig — any feature may ship free of charge; components are built host-agnostic to graduate (journal/homily → EnZIME's knowledge assistant; billing → the universal adapter; module system → shared core). Monetization pressure never blocks a feature here.
+- **RC is a scaffold** (`~/.claude/BILLING_CONVENTIONS.md § Migration horizon`): bridge ledger must be transition-grade (state transitions, currency + alias mirroring); no RC-only feature without a mirroring plan.
