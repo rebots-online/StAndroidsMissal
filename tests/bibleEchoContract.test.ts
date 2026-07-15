@@ -34,7 +34,7 @@ describe('BS.1R2 Bible Echo Contract', () => {
 
     it('BibleView.tsx imports SelectionEcho from BilingualText.tsx', () => {
       const bibleView = readFileSync('src/ui/BibleView.tsx', 'utf-8');
-      assert.ok(bibleView.includes("import { useNarrow, type SelectionEcho } from './BilingualText.tsx';"),
+      assert.ok(bibleView.includes('SelectionEcho') && bibleView.includes("from './BilingualText.tsx';"),
         'BibleView must import SelectionEcho type from BilingualText.tsx');
     });
 
@@ -65,11 +65,22 @@ describe('BS.1R2 Bible Echo Contract', () => {
 
     it('BibleView.tsx has selectionEcho rendering in both panes (count >= 2)', () => {
       const bibleView = readFileSync('src/ui/BibleView.tsx', 'utf-8');
-      // Count references to livePhraseEcho in rendering contexts
-      // The renderWithSelectionEcho function should be called for both latin and english
-      const renderCalls = (bibleView.match(/renderWithSelectionEcho\(/g) ?? []).length;
-      assert.ok(renderCalls >= 2,
-        `selectionEcho must appear in both render panes (found ${renderCalls} renderWithSelectionEcho calls, expected >= 2)`);
+      // The selectionEcho prop must be passed to BilingualText
+      const hasSelectionEchoProp = bibleView.includes('selectionEcho: livePhraseEcho');
+      assert.ok(hasSelectionEchoProp,
+        'BibleView must pass selectionEcho prop to BilingualText (found selectionEcho: livePhraseEcho)');
+    });
+
+    it('BibleView.tsx does NOT have renderWithSelectionEcho local workaround', () => {
+      const bibleView = readFileSync('src/ui/BibleView.tsx', 'utf-8');
+      assert.ok(!bibleView.includes('renderWithSelectionEcho'),
+        'BibleView must not have renderWithSelectionEcho function (use shared renderer)');
+    });
+
+    it('BibleView.tsx does NOT have direct <mark className="selection-echo"> workaround', () => {
+      const bibleView = readFileSync('src/ui/BibleView.tsx', 'utf-8');
+      assert.ok(!bibleView.includes('<mark className="selection-echo">') && !bibleView.includes('<mark class="selection-echo">'),
+        'BibleView must not have direct selection-echo mark elements (use shared renderer)');
     });
   });
 
