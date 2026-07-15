@@ -1,6 +1,6 @@
 # St. Android's Missal — v1 Architecture
 
-**Status:** authoritative for v0.1.x · **Generated:** 2026-07-05 · **Identifier:** `mba.robin.standroidsmissal`
+**Status:** historical baseline for v0.1.x; current authority is `DOCS/ARCHITECTURE.md` · **Generated:** 2026-07-05 · **Identifier:** `mba.robin.standroidsmissal`
 
 St. Android's Missal is the next-major-version rewrite of SanctissiMissa ("Hello, Word").
 It preserves the skeleton structure of the Mass — expanded and visualized as a **subway-style

@@ -23,26 +23,40 @@ databases**, serving a beautiful, exegetical UI:
 - 🕰️ **Divine Office cursus** — the eight hours as a loop line (full Breviary texts:
   Phase 2)
 
-## Platforms (Tauri 2)
+## Platforms and current release outputs
 
-Web/PWA · Windows 11 (NSIS) · Linux (deb + AppImage) · Android APK.
-All builds are **local** — CI is dormant until public release (TC14).
+- Web/PWA: versioned offline ZIP
+- Linux x64: `.deb` and AppImage
+- Windows 11 x64: standalone PE `.exe`
+- Android: production-signed release APK and Play-uploadable AAB
+- Android diagnostics: native debug-symbol archive; the debug APK is retained
+  for diagnostics only and never satisfies release acceptance
+
+NSIS, MSI, MSIX, RPM, and Snap packages are not currently produced. Microsoft
+Store packaging requires a separate Windows-host package pass. All builds are
+**local** — CI remains dormant until explicitly activated (TC14).
 
 ## Prerequisites
 
 - **Node.js ≥ 22.6** (`--experimental-strip-types` for TS test files + ingest)
 - **Rust** (stable, via [rustup](https://rustup.rs))
 - **Linux native:** `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev build-essential pkg-config libssl-dev`
-- **Android:** Android SDK (android-34, build-tools 34.0.0), `cargo-ndk`, Rust Android targets
+- **Git LFS** for the tracked release set in `dist/`
+- **Android:** SDK platform 36, build-tools 36.1.0, NDK 27.0.12077973,
+  `cargo-ndk`, a compatible JDK, and all four Rust Android targets
+- **Windows cross-build:** `cargo-xwin`
+- **Release utilities:** `zip`, `readelf`/binutils, `sha256sum`, `jarsigner`,
+  `apksigner`, and `aapt2`
 
-See `DOCS/BUILD.md` for full prerequisites and platform-specific setup.
+See `BUILD_INSTRUCTIONS.md` for the authoritative recipe and unusual release
+constraints. `DOCS/BUILD.md` is retained as a compatibility pointer.
 
 ## Quick start
 
 ```bash
-npm install           # install dependencies
+npm ci                # install the locked dependency graph
 npm run ingest        # rebuild missal.db from VENDORED/ (optional — committed)
-npm test              # 37 tests: computus + embeddings + ordo + normalize + concepts
+npm test              # run the complete current test suite
 npm run dev           # web dev server (port 5173)
 npm run tauri dev     # desktop shell
 ```
@@ -52,18 +66,27 @@ npm run tauri dev     # desktop shell
 ```bash
 # One stamp, then web + Linux + Windows x64 + Android production/debug/symbols
 export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
 npm run build:release
-
-# Or use the kickstart script (idempotent — installs missing prerequisites)
-~/Admin-Manual/scripts/kickstart-tauri-build.sh linux
-~/Admin-Manual/scripts/kickstart-tauri-build.sh android
 ```
+
+`build:release` is the only coherent all-platform release command. It stamps
+exactly once, builds web first, produces every platform artifact, preserves
+Android native symbols, and collects only after every target succeeds. The
+Admin-Manual kickstart script is useful for toolchain bootstrap and ad-hoc
+target builds; it is not an alternative release driver.
+
+Production Android signing requires the ignored
+`src-tauri/gen/android/keystore.properties`, provisioned from Admin-Manual.
+Neither credentials nor keystore bytes belong in this repository.
 
 Artifacts are collected in `dist/` with compliant filenames:
 ```
 standroidsmissal-v1.16.34594-linux-amd64.deb
 standroidsmissal-v1.16.34594-linux-amd64.AppImage
 standroidsmissal-v1.16.34594-windows-x64-standalone.exe
+standroidsmissal-v1.16.34594-web-pwa.zip
+standroidsmissal-v1.16.34594-android-universal-debug.apk
 standroidsmissal-v1.16.34594-android-universal-release.apk
 standroidsmissal-v1.16.34594-android-universal-release.aab
 standroidsmissal-v1.16.34594-android-native-debug-symbols.zip
@@ -77,7 +100,8 @@ Canonical source: `version.txt`; `version.json` is the generated mirror.
 
 ## Documentation
 
-- `DOCS/BUILD.md` — full build instructions (all platforms)
+- `BUILD_INSTRUCTIONS.md` — authoritative release recipe (all platforms)
+- `DOCS/BUILD.md` — compatibility pointer to the root recipe
 - `DOCS/ARCHITECTURE.md` — authoritative entity table, data flows, decisions
 - `DOCS/CORPUS-SCHEMA.md` — corpus schema, concept taxonomy, text normalization
 - `DOCS/ARCHITECTURE/StAndroidsMissal-v1.md` — entity table, data flows, decisions

@@ -417,6 +417,119 @@ Supersessions within the entity table: `PlannerView`/`HomilyEditor` (P-D) are **
 
 **Attestation (2026-07-12, third re-attestation).** Amended per operator direction (this session): §7.6 Bible + Accompaniment plane added (v0.4, labelled P-S in the entity table) — vendored Bibles promoted to first-class graph citizens (book/chapter/verse nodes, CITES edges, fill-normalization boundary), the one-object/four-exposures Accompaniment unification (superseding §7's `homilies`/`journal_entries`/`theme_spans` split and absorbing P-D `PlannerView`/`HomilyEditor`), sidecar-as-SQLite v2 with lore + vector memory, journey-companion CompanionEngine with SOUL.md-style CompanionMemory, entitlement vocabulary (`companion_ondevice`/`companion_hosted`/`institutional`), free-form theme selectors, ParishProfile header space, Haydock commentary vendoring, deep-link address layer, Android widget.
 
+## 9. v2.17 correction wave and shared Companion evolution (2026-07-14)
+
+The annotated requirements sources are
+`DOCS/StAndroidsMissal Three Fixes 2026-7-14 at 8.34.40 PM.pdf` and
+`DOCS/ThreeFixes-to-Text-Selection-Vector-search-resullts-14jul2026-20h50.png`.
+The immediate v2.17 wave corrects bilingual selection and result rendering. It
+does not wait for the later Latin-analysis, entitlement, Companion, voice, or
+media-generation modules.
+
+### 9.1 Immediate entity table (binding for CHECKLIST stanza B-S)
+
+| Entity | Type | File:line | Role | Key signatures / fields |
+|---|---|---|---|---|
+| `PhraseAlignment` / `alignPhrase` | type/fn | `src/core/text/align.ts:14` | corpus-attested phrase alignment: find the source paired-line index and character span, derive counterpart word anchors through `wordEcho`, and return the smallest destination span containing them; deterministic positional fallback stays inside the paired line | `PhraseAlignment { srcLang, idx, srcLine, srcStart, srcEnd, dstLine, dstStart, dstEnd, countsMatch, method: 'attested-anchors'\|'positional-fallback' }`; `alignPhrase(db, block, term): PhraseAlignment \| null` |
+| `SelectionEcho` | type | `src/ui/BilingualText.tsx:79` | visual counterpart phrase range; native DOM selection remains on the dragged side because browsers expose one selection, while the counterpart is marked in real time | `{ lang: 'latin'\|'english'; line: number; start: number; end: number }` |
+| `TextLines.selectionEcho` / `BilingualText.selectionEcho` | props | `src/ui/BilingualText.tsx:87` | renders only the aligned counterpart phrase as `mark.selection-echo`; line-level `.xlate-echo` remains the fallback/context band | optional `selectionEcho?: SelectionEcho` |
+| `ReaderView.livePhraseEcho` | state/effect | `src/ui/ReaderView.tsx:75` | on every `selectionchange`, identify language/line/text, call `alignPhrase`, and update the other pane without opening the context menu; collapsed/empty selections clear it | `SelectionEcho \| null` |
+| `BilingualResultText` / `buildBilingualResult` | type/fn | `src/core/text/bilingualResult.ts:1` | selects the query-matching primary language, closest clause, exact query spans, and same-line counterpart for concordance/vector/nucleated results | `BilingualResultText { primary, primaryLang, companion, companionLang, matchSpans }`; `buildBilingualResult(block, query): BilingualResultText` |
+| `ResultSnippet` | comp | `src/ui/ResultSnippet.tsx:1` | one safe React result renderer shared by concordance, vector, nuclei, and long tail; no `dangerouslySetInnerHTML` | props `{ result: BilingualResultText }`; matched phrase renders `<mark className="result-query"><strong><em>…</em></strong></mark>`; companion renders `.result-companion` |
+| `ConcordanceHit.latin` / `.english` | fields | `src/core/data/types.ts` + `src/core/data/corpusDb.ts:754` | hydrate both stored languages for each literal hit so reciprocal companion rendering never re-queries in UI | `latin: string \| null; english: string \| null` |
+
+Binding behavior: selecting Latin or English highlights the corresponding phrase
+on the other side as the pointer moves; result cards emphasize the matching
+phrase with bold italic marker treatment; every result shows the other language
+immediately beneath, indented, lighter and italic. Missing translations degrade
+to primary-only. Context-first nuclei remain first and every remaining result
+stays in the accessible long tail.
+
+### 9.2 Ecclesiastical Latin analysis (staged, nonblocking)
+
+`LatinAnalysisEngine` consumes a selected Latin phrase and returns
+`LatinAnalysis { tokens: MorphologicalToken[]; syntax; idiom; style; ecclesiasticalUsage; sources[] }`.
+Each `MorphologicalToken` names surface form, lemma, morphemes, part of speech,
+case/number/gender or person/number/tense/mood/voice, syntactic role, confidence,
+and source provenance. Example invariants: *quæsumus* is first-person plural
+present active indicative; *Domine* is vocative singular. Automatic analysis is
+never required to read, select, search, annotate, journal, or export. Exact
+public-domain editions/datasets must pass the `NucleusSourceManifest` rights and
+provenance audit before ingestion.
+
+### 9.3 Entitlement boundary (staged, B-1 through B-8)
+
+Core reader, search, annotation, rich editing, journaling, homily planning, and
+all locally authored content remain functional. The gate is the rich editor's
+outbound boundary: `EditorOutboundAction = 'copy'|'paste'|'export'|'print'|'share'`.
+Every gate calls the single `EntitlementController.has(entitlementId)` surface;
+no screen reads a processor or receipt.
+
+Haydock is permanently included and therefore has no gate. Each other reference
+module has one stable entitlement `reference_<moduleId>`. A subscription product
+and a lifetime/non-consumable product both grant that same entitlement. The
+all-library products grant `study_library_all`. A three-day introductory trial
+is a RevenueCat/store offering granting `study_library_all`; no client clock or
+manual approval controls expiry. Play builds expose Play Billing only; direct
+processor adapters remain build-time absent from Play and sync server-side to RC
+elsewhere. `EntitlementSyncBridge` remains production-grade per B-6.
+
+### 9.4 Actively managed rich user lore and the shared Companion contract
+
+Kintsugi contributes inference routing/runtime delivery; StAndroid contributes
+domain-aware Companion + Accompaniment integration; EnZIME contributes canonical
+memory provenance, capability truth, inspectable recall and the **proffered
+prosthetic polymath**. Haydock nucleation supplies the ordering invariant:
+context-matching signal first, exploratory associations after it, lossless tail.
+
+| Entity | Contract |
+|---|---|
+| `CompanionSession` / `CompanionTurn` | one canonical conversation/turn shared by full chat, quick question, text, speech and avatar; every event has `turnId`, sequence and timestamp |
+| `InferenceBackend` / `InferenceSession` / `InferenceRouter` / `SelectionReport` | capability-probed adapters for LiteRT-LM, llama.cpp-family, wllama WebView/WASM, hosted OpenAI-compatible services, and honest offline fallback; provider claims follow a real `probe()` + smoke generation |
+| `ConversationService` / `ContextAssembler` | persistence, streaming, cancellation, citations/tools; assembles current selection/position, corpus evidence and lore without exposing provider details |
+| `MemoryItem` / `MemorySource` / `MemoryRevision` / `MemoryEdge` | canonical, source-linked, revisioned user lore with explicit entity/topic/causal/contradiction/supersession relationships |
+| `MemoryWorkbench` | inspect, edit, pin/promote, demote, merge, supersede, forget, export and rebuild; forgetting removes the item from retrieval immediately |
+| `LoreRecallBundle` / `LoreUsageTrace` | every turn runs top five vector recall and top five explicit graph/ontology recall in parallel; duplicates merge but retain both reasons; IDs, scores, paths, dates and provenance enter context; model may use none/some/all; actual use/citation is recorded |
+| `AssociativePolicy` / `AssociationSet` / `ProfferedInsight` | focused/balanced/divergent control; sourced/inferred/speculative labels; absurd/distant analogues may yield evidence, analogy, metaphor, transferable mechanism, experiment or delightful trinket, but never masquerade as evidence |
+| `LoreExchangeEnvelope` / `CrossProjectLoreBridge` | previewed, provenance-preserving export/import of user-approved lore among StAndroid, Kintsugi and EnZIME; never silent shared-database mutation |
+| `CompanionView` | left-rail main-screen Companion workspace: rich conversation, lore self-management, provenance/why-surfaced, associative controls and saved Accompaniments |
+| `QuickQuestionLauncher` / `QuickQuestionPanel` / `OpenInCompanion` | fixed bottom-right quick-question entry; expands over any screen and promotes the exact same `CompanionSession` to the full view |
+
+Journaling uses lore to surface resonances, tensions and unfinished threads for
+inspiration. Homily work uses the same lore goal-directedly for themes,
+scriptural/liturgical connections, examples and prior lines without displacing
+authorship. EnZIME additionally invites labelled speculative parallels and
+radical applications. Suggestions can always be ignored; no core workflow waits
+for Companion output.
+
+### 9.5 Concurrent voice/avatar transport (staged, optional)
+
+`CompanionMediaRouter` fans mixed text/speech input into the one turn and fans
+text, citations, audio and avatar events out concurrently. `DuplexVoiceSession`
+is the automatic two-way path: microphone/VAD → streaming ASR → shared
+`CompanionTurn` → streamed response → TTS → speaker/avatar. `EchoControl`,
+`TurnDetector` and `BargeInController` provide return-audio suppression,
+automatic boundaries, and cancellation of active generation/TTS.
+
+The reference transport is Hugging Face `speech-to-speech`: modular threaded
+VAD→STT→LLM→TTS and OpenAI-Realtime-compatible `/v1/realtime`. Current documented
+TTS labels are Qwen3-TTS and optional Kokoro-82M. Provider/model identifiers are
+configuration. Text remains fully functional without microphone, avatar,
+network, quota, or any hosted service.
+
+### 9.6 Atomic rubric-clip generation (staged, optional)
+
+`RubricClipPipeline` ingests operator-owned reference video, segments stable
+actions, extracts start/mid/end stills, maps them to rubric/concept nodes, emits
+one-motion 3–5 second prompt briefs, calls a configured image-to-video provider,
+rejects identity/vesture/object/posture/camera drift, and persists both approved
+and rejected attempts. `RubricClipProvenance` stores source timecode/still,
+prompt, seed/settings, model/Space revision, duration, approval status and human
+recorded alternative. Original footage is authoritative; generated clips are
+supplemental projections. The configured candidate is the operator's Wan2.2 14B
+Hugging Face Space. Manual review is accommodated but automated rubric checks
+must make the pipeline function without it.
+
 **Attestation (2026-07-14, fourth re-attestation).** Amended per operator direction (this session): §7.7 presentation & meaning plane added (v0.5, labelled P-T in the entity table) — `sanctissimissa` theme family (7th family; decision 13 + open question 6 amended; text-role tokens `--rubric`/`--dialogue-p`/`--dialogue-s` with render-level `dialogueClass`), interleaved bilingual mode (`BilingualText` extraction, selection-range echo), similarity UX (clause focus `bestClause`, `SimilarityGlyph`, `IMAGERY_CONCEPTS`), Scripture Atlas (imagery/scenario + Gospel-parallels navigation, `PERICOPES` spine), generalized interpretive layer (`ingest-commentary.mjs`, `COMMENTS_ON` edges; Haydock + Catena Aurea this wave, 13-source PD roadmap), and the journal sidecar workspace (`JournalSidecar`/`ConnectionsPanel`, capture + highlight-both-panes context actions, destinations → exposure/selectors). Open question 8 amended with v0.5 shared-file ownership; open question 9 added (parallels data source).
 
 **Attestation.** This document is complete, stub-free, and depicts the end-state production release: every named entity carries an exact identifier, target `file:line`, role, and signature; no TBD markers remain; open questions are resolved above. Shipped rows were verified against the working tree via codegraph on the date below; planned rows are normative targets and are cited verbatim by `CHECKLIST.md` stanzas (v0.2 wave, O-stanzas, B-stanzas, and the v0.5 BJ–BO stanzas). Re-attested after adding §7.7 + the P-T entity rows.
