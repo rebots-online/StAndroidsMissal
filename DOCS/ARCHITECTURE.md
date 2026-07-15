@@ -533,4 +533,93 @@ must make the pipeline function without it.
 **Attestation (2026-07-14, fourth re-attestation).** Amended per operator direction (this session): §7.7 presentation & meaning plane added (v0.5, labelled P-T in the entity table) — `sanctissimissa` theme family (7th family; decision 13 + open question 6 amended; text-role tokens `--rubric`/`--dialogue-p`/`--dialogue-s` with render-level `dialogueClass`), interleaved bilingual mode (`BilingualText` extraction, selection-range echo), similarity UX (clause focus `bestClause`, `SimilarityGlyph`, `IMAGERY_CONCEPTS`), Scripture Atlas (imagery/scenario + Gospel-parallels navigation, `PERICOPES` spine), generalized interpretive layer (`ingest-commentary.mjs`, `COMMENTS_ON` edges; Haydock + Catena Aurea this wave, 13-source PD roadmap), and the journal sidecar workspace (`JournalSidecar`/`ConnectionsPanel`, capture + highlight-both-panes context actions, destinations → exposure/selectors). Open question 8 amended with v0.5 shared-file ownership; open question 9 added (parallels data source).
 
 **Attestation.** This document is complete, stub-free, and depicts the end-state production release: every named entity carries an exact identifier, target `file:line`, role, and signature; no TBD markers remain; open questions are resolved above. Shipped rows were verified against the working tree via codegraph on the date below; planned rows are normative targets and are cited verbatim by `CHECKLIST.md` stanzas (v0.2 wave, O-stanzas, B-stanzas, and the v0.5 BJ–BO stanzas). Re-attested after adding §7.7 + the P-T entity rows.
+
+## 10. Bible-reader workspace and navigation correction wave (2026-07-14)
+
+The annotated source is
+`DOCS/BibleReaderProblems-Overlap-ResizableBar-14jul2026-22h22.png`.
+This wave follows BS.1–BS.3. It corrects interaction geometry and navigation,
+then makes the already-exposed theme registry visually truthful. CodeGraph does
+not index CSS; the targeted `src/styles.css` selector read used for this design
+pass is the recorded I-1 escalation gap, not a survey-style source read.
+
+### 10.1 Product-design pass
+
+**Subject and single job.** The surface is a contemplative bilingual Catholic
+Bible reader. Its job is to keep the verse under study visible while related
+language, Scripture, commentary, journal, and homily tools remain reachable.
+
+**Layout.** Desktop uses a quiet three-part reading desk. The inspector width is
+a user preference; the divider is a real keyboard/pointer control. Narrow
+screens keep one reading column and present the inspector as a dismissible
+overlay without making any reading action unavailable.
+
+```text
+┌──────────── rail ────────────┬──────────── reading desk ─────────────┬╫┬──── inspector ────┐
+│ Scripture                    │ Latin                  English         │╫│ Similar passages   │
+│ Journal                      │          ┌ callout above/below ┐       │╫│ ▾ Matthew           │
+│ Homily Writer                │ verse    └─────────────────────┘       │╫│   ▾ chapter 5       │
+│                              │                                        │╫│      verse 13       │
+│ Settings · Help/About        │                                        │╫│ ▸ John              │
+│ date / feast                 │                                        │╫│ ▸ Further material  │
+└──────────────────────────────┴────────────────────────────────────────┴╫┴─────────────────────┘
+```
+
+The callout measures its rendered box and the active word/line anchor. It chooses
+above or below with a 12px exclusion gap, clamps horizontally and vertically,
+and never covers the anchor rectangle. Book/chapter/verse grouping is a view over
+the complete result set: theme-first remains the default and every tail result
+remains available in both views.
+
+**Theme design.** Every registered family must define the full semantic token
+contract; a selector name alone is not a theme. `skeuomorphic` uses layered
+weft/warp gradients, a lightly piped edge, and a shallow inward tension shadow
+on bilingual cards—recognizably tented fabric without photographic texture.
+`hello-word-glow` is the deliberately modern family: Midnight Nave `#07111f`,
+Chapel Blue `#0b1f3a`, Luminous Cyan `#63e6ff`, Marian Violet `#8b7cff`, Warm
+Ivory `#f3ebd8`, and Rubric Coral `#ff6b72`. Its single signature is a slow,
+soft subway-line/card-edge luminance pulse; `prefers-reduced-motion: reduce`
+removes it. Existing text roles keep the app's serif reading voice and utility
+sans is confined to controls/metadata.
+
+**Navigation.** Journal and Homily Writer are distinct full workspaces over the
+same `SidecarDb`; there is no duplicated store. Theme controls move into a full
+Settings workspace. Help/About becomes a routed, full-size reading section with
+room for an operator-authored origin story, purpose, acknowledgements, corpus,
+privacy, version, and links; the old 440px modal is removed.
+
+### 10.2 Binding entity table (CHECKLIST stanza B-X)
+
+| Entity | Type | File:line | Role | Key signatures / fields |
+|---|---|---|---|---|
+| `FloatingCalloutPlacement` / `placeFloatingCallout` | type/fn | `src/core/ui/calloutPlacement.ts:1` | choose an above/below, viewport-clamped box that excludes the active word/line rectangle | `{ left:number; top:number; side:'above'\|'below' }`; `placeFloatingCallout(anchor:DOMRectLike, box:Size, viewport:Size, gap?:number): FloatingCalloutPlacement` |
+| `BibleWordCallout` | comp | `src/ui/BibleView.tsx:81` | measure `.xlate-callout`, anchor it to the word/verse line, and recompute on pointer/resize without obscuring the referenced line | state `{ anchor:DOMRectLike; echo:WordEchoResult }`; one `ref`, one `useLayoutEffect` |
+| `InspectorWidth` / `clampInspectorWidth` | type/fn | `src/core/ui/inspectorLayout.ts:1` | finite persisted desktop panel width | `type InspectorWidth = number`; `clampInspectorWidth(value, viewportWidth): number` with 280px minimum and `min(720px, 60vw)` maximum |
+| `ResizableInspectorLayout` | comp | `src/ui/ResizableInspectorLayout.tsx:1` | single/split workspace with pointer + keyboard separator and sidecar-backed `layout.inspectorWidth` preference | props `{ main:ReactNode; inspector:ReactNode|null; settings:SettingsStore|null }`; separator has `role="separator"`, `aria-orientation="vertical"`, Arrow/Home/End handling |
+| `ThemeTokenContract` | contract | `src/core/theme/themes.ts:7` + `src/styles.css` | every `ThemeFamily` supplies surface, ink, card, border, rail, pane, shadow and text-role tokens plus an intentional component idiom | add `'hello-word-glow'`; retain all existing stable IDs |
+| `SettingsView` | comp | `src/ui/SettingsView.tsx:1` | full workspace for `ThemePicker`, live material preview, light/dark/system choice and future preferences | props `{ sidecar:SettingsStore|null }` |
+| `ResultGroupingMode` / `organizeResultsByCanon` | type/fn | `src/core/text/resultHierarchy.ts:1` | lossless alternative ordering for Bible results | `'themes'\|'biblical-order'`; returns ordered `CanonicalBookGroup[]` with chapter/verse children and one non-Bible group |
+| `ResultGroupingToolbar` / `CanonicalResultTree` | comps | `src/ui/MeaningPanel.tsx:169` | switch theme-first vs foldable Book→chapter→verse navigation without deleting nuclei or tail items | props receive the one `NucleatedSimilaritySet`; `<details>` groups retain stable hit keys |
+| `View` / `PRIMARY_NAV` / `UTILITY_NAV` | type/constants | `src/App.tsx:24` | distinct `journal`, `homily`, `settings`, and `about` routes; utility destinations stay near the date card | `View` adds `'homily'\|'settings'\|'about'`; remove `journalTab` and `aboutOpen` |
+| `AboutContent` / `ABOUT_CONTENT` | interface/data | `src/content/about.ts:1` | operator-editable origin-story and product-information source without layout code changes | `{ originStory:string[]; purpose:string[]; acknowledgements:string[]; privacy:string[] }` plus existing version/link data in view |
+| `AboutView` | comp | `src/ui/AboutView.tsx:1` | full-size Help/About reading workspace, responsive and scrollable | props `{ versionInfo; links; content:AboutContent }` |
+
+### 10.3 Ordering and ownership
+
+BX.1, BX.2, and BX.3 are independent worktree cohorts. BX.4 begins only after
+BS.3 lands because it reorganizes the shared bilingual result renderer. BX.5
+begins after BX.3 because Settings owns `ThemePicker`; BX.5 is the sole
+`src/App.tsx` owner for this wave. CSS merges keep one labelled block per task.
+
+### 10.4 Fresh-verifier browser protocol (not a CHECKLIST Accept clause)
+
+A fresh GLM-5.2 seat exercises the production web/native surface at desktop and
+narrow widths. It proves: callout never intersects the referenced line at top,
+middle, or bottom of viewport; separator pointer drag and keyboard arrows persist
+after reload; all eight theme families visibly differ; skeuomorphic cards show
+tented fabric edges; `hello-word-glow` glows softly and stops under reduced
+motion; theme/canonical result views contain identical hit IDs; Book and chapter
+folds navigate; Journal and Homily Writer open distinct workspaces with the same
+typographic system; Settings owns themes; Help/About is a full routed section
+with long origin-story text and no modal size ceiling.
 — Authored and attested by Claude Fable 5 (`claude-fable-5`, Claude Code session, operator-directed architect pass) · 2026-07-14
