@@ -95,3 +95,39 @@ export function placeFloatingCallout(
 
   return placement;
 }
+
+/**
+ * placementsEqual — referential-by-value equality for two placements. Two
+ * placements are equal iff left, top and side all match exactly.
+ */
+export function placementsEqual(a: FloatingCalloutPlacement, b: FloatingCalloutPlacement): boolean {
+  return a.left === b.left && a.top === b.top && a.side === b.side;
+}
+
+/**
+ * reconcileCallout — pure idempotence primitive for callout state updates.
+ *
+ * Returns the EXACT `prev` reference (no allocation) when the incoming
+ * `anchor`/`placement` match the previous ones, so a React state setter fed
+ * this result bails out of re-rendering and the measurement effect terminates.
+ * Otherwise returns a new object carrying the fresh anchor and placement.
+ *
+ * Pure: no DOM access, no React import; depends only on its arguments.
+ */
+export function reconcileCallout<C extends { anchor: DOMRectLike; placement?: FloatingCalloutPlacement }>(
+  prev: C,
+  anchor: DOMRectLike,
+  placement: FloatingCalloutPlacement,
+): C {
+  if (
+    prev.placement !== undefined &&
+    placementsEqual(prev.placement, placement) &&
+    prev.anchor.left === anchor.left &&
+    prev.anchor.top === anchor.top &&
+    prev.anchor.width === anchor.width &&
+    prev.anchor.height === anchor.height
+  ) {
+    return prev;
+  }
+  return { ...prev, anchor, placement };
+}

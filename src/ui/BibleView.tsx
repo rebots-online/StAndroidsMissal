@@ -7,7 +7,7 @@
  * open the citing section on its own source day via onOpenKey.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { SectionText } from '../core/data/types.ts';
 import type { SidecarDb } from '../core/accompaniment/store.ts';
@@ -18,7 +18,7 @@ import { alignSelection, alignPhrase, wordEcho, wordAtPoint, type WordEchoResult
 import { useNarrow, type SelectionEcho, TextLines } from './BilingualText.tsx';
 import BilingualText from './BilingualText.tsx';
 import ScriptureAtlas, { type AtlasMode } from './ScriptureAtlas.tsx';
-import { placeFloatingCallout, type DOMRectLike } from '../core/ui/calloutPlacement.ts';
+import { placeFloatingCallout, reconcileCallout, type DOMRectLike, type FloatingCalloutPlacement } from '../core/ui/calloutPlacement.ts';
 
 interface Props {
   db: CorpusDb;
@@ -67,11 +67,12 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
   const [echoVerse, setEchoVerse] = useState<number | null>(null);
   /** Live phrase echo: exact character-range reciprocal echo from alignPhrase. */
   const [livePhraseEcho, setLivePhraseEcho] = useState<SelectionEcho | null>(null);
-  const [callout, setCallout] = useState<{ anchor: DOMRectLike; echo: WordEchoResult; placement: { left: number; top: number; side: 'above' | 'below' } | null } | null>(null);
+  const [callout, setCallout] = useState<{ anchor: DOMRectLike; echo: WordEchoResult; placement?: FloatingCalloutPlacement } | null>(null);
   const echoCache = useRef(new Map<string, WordEchoResult | null>());
   const lastWord = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const calloutRef = useRef<HTMLDivElement>(null);
+  const calloutElRef = useRef<HTMLDivElement>(null);
+  const anchorElRef = useRef<HTMLElement | null>(null);
   /** Below 1100px the two verse panes interleave into one column (§7.7). */
   const narrow = useNarrow(1100);
 
@@ -177,8 +178,9 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
     if (result?.word) {
       const verseEl = el?.closest('[data-verse]') as HTMLElement | null;
       if (verseEl) {
+        anchorElRef.current = verseEl;
         const anchorRect = verseEl.getBoundingClientRect();
-        setCallout({ anchor: anchorRect, echo: result, placement: null });
+        setCallout({ anchor: anchorRect, echo: result });
       } else {
         setCallout(null);
       }
@@ -187,35 +189,43 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
     }
   };
 
-  // Recompute callout placement after measurement and viewport resize.
-  useEffect(() => {
-    if (!callout || !calloutRef.current) return;
-
-    const calloutEl = calloutRef.current;
-    const box = { width: calloutEl.offsetWidth, height: calloutEl.offsetHeight };
-    const viewport = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
-
-    const placement = placeFloatingCallout(callout.anchor, box, viewport);
-    setCallout(prev => prev ? { ...prev, placement } : null);
-  }, [callout]);
-
-  // Recompute on viewport resize.
-  useEffect(() => {
+  // Recompute callout placement after measurement. Keyed on the stable echo
+  // identity (not the whole `callout` object): a placement-only update preserves
+  // the echo reference, so the effect runs once per active word and terminates.
+  useLayoutEffect(() => {
     if (!callout) return;
+    const anchorEl = anchorElRef.current;
+    if (!anchorEl || !anchorEl.isConnected) {
+      setCallout(null);
+      return;
+    }
+    const anchor = anchorEl.getBoundingClientRect();
+    const box = { width: calloutElRef.current?.offsetWidth ?? 0, height: calloutElRef.current?.offsetHeight ?? 0 };
+    const viewport = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
+    const placement = placeFloatingCallout(anchor, box, viewport);
+    setCallout(prev => prev ? reconcileCallout(prev, anchor, placement) : null);
+  }, [callout?.echo]);
 
+  // Recompute on viewport resize — re-measure the live anchor element, never a
+  // stored hover-time rectangle.
+  useEffect(() => {
+    const echo = callout?.echo;
+    if (!echo) return;
     const handleResize = () => {
-      if (!callout || !calloutRef.current) return;
-      const calloutEl = calloutRef.current;
-      const box = { width: calloutEl.offsetWidth, height: calloutEl.offsetHeight };
+      const anchorEl = anchorElRef.current;
+      if (!anchorEl || !anchorEl.isConnected) {
+        setCallout(null);
+        return;
+      }
+      const anchor = anchorEl.getBoundingClientRect();
+      const box = { width: calloutElRef.current?.offsetWidth ?? 0, height: calloutElRef.current?.offsetHeight ?? 0 };
       const viewport = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
-
-      const placement = placeFloatingCallout(callout.anchor, box, viewport);
-      setCallout(prev => prev ? { ...prev, placement } : null);
+      const placement = placeFloatingCallout(anchor, box, viewport);
+      setCallout(prev => prev ? reconcileCallout(prev, anchor, placement) : null);
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [callout]);
+  }, [callout?.echo]);
 
   // Drag-selection lights the aligned verse in both panes.
   useEffect(() => {
@@ -577,7 +587,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
 
       {callout && (
         <div
-          ref={calloutRef}
+          ref={calloutElRef}
           className="xlate-callout"
           style={{
             left: callout.placement ? callout.placement.left : callout.anchor.left,
