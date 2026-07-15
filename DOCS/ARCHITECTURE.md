@@ -877,7 +877,8 @@ privacy, version, and links; the old 440px modal is removed.
 | Entity | Type | File:line | Role | Key signatures / fields |
 |---|---|---|---|---|
 | `FloatingCalloutPlacement` / `placeFloatingCallout` | type/fn | `src/core/ui/calloutPlacement.ts:1` | choose an above/below, viewport-clamped box that excludes the active word/line rectangle | `{ left:number; top:number; side:'above'\|'below' }`; `placeFloatingCallout(anchor:DOMRectLike, box:Size, viewport:Size, gap?:number): FloatingCalloutPlacement` |
-| `BibleWordCallout` | comp | `src/ui/BibleView.tsx:81` | measure `.xlate-callout`, anchor it to the word/verse line, and recompute on pointer/resize without obscuring the referenced line | state `{ anchor:DOMRectLike; echo:WordEchoResult }`; one `ref`, one `useLayoutEffect` |
+| `placementsEqual` / `reconcileCallout` | fn | `src/core/ui/calloutPlacement.ts` | **BX.1R.** pure idempotent placement reconciler that terminates the live callout measurement effect | `placementsEqual(a, b): boolean` over `left`\|`top`\|`side`; `reconcileCallout<C extends { anchor:DOMRectLike; placement?:FloatingCalloutPlacement }>(prev:C, anchor:DOMRectLike, placement:FloatingCalloutPlacement): C` — returns the exact `prev` reference when placement and anchor are unchanged, else `{ ...prev, anchor, placement }` |
+| `BibleWordCallout` | comp | `src/ui/BibleView.tsx:81` | measure `.xlate-callout`, anchor it to the word/verse line, and recompute on activation/resize without obscuring the referenced line; **BX.1R:** placement update is reference-idempotent and the anchor is re-measured live | state `{ anchor:DOMRectLike; echo:WordEchoResult; placement?:FloatingCalloutPlacement }`; `calloutElRef` on `.xlate-callout`, `anchorElRef` on the active source element; one `useLayoutEffect` keyed on the **stable echo identity `callout?.echo`** (NOT `[callout]`) that re-measures the box and a fresh `anchorElRef.current.getBoundingClientRect()` and writes `setCallout(prev => prev ? reconcileCallout(prev, anchor, placement) : null)`; one resize listener keyed on `callout?.echo` doing the same fresh re-measure and `setCallout(null)` when the source element is gone |
 | `InspectorWidth` / `clampInspectorWidth` | type/fn | `src/core/ui/inspectorLayout.ts:1` | finite persisted desktop panel width | `type InspectorWidth = number`; `clampInspectorWidth(value, viewportWidth): number` with 280px minimum and `min(720px, 60vw)` maximum |
 | `ResizableInspectorLayout` | comp | `src/ui/ResizableInspectorLayout.tsx:1` | single/split workspace with pointer + keyboard separator and sidecar-backed `layout.inspectorWidth` preference | props `{ main:ReactNode; inspector:ReactNode|null; settings:SettingsStore|null }`; separator has `role="separator"`, `aria-orientation="vertical"`, Arrow/Home/End handling |
 | `ThemeTokenContract` | contract | `src/core/theme/themes.ts:7` + `src/styles.css` | every `ThemeFamily` supplies surface, ink, card, border, rail, pane, shadow and text-role tokens plus an intentional component idiom | add `'hello-word-glow'`; retain all existing stable IDs |
@@ -907,4 +908,50 @@ motion; theme/canonical result views contain identical hit IDs; Book and chapter
 folds navigate; Journal and Homily Writer open distinct workspaces with the same
 typographic system; Settings owns themes; Help/About is a full routed section
 with long origin-story text and no modal size ceiling.
+
+### 10.5 BibleView callout placement termination (BX.1R — mandatory correction)
+
+Fresh independent GLM-5.2 verification at `54385c12` (2026-07-15) confirmed BX.1's
+automated gates green (focused 13/13, full 250/250, `tsc`, web build) but found a
+semantic runtime defect in the live word callout. `BibleWordCallout`'s measurement
+`useLayoutEffect` depended on `[callout]` and unconditionally ran
+`setCallout(prev => prev ? { ...prev, placement } : null)`; the spread always
+allocates a new object, so the dependency changed on every render and the first
+active callout looped until React threw "Maximum update depth exceeded". The
+resize path also reused the hover-time `anchor` rectangle instead of re-measuring
+the verse element after reflow. The pure `placeFloatingCallout`, the 8px viewport
+inset, the above/below choice, the non-intersection guarantee and the side-aware
+caret all passed and are unchanged by BX.1R.
+
+**Normative state.** `BibleWordCallout` holds `callout: { anchor: DOMRectLike;
+echo: WordEchoResult; placement?: FloatingCalloutPlacement } | null`. The
+measurement `useLayoutEffect` is keyed on the **stable echo identity**
+`callout?.echo` — never on the whole `callout` object. Because a placement-only
+update spreads `prev` and preserves the `echo` reference, `callout?.echo` is
+unchanged across such an update, so the effect runs once per active word and
+terminates. The updater is `setCallout(prev => prev ? reconcileCallout(prev,
+anchor, placement) : null)`, where `reconcileCallout` returns the exact `prev`
+reference whenever the freshly measured `placement` (`left` / `top` / `side`) and
+the freshly measured `anchor` are equal to the stored values; otherwise it returns
+a new object. The measurement effect and a resize listener (both keyed on
+`callout?.echo`) re-measure the anchor live from `anchorElRef.current` (the active
+word/verse source element) via `getBoundingClientRect()`; if that element is
+`null`/detached they call `setCallout(null)` and clear the callout safely. No path
+reads a stored hover-time anchor rectangle for placement.
+
+**Verification is fully automated and idempotent (no manual dependency).** A
+focused regression gate, `tests/calloutTermination.test.ts`, proves: (1)
+behaviorally, `reconcileCallout` returns the identical reference for unchanged
+inputs and a distinct reference when either the anchor or the placement changes,
+and `placementsEqual` is reflexive, symmetric, and field-discriminating; (2) as a
+source contract over `src/ui/BibleView.tsx`, the measurement effect's dependency is
+the echo identity and NOT `[callout]`, the updater references `reconcileCallout`
+(the unconditional `{ ...prev, placement }` spread fails), the resize path measures
+`anchorElRef.current` live, and a detached source clears the callout; (3) a
+termination harness shows the updater reaches a fixed point in a single state
+mutation. The gate FAILS against the pre-BX.1R source and PASSES after. BX.1 cannot
+be marked ✅ until BX.1R is `[X]`/✅ and every Verify/Accept command exits 0. The
+§10.4 fresh-verifier browser protocol remains optional confirmation, not an Accept
+gate.
 — Authored and attested by Claude Fable 5 (`claude-fable-5`, Claude Code session, operator-directed architect pass) · 2026-07-14
+— Authored and attested by GLM-5.2 (`zai-coding-plan/glm-5.2`, opencode architect/plan seat, base `7595f625`, branch `architect/bx1r-1.17-20260715`) · 2026-07-15
