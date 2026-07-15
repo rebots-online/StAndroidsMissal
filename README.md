@@ -34,7 +34,9 @@ databases**, serving a beautiful, exegetical UI:
 
 NSIS, MSI, MSIX, RPM, and Snap packages are not currently produced. Microsoft
 Store packaging requires a separate Windows-host package pass. All builds are
-**local** — CI remains dormant until explicitly activated (TC14).
+**local** — CI remains dormant until explicitly activated. See
+`BUILD_INSTRUCTIONS.md` § CI/CD for the proposed self-hosted runner recipe
+(GitHub Actions and Forgejo Actions) pending runner provisioning.
 
 ## Prerequisites
 
@@ -82,14 +84,14 @@ Neither credentials nor keystore bytes belong in this repository.
 
 Artifacts are collected in `dist/` with compliant filenames:
 ```
-standroidsmissal-v1.16.34594-linux-amd64.deb
-standroidsmissal-v1.16.34594-linux-amd64.AppImage
-standroidsmissal-v1.16.34594-windows-x64-standalone.exe
-standroidsmissal-v1.16.34594-web-pwa.zip
-standroidsmissal-v1.16.34594-android-universal-debug.apk
-standroidsmissal-v1.16.34594-android-universal-release.apk
-standroidsmissal-v1.16.34594-android-universal-release.aab
-standroidsmissal-v1.16.34594-android-native-debug-symbols.zip
+standroidsmissal-v1.18.35665-linux-amd64.deb
+standroidsmissal-v1.18.35665-linux-amd64.AppImage
+standroidsmissal-v1.18.35665-windows-x64-standalone.exe
+standroidsmissal-v1.18.35665-web-pwa.zip
+standroidsmissal-v1.18.35665-android-universal-debug.apk
+standroidsmissal-v1.18.35665-android-universal-release.apk
+standroidsmissal-v1.18.35665-android-universal-release.aab
+standroidsmissal-v1.18.35665-android-native-debug-symbols.zip
 ```
 
 The release driver collects only after every platform succeeds and emits
