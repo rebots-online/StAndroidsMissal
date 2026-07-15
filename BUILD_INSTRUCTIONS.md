@@ -90,11 +90,27 @@ Versions are `MAJOR.MINOR.BUILD`, not SemVer PATCH numbering.
 - Do not chain the stamping `build:web`, `build:desktop`, `build:android`, or
   `build:all` entry points for one release.
 
-If a release fails after stamping, do not rerun the stamping driver blindly.
-Resume with the corresponding unstamped target commands after identifying the
-completed stamp. A first-class autonomous `--resume-stamped` path is a required
-release-driver follow-up; until it lands, `release.lock` deliberately refuses
-an ambiguous frozen stamp.
+### Autonomous stamped resume
+
+The release driver automatically manages stamped resume via `release.lock`:
+
+- **First invocation**: stamps once, writes ignored `release.lock` JSON
+  `{version, sourceHead, startedAt, completedStages:[]}`, and runs all stages.
+- **Stage completion**: after each successful stage, its name is atomically
+  appended to `completedStages`.
+- **Interrupted release**: a later plain `npm run build:release` with a matching
+  lock resumes automatically at the first incomplete stage without stamping.
+- **Restart**: `npm run build:release --restart` explicitly moves the old lock to
+  `~/outbox/standroidsmissal/` and starts a new stamp.
+- **Mismatched/corrupt locks**: fail closed with exact remediation instructions.
+  Version or sourceHead mismatches, corrupted JSON, or missing required fields
+  trigger explicit error messages and the `--restart` path.
+- **Completion**: successful collection moves the completed lock into versioned
+  `dist/rubric-runs/release-state-v<version>.json`.
+- **No manual steps**: normal resume is fully automatic; `--restart` is only
+  for intentional restarts or after manual remediation.
+
+The lock file is gitignored and never committed. It lives only in the worktree.
 
 ## Coherent release
 
@@ -107,7 +123,7 @@ npm run build:release
 
 The driver executes this order:
 
-1. Stamp once.
+1. Stamp once (fresh release only).
 2. Run the complete test suite.
 3. Build web/PWA first.
 4. Build Linux deb and AppImage.
@@ -117,6 +133,10 @@ The driver executes this order:
    available for symbol packaging.
 8. Package native symbols for all four Android ABIs.
 9. Collect and validate the complete set into `dist/`.
+
+After each successful stage, its name is atomically recorded in `release.lock`.
+If the driver is interrupted, re-running `npm run build:release` resumes at the
+first incomplete stage without stamping. Use `--restart` to begin a fresh stamp.
 
 Web must precede collection because Vite empties its output directory. Never
 place collected native release artifacts in `dist/` before the final web build.
