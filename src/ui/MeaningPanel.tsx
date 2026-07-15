@@ -16,6 +16,8 @@ import type {
   SimilarHit,
 } from '../core/data/types.ts';
 import { bestClause } from '../core/vector/clause.ts';
+import { buildBilingualResult } from '../core/text/bilingualResult.ts';
+import { ResultSnippet } from './ResultSnippet.tsx';
 import SimilarityGlyph from './SimilarityGlyph.tsx';
 
 interface Props {
@@ -55,15 +57,16 @@ function humanRef(db: CorpusDb, key: string): { headline: string; where: string 
   };
 }
 
-function ConcordanceHitRow({ db, hit, onOpenKey }: { db: CorpusDb; hit: ConcordanceHit; onOpenKey: (k: string) => void }) {
+function ConcordanceHitRow({ db, hit, query, onOpenKey }: { db: CorpusDb; hit: ConcordanceHit; query: string; onOpenKey: (k: string) => void }) {
   const ref = humanRef(db, hit.key);
+  const result = buildBilingualResult({ latin: hit.latin, english: hit.english }, query);
   return (
     <div className="hit clickable" onClick={() => onOpenKey(hit.key)} title="Open in the reader, in context">
       <div className="where">
         <span className="ref-headline">{ref.headline}</span>
         <span className="open-hint">{ref.where} ↗</span>
       </div>
-      <div className="text" dangerouslySetInnerHTML={{ __html: hit.snippet.replace(/«/g, '<b>«').replace(/»/g, '»</b>') }} />
+      <ResultSnippet result={result} />
     </div>
   );
 }
@@ -75,11 +78,10 @@ function SimilarHitRow({
 }) {
   const ref = humanRef(db, hit.key);
   const [expanded, setExpanded] = useState(false);
+  const result = buildBilingualResult({ latin: hit.latin, english: hit.english }, query);
   const full = hit.latin ?? hit.english ?? '';
   const clause = useMemo(() => bestClause(full, query), [full, query]);
-  const before = clause ? full.slice(0, clause.start) : '';
-  const after = clause ? full.slice(clause.end) : '';
-  const hasContext = before.trim().length > 0 || after.trim().length > 0;
+  const hasContext = clause && (clause.start > 0 || clause.end < full.length);
   return (
     <div className="hit clickable" onClick={() => onOpenKey(hit.key)} title="Open in the reader, in context">
       <div className="where">
@@ -89,41 +91,33 @@ function SimilarHitRow({
         </span>
         <span className="open-hint">{ref.where} ↗</span>
       </div>
-      <div className="text">
-        {clause ? (
-          expanded ? (
-            <>
-              {before}
-              <b className="clause-hit">{clause.text}</b>
-              {after}
-              {hasContext && (
-                <button
-                  className="clause-toggle"
-                  onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-                  title="Collapse to the closest clause"
-                >
-                  less
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <b className="clause-hit">{clause.text}</b>
-              {hasContext && (
-                <button
-                  className="clause-toggle"
-                  onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
-                  title="Show the full passage around this clause"
-                >
-                  … more
-                </button>
-              )}
-            </>
-          )
-        ) : (
-          `${full.slice(0, 200)}…`
-        )}
-      </div>
+      {expanded ? (
+        <>
+          <ResultSnippet result={buildBilingualResult({ latin: hit.latin, english: hit.english }, query)} />
+          {hasContext && (
+            <button
+              className="clause-toggle"
+              onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
+              title="Collapse to the closest clause"
+            >
+              less
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          <ResultSnippet result={result} />
+          {hasContext && (
+            <button
+              className="clause-toggle"
+              onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+              title="Show the full passage around this clause"
+            >
+              … more
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -133,15 +127,18 @@ function NucleatedHitRow({
   item,
   siblings,
   nucleus,
+  query,
   onOpenKey,
 }: {
   db: CorpusDb;
   item: NucleatedSimilarityHit;
   siblings: number[];
   nucleus: InterpretiveNucleus | null;
+  query: string;
   onOpenKey: (k: string) => void;
 }) {
   const ref = humanRef(db, item.hit.key);
+  const result = buildBilingualResult({ latin: item.hit.latin, english: item.hit.english }, query);
   return (
     <div className="hit clickable" onClick={() => onOpenKey(item.hit.key)} title="Open in the reader, in context">
       <div className="where">
@@ -151,7 +148,7 @@ function NucleatedHitRow({
         </span>
         <span className="open-hint">{ref.where} ↗</span>
       </div>
-      <div className="text"><b className="clause-hit">{item.clause}</b></div>
+      <ResultSnippet result={result} />
       <div className="jsc-why">
         Bridge: corpus vector {item.hit.score.toFixed(3)} →{' '}
         {nucleus ? `${nucleus.source} nucleus affinity ${item.nucleusAffinity.toFixed(3)}` : 'stable concept grouping'}
@@ -207,6 +204,7 @@ function NucleatedResults({
                   item={item}
                   siblings={siblings}
                   nucleus={group.nucleus}
+                  query={term}
                   onOpenKey={onOpenKey}
                 />
               ))}
@@ -228,6 +226,7 @@ function NucleatedResults({
                 item={item}
                 siblings={set.tail.map((tailItem) => tailItem.contextScore)}
                 nucleus={item.nucleusKey ? nuclei.get(item.nucleusKey) ?? null : null}
+                query={term}
                 onOpenKey={onOpenKey}
               />
             ))}
@@ -243,6 +242,7 @@ function ConceptGroup<T extends ConcordanceHit | SimilarHit>({
   description,
   count,
   hits,
+  query,
   renderHit,
   onOpenKey,
 }: {
@@ -250,7 +250,8 @@ function ConceptGroup<T extends ConcordanceHit | SimilarHit>({
   description: string | null;
   count: number;
   hits: T[];
-  renderHit: (hit: T, onOpenKey: (k: string) => void) => React.ReactNode;
+  query: string;
+  renderHit: (hit: T, query: string, onOpenKey: (k: string) => void) => React.ReactNode;
   onOpenKey: (k: string) => void;
 }) {
   const [expanded, setExpanded] = useState(count <= 3);
@@ -269,13 +270,13 @@ function ConceptGroup<T extends ConcordanceHit | SimilarHit>({
       {expanded && (
         <div className="concept-hits">
           {hits.map((hit, i) => (
-            <div key={i}>{renderHit(hit, onOpenKey)}</div>
+            <div key={i}>{renderHit(hit, query, onOpenKey)}</div>
           ))}
         </div>
       )}
       {!expanded && count > 3 && (
         <div className="concept-preview">
-          {renderHit(hits[0], onOpenKey)}
+          {renderHit(hits[0], query, onOpenKey)}
         </div>
       )}
     </div>
@@ -361,7 +362,8 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
                 description={g.description}
                 count={g.count}
                 hits={g.hits}
-                renderHit={(hit, ok) => <ConcordanceHitRow db={db} hit={hit} onOpenKey={ok} />}
+                query={term}
+                renderHit={(hit, q, ok) => <ConcordanceHitRow db={db} hit={hit} query={q} onOpenKey={ok} />}
                 onOpenKey={onOpenKey}
               />
             ));

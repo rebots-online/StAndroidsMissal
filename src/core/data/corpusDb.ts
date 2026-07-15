@@ -761,15 +761,26 @@ export class CorpusDb {
       .join(' ');
     if (!safe) return [];
     try {
-      return this.all(
+      const ftsHits = this.all(
         `SELECT key, section, snippet(search, 2, '«', '»', ' … ', 12) snippet
          FROM search WHERE search MATCH ? ORDER BY rank LIMIT ?`,
         [safe, k],
-      ).map((r) => ({
-        key: String(r.key),
-        section: String(r.section),
-        snippet: String(r.snippet),
-      }));
+      );
+      
+      return ftsHits.map((r) => {
+        const key = String(r.key);
+        const tb = this.all(
+          `SELECT tb.latin, tb.english FROM text_blocks tb JOIN nodes n ON n.id = tb.node_id WHERE n.key = ?`,
+          [key],
+        )[0];
+        return {
+          key,
+          section: String(r.section),
+          snippet: String(r.snippet),
+          latin: (tb?.latin as string) ?? null,
+          english: (tb?.english as string) ?? null,
+        };
+      });
     } catch {
       return [];
     }

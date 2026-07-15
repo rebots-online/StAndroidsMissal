@@ -49,6 +49,8 @@ export interface ConcordanceHit {
   key: string;
   section: string;
   snippet: string;
+  latin: string | null;
+  english: string | null;
 }
 
 export interface CrossRef {
