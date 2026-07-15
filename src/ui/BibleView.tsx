@@ -14,7 +14,7 @@ import type { SidecarDb } from '../core/accompaniment/store.ts';
 import type { SelectionAction } from './ReaderView.tsx';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 import { verseHash } from '../core/share/shareLink.ts';
-import { alignSelection, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
+import { alignSelection, alignPhrase, wordEcho, wordAtPoint, type WordEchoResult, type PhraseSelectionInput } from '../core/text/align.ts';
 import { useNarrow } from './BilingualText.tsx';
 import ScriptureAtlas, { type AtlasMode } from './ScriptureAtlas.tsx';
 
@@ -73,7 +73,6 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
   const [noteFor, setNoteFor] = useState<Menu | null>(null);
   const [noteText, setNoteText] = useState('');
   const [annVersion, setAnnVersion] = useState(0);
-  const [sidecarVersion, setSidecarVersion] = useState(0);
   const [liturgyOpen, setLiturgyOpen] = useState(false);
   const [atlasMode, setAtlasMode] = useState<AtlasMode>('canonical');
   /** Verse echo: hover/tap/selection lights the aligned verse in BOTH panes. */
@@ -161,20 +160,6 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
     };
   }
 
-  async function highlightBoth(m: Menu) {
-    if (!sidecar || !m.nodeKey) return;
-    const capture = captureFrom(m);
-    sidecar.save({
-      exposure: 'journal',
-      anchors: [m.nodeKey],
-      quote: capture.quote,
-      quoteAlt: capture.quoteAlt ?? null,
-      color: 'gold',
-    });
-    await sidecar.persist();
-    setSidecarVersion((version) => version + 1);
-  }
-
   const verseFromEvent = (e: React.SyntheticEvent) => {
     const el = (e.target as HTMLElement).closest?.('[data-verse]') as HTMLElement | null;
     if (el) setEchoVerse(Number(el.dataset.verse));
@@ -204,21 +189,119 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
 
   // Drag-selection lights the aligned verse in both panes.
   useEffect(() => {
-    const onSel = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !rootRef.current) return;
-      let el: Node | null = sel.anchorNode;
+    const verseInfoAt = (node: Node | null): { nodeKey: string; verse: number; lang: 'latin' | 'english' | null; lineText: string; start: number; end: number } | null => {
+      let el: Node | null = node;
       while (el && el !== rootRef.current) {
         if (el instanceof HTMLElement && el.dataset.verse !== undefined) {
-          setEchoVerse(Number(el.dataset.verse));
-          return;
+          const verse = Number(el.dataset.verse);
+          const nodeKey = el.dataset.nodekey;
+          if (!nodeKey) return null;
+          const lang = (el.dataset.lang ?? null) as 'latin' | 'english' | null;
+          
+          const lineText = el.textContent ?? '';
+          
+          return { nodeKey, verse, lang, lineText, start: 0, end: lineText.length };
         }
         el = el.parentNode;
+      }
+      return null;
+    };
+
+    const onSel = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !rootRef.current) {
+        setEchoVerse(null);
+        return;
+      }
+
+      const range = sel.getRangeAt(0);
+      
+      const anchorInfo = verseInfoAt(range.startContainer);
+      const focusInfo = verseInfoAt(range.endContainer);
+      
+      // Only handle selection within one language/verse
+      if (anchorInfo && focusInfo && 
+          anchorInfo.nodeKey === focusInfo.nodeKey && 
+          anchorInfo.verse === focusInfo.verse &&
+          anchorInfo.lang && focusInfo.lang &&
+          anchorInfo.lang === focusInfo.lang) {
+        
+        setEchoVerse(anchorInfo.verse);
+        
+        // Compute exact character endpoints from range
+        const rangeStartOffset = range.startOffset;
+        const rangeEndOffset = range.endOffset;
+        
+        // Find the verse element
+        const verseEl = anchorInfo.nodeKey ? 
+          rootRef.current?.querySelector(`[data-nodekey="${anchorInfo.nodeKey}"][data-verse="${anchorInfo.verse}"]`) : null;
+        
+        if (verseEl) {
+          // Calculate positions relative to the verse element
+          let start = rangeStartOffset;
+          let end = rangeEndOffset;
+          
+          // Try to find text nodes to get more precise positions
+          const walker = document.createTreeWalker(
+            verseEl,
+            NodeFilter.SHOW_TEXT
+          );
+          
+          let currentOffset = 0;
+          let node: Node | null;
+          let foundStart = false;
+          let foundEnd = false;
+          
+          while ((node = walker.nextNode())) {
+            const nodeLength = node.textContent?.length ?? 0;
+            
+            if (!foundStart && node === range.startContainer) {
+              start = currentOffset + rangeStartOffset;
+              foundStart = true;
+            }
+            
+            if (!foundEnd && node === range.endContainer) {
+              end = currentOffset + rangeEndOffset;
+              foundEnd = true;
+            }
+            
+            if (foundStart && foundEnd) break;
+            
+            currentOffset += nodeLength;
+          }
+          
+          // Call alignPhrase with exact selection
+          const v = verses.find((x) => x.nodeKey === anchorInfo.nodeKey);
+          if (v && anchorInfo.lang) {
+            const selection: PhraseSelectionInput = {
+              srcLang: anchorInfo.lang,
+              idx: anchorInfo.verse - 1, // Convert verse number to line index
+              start: Math.min(start, end),
+              end: Math.max(start, end),
+            };
+            
+            const aligned = alignPhrase(db, { latin: v.latin, english: v.english }, selection);
+            if (aligned && aligned.dstLine) {
+              setEchoVerse(anchorInfo.verse);
+            } else {
+              setEchoVerse(anchorInfo.verse);
+            }
+          } else {
+            setEchoVerse(anchorInfo.verse);
+          }
+        }
+      } else {
+        // Still light up the verse echo for cross-line selections
+        if (anchorInfo) {
+          setEchoVerse(anchorInfo.verse);
+        } else if (focusInfo) {
+          setEchoVerse(focusInfo.verse);
+        }
       }
     };
     document.addEventListener('selectionchange', onSel);
     return () => document.removeEventListener('selectionchange', onSel);
-  }, []);
+  }, [db, verses]);
 
   // ── Book grid ────────────────────────────────────────────────────
   if (!book) {
@@ -305,7 +388,6 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
     }),
   );
   void annVersion;
-  void sidecarVersion;
   return (
     <div
       className="content reader"
@@ -490,11 +572,6 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
           {onCapture && (
             <button onClick={() => { onCapture(captureFrom(menu)); setMenu(null); }}>
               ✎ Add to Journal/Homily notes
-            </button>
-          )}
-          {sidecar && menu.nodeKey && (
-            <button onClick={() => { void highlightBoth(menu); setMenu(null); }}>
-              🖍 Highlight both panes
             </button>
           )}
           <button

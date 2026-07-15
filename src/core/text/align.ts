@@ -11,6 +11,13 @@
 
 import { normalizeText } from './normalize.ts';
 
+export interface PhraseSelectionInput {
+  srcLang: 'latin' | 'english';
+  idx: number;
+  start: number;
+  end: number;
+}
+
 export interface PhraseAlignment {
   srcLang: 'latin' | 'english';
   idx: number;
@@ -152,130 +159,203 @@ export interface PhraseAlignment {
 export function alignPhrase(
   db: EchoDb,
   block: { latin: string | null; english: string | null },
-  term: string,
+  selection: PhraseSelectionInput,
 ): PhraseAlignment | null {
-  const normTerm = normalizeText(term);
-  if (!normTerm) return null;
+  // Normalize reversed endpoints
+  const { srcLang, idx, start: rawStart, end: rawEnd } = selection;
+  const start = Math.min(rawStart, rawEnd);
+  const end = Math.max(rawStart, rawEnd);
 
-  // Try both source languages
-  for (const srcLang of ['latin', 'english'] as const) {
-    const src = block[srcLang];
-    if (!src) continue;
+  // Reject collapsed selection
+  if (start === end) return null;
 
-    const srcLines = src.split('\n');
-    const dst = block[srcLang === 'latin' ? 'english' : 'latin'];
-    const dstLines = dst ? dst.split('\n') : null;
+  // Get source and destination text
+  const src = block[srcLang];
+  if (!src) return null;
 
-    // Find line containing the term (diacritics-insensitive)
-    for (let idx = 0; idx < srcLines.length; idx++) {
-      const srcLine = srcLines[idx];
-      const normLine = normalizeText(srcLine);
+  const srcLines = src.split('\n');
+  const dst = block[srcLang === 'latin' ? 'english' : 'latin'];
+  const dstLines = dst ? dst.split('\n') : null;
 
-      // Find the exact term range in the original-casing source line
-      const termStart = normLine.indexOf(normTerm);
-      if (termStart < 0) continue;
+  // Reject out-of-range line index
+  if (idx < 0 || idx >= srcLines.length) return null;
 
-      // Calculate normalized token offsets to find original position
-      const normTokens = normLine.split(/\s+/).filter(Boolean);
-      const srcTokens = srcLine.split(/\s+/).filter(Boolean);
-      let charCount = 0;
-      let srcStart = 0;
-      let srcEnd = srcLine.length;
+  // Get source line
+  const srcLine = srcLines[idx];
 
-      // Find which token(s) contain the term and their original positions
-      for (let i = 0; i < normTokens.length; i++) {
-        const tokenNorm = normTokens[i];
-        const tokenSrc = srcTokens[i];
-        const tokenInTerm = normTerm.includes(tokenNorm);
+  // Reject out-of-range character positions
+  if (start < 0 || end > srcLine.length) return null;
 
-        if (tokenInTerm) {
-          // First token of the match
-          if (charCount <= termStart && charCount + tokenNorm.length >= termStart) {
-            srcStart = charCount;
-          }
-          // Last token of the match
-          if (charCount <= termStart + normTerm.length) {
-            srcEnd = charCount + tokenSrc.length;
-          }
-        }
-        charCount += tokenNorm.length + 1; // +1 for space
-      }
+  // Reject missing counterpart
+  const dstLine = dstLines && idx < dstLines.length ? dstLines[idx] : null;
+  if (!dstLine) return null;
 
-      const dstLine = dstLines && idx < dstLines.length ? dstLines[idx] : null;
-      if (!dstLine) return null;
+  // Split source line into tokens (preserving original form)
+  const srcTokens = srcLine.split(/\s+/).filter(Boolean);
+  const srcNormTokens = srcTokens.map(t => normalizeText(t));
 
-      // Use wordEcho for each selected source token to find anchors
-      const selectedSrcTokens = srcLine.slice(srcStart, srcEnd).split(/\s+/).filter(Boolean);
-      const anchors: Array<{ start: number; end: number }> = [];
+  // Build cumulative normalized character positions for source line
+  const srcNormPositions: Array<{ normStart: number; normEnd: number; originalStart: number; originalEnd: number; token: string; normToken: string }> = [];
+  let normPos = 0;
+  let origPos = 0;
+  for (let i = 0; i < srcTokens.length; i++) {
+    const token = srcTokens[i];
+    const normToken = srcNormTokens[i];
+    srcNormPositions.push({
+      normStart: normPos,
+      normEnd: normPos + normToken.length,
+      originalStart: origPos,
+      originalEnd: origPos + token.length,
+      token,
+      normToken,
+    });
+    normPos += normToken.length + 1; // +1 for space
+    origPos += token.length + 1;
+  }
 
-      for (const token of selectedSrcTokens) {
-        const echo = wordEcho(db, block, token);
-        if (echo?.word) {
-          const tokenNorm = normalizeText(echo.word);
-          const dstNorm = normalizeText(dstLine);
-          const tokenIdx = dstNorm.indexOf(tokenNorm);
-          if (tokenIdx >= 0) {
-            // Find original position
-            const dstTokens = dstLine.split(/\s+/).filter(Boolean);
-            const normTokens2 = dstNorm.split(/\s+/).filter(Boolean);
-            let charPos = 0;
-            for (let i = 0; i < normTokens2.length; i++) {
-              if (i === tokenIdx) {
-                anchors.push({ start: charPos, end: charPos + dstTokens[i].length });
-                break;
-              }
-              charPos += normTokens2[i].length + 1;
-            }
-          }
-        }
-      }
-
-      const countsMatch = dstLines !== null && dstLines.length === srcLines.length;
-
-      // When we have >=2 anchors, use them to determine the destination range
-      if (anchors.length >= 2) {
-        const dstStart = Math.min(...anchors.map(a => a.start));
-        const dstEnd = Math.max(...anchors.map(a => a.end));
-        return {
-          srcLang,
-          idx,
-          srcLine,
-          srcStart,
-          srcEnd,
-          dstLine,
-          dstStart,
-          dstEnd,
-          countsMatch,
-          method: 'attested-anchors',
-        };
-      }
-
-      // Fewer than 2 anchors: use positional fallback
-      // Project source token start/end ratios into destination token indices
-      const srcTotal = srcLine.length;
-      const dstTotal = dstLine.length;
-      const srcRatioStart = srcStart / Math.max(1, srcTotal);
-      const srcRatioEnd = srcEnd / Math.max(1, srcTotal);
-
-      const dstStart = Math.floor(srcRatioStart * dstTotal);
-      const dstEnd = Math.floor(srcRatioEnd * dstTotal);
-
-      return {
-        srcLang,
-        idx,
-        srcLine,
-        srcStart,
-        srcEnd,
-        dstLine,
-        dstStart,
-        dstEnd,
-        countsMatch,
-        method: 'positional-fallback',
-      };
+  // Find which tokens intersect with the selection range
+  const selectedTokenIndices: number[] = [];
+  for (let i = 0; i < srcNormPositions.length; i++) {
+    const tokenInfo = srcNormPositions[i];
+    if (start < tokenInfo.originalEnd && end > tokenInfo.originalStart) {
+      selectedTokenIndices.push(i);
     }
   }
 
-  return null;
+  if (selectedTokenIndices.length === 0) return null;
+
+  // Get destination line tokens and their normalized forms
+  const dstTokens = dstLine.split(/\s+/).filter(Boolean);
+  const dstNormTokens = dstTokens.map(t => normalizeText(t));
+
+  // Build cumulative normalized character positions for destination line
+  const dstNormPositions: Array<{ normStart: number; normEnd: number; originalStart: number; originalEnd: number; token: string; normToken: string }> = [];
+  normPos = 0;
+  origPos = 0;
+  for (let i = 0; i < dstTokens.length; i++) {
+    const token = dstTokens[i];
+    const normToken = dstNormTokens[i];
+    dstNormPositions.push({
+      normStart: normPos,
+      normEnd: normPos + normToken.length,
+      originalStart: origPos,
+      originalEnd: origPos + token.length,
+      token,
+      normToken,
+    });
+    normPos += normToken.length + 1;
+    origPos += token.length + 1;
+  }
+
+  // Use wordEcho to find attested anchors for all selected tokens
+  const anchors: Array<{ dstTokenIdx: number; confidence: number }> = [];
+  for (const srcTokenIdx of selectedTokenIndices) {
+    const srcToken = srcTokens[srcTokenIdx];
+    const echo = wordEcho(db, block, srcToken);
+    if (echo?.word) {
+      const echoNorm = normalizeText(echo.word);
+      // Find matching destination token by normalized form
+      for (let i = 0; i < dstNormTokens.length; i++) {
+        if (dstNormTokens[i] === echoNorm) {
+          anchors.push({ dstTokenIdx: i, confidence: 1.0 });
+          break;
+        }
+      }
+    }
+  }
+
+  const countsMatch = dstLines !== null && dstLines.length === srcLines.length;
+
+  // If we have >=2 anchors, use attested-anchors method with partial boundary support
+  if (anchors.length >= 2) {
+    const firstAnchor = anchors[0];
+    const lastAnchor = anchors[anchors.length - 1];
+
+    // For the first token: map partial selection into destination
+    const firstSrcTokenIdx = selectedTokenIndices[0];
+    const firstSrcTokenInfo = srcNormPositions[firstSrcTokenIdx];
+    const firstDstTokenInfo = dstNormPositions[firstAnchor.dstTokenIdx];
+
+    let dstStart: number;
+    if (firstSrcTokenIdx === firstAnchor.dstTokenIdx && anchors[0].confidence === 1.0) {
+      // Selection starts at same token position: use character ratio
+      const ratioStart = (start - firstSrcTokenInfo.originalStart) / Math.max(1, firstSrcTokenInfo.originalEnd - firstSrcTokenInfo.originalStart);
+      dstStart = firstDstTokenInfo.originalStart + Math.floor(ratioStart * (firstDstTokenInfo.originalEnd - firstDstTokenInfo.originalStart));
+    } else {
+      // Different token: use full destination token
+      dstStart = firstDstTokenInfo.originalStart;
+    }
+
+    // For the last token: map partial selection into destination
+    const lastSrcTokenIdx = selectedTokenIndices[selectedTokenIndices.length - 1];
+    const lastSrcTokenInfo = srcNormPositions[lastSrcTokenIdx];
+    const lastDstTokenInfo = dstNormPositions[lastAnchor.dstTokenIdx];
+
+    let dstEnd: number;
+    if (lastSrcTokenIdx === lastAnchor.dstTokenIdx && anchors[anchors.length - 1].confidence === 1.0) {
+      // Selection ends at same token position: use character ratio
+      const ratioEnd = (end - lastSrcTokenInfo.originalStart) / Math.max(1, lastSrcTokenInfo.originalEnd - lastSrcTokenInfo.originalStart);
+      dstEnd = lastDstTokenInfo.originalStart + Math.ceil(ratioEnd * (lastDstTokenInfo.originalEnd - lastDstTokenInfo.originalStart));
+    } else {
+      // Different token: use full destination token
+      dstEnd = lastDstTokenInfo.originalEnd;
+    }
+
+    return {
+      srcLang,
+      idx,
+      srcLine,
+      srcStart: start,
+      srcEnd: end,
+      dstLine,
+      dstStart: Math.max(0, dstStart),
+      dstEnd: Math.min(dstLine.length, dstEnd),
+      countsMatch,
+      method: 'attested-anchors',
+    };
+  }
+
+  // Fallback: project exact source character ratios into destination grapheme boundaries
+  const dstTotal = dstLine.length;
+
+  // Calculate normalized character positions
+  const srcNorm = normalizeText(srcLine);
+  const dstNorm = normalizeText(dstLine);
+
+  // Find character-level grapheme boundaries in destination
+  const dstGraphemeBounds: number[] = [0];
+  for (let i = 0; i < dstNorm.length; i++) {
+    dstGraphemeBounds.push(i + 1);
+  }
+
+  // Calculate source ratios in normalized space
+  const srcNormStartChar = normalizeText(srcLine.slice(0, start)).length;
+  const srcNormEndChar = normalizeText(srcLine.slice(0, end)).length;
+  const srcNormTotal = srcNorm.length;
+
+  const srcRatioStart = srcNormStartChar / Math.max(1, srcNormTotal);
+  const srcRatioEnd = srcNormEndChar / Math.max(1, srcNormTotal);
+
+  // Map ratios to destination grapheme positions
+  const dstNormStart = Math.floor(srcRatioStart * dstNorm.length);
+  const dstNormEnd = Math.ceil(srcRatioEnd * dstNorm.length);
+
+  // Find closest grapheme boundaries
+  const dstStart = Math.max(0, Math.min(dstTotal, dstNormStart));
+  const dstEnd = Math.max(0, Math.min(dstTotal, dstNormEnd));
+
+  return {
+    srcLang,
+    idx,
+    srcLine,
+    srcStart: start,
+    srcEnd: end,
+    dstLine,
+    dstStart,
+    dstEnd,
+    countsMatch,
+    method: 'positional-fallback',
+  };
 }
 
 export function wordAtPoint(x: number, y: number): string | null {

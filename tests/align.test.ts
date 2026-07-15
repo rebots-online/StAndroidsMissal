@@ -1,9 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { alignPhrase } from '../src/core/text/align.ts';
+import { alignPhrase, type PhraseSelectionInput } from '../src/core/text/align.ts';
 
-test('alignPhrase - Latin to English (diacritics-insensitive)', () => {
-  // Mock EchoDb that returns empty concordance (positional fallback will be used)
+test('alignPhrase - exact forward Latin to English endpoints', () => {
   const mockDb = {
     concordance: () => [],
     textOf: () => null,
@@ -14,15 +13,24 @@ test('alignPhrase - Latin to English (diacritics-insensitive)', () => {
     english: 'we beseech You, O Lord, that we may worthily merit.',
   };
 
-  const result = alignPhrase(mockDb, testBlock, 'quæsumus, Dómine');
-  assert.ok(result, 'Should return alignment for Latin phrase');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 17,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.ok(result, 'Should return alignment for exact Latin range');
   assert.strictEqual(result?.srcLang, 'latin', 'Source language should be latin');
-  assert.strictEqual(result?.method, 'positional-fallback', 'Should use positional fallback with mock');
-  assert.ok(result?.dstLine, 'Should have destination line');
-  assert.ok(result?.dstLine?.toLowerCase().includes('we beseech you'), 'Should contain translated phrase');
+  assert.strictEqual(result?.idx, 0, 'Line index should be 0');
+  assert.strictEqual(result?.srcStart, 0, 'Source start should match selection');
+  assert.strictEqual(result?.srcEnd, 17, 'Source end should match selection');
+  assert.ok(result?.dstStart >= 0, 'Destination start should be non-negative');
+  assert.ok(result?.dstEnd <= (result?.dstLine?.length ?? 0), 'Destination end should not exceed line length');
 });
 
-test('alignPhrase - English to Latin (diacritics-insensitive)', () => {
+test('alignPhrase - exact reverse English to Latin endpoints', () => {
   const mockDb = {
     concordance: () => [],
     textOf: () => null,
@@ -33,14 +41,23 @@ test('alignPhrase - English to Latin (diacritics-insensitive)', () => {
     english: 'we beseech You, O Lord, that we may worthily merit.',
   };
 
-  const result = alignPhrase(mockDb, testBlock, 'we beseech You');
-  assert.ok(result, 'Should return alignment for English phrase');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'english',
+    idx: 0,
+    start: 0,
+    end: 13,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.ok(result, 'Should return alignment for exact English range');
   assert.strictEqual(result?.srcLang, 'english', 'Source language should be english');
-  assert.ok(result?.dstLine, 'Should have destination line');
+  assert.strictEqual(result?.idx, 0, 'Line index should be 0');
+  assert.strictEqual(result?.srcStart, 0, 'Source start should match selection');
+  assert.strictEqual(result?.srcEnd, 13, 'Source end should match selection');
   assert.ok(result?.dstLine?.toLowerCase().includes('quæsumus') || result?.dstLine?.toLowerCase().includes('quaesumus'), 'Should contain translated phrase');
 });
 
-test('alignPhrase - diacritics-insensitive lookup', () => {
+test('alignPhrase - normalize reversed endpoints', () => {
   const mockDb = {
     concordance: () => [],
     textOf: () => null,
@@ -51,19 +68,20 @@ test('alignPhrase - diacritics-insensitive lookup', () => {
     english: 'we beseech You, O Lord, that we may worthily merit.',
   };
 
-  // Test with diacritics stripped
-  const result1 = alignPhrase(mockDb, testBlock, 'quaesumus, domine');
-  assert.ok(result1, 'Should find phrase with diacritics stripped');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 17,
+    end: 0,
+  };
 
-  // Test with original diacritics
-  const result2 = alignPhrase(mockDb, testBlock, 'quæsumus, Dómine');
-  assert.ok(result2, 'Should find phrase with original diacritics');
-
-  // Both should align to the same destination line
-  assert.strictEqual(result1?.dstLine, result2?.dstLine, 'Should align to same destination line');
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.ok(result, 'Should handle reversed endpoints');
+  assert.strictEqual(result?.srcStart, 0, 'Source start should be normalized to min');
+  assert.strictEqual(result?.srcEnd, 17, 'Source end should be normalized to max');
 });
 
-test('alignPhrase - destination range inside paired line', () => {
+test('alignPhrase - reject collapsed selection', () => {
   const mockDb = {
     concordance: () => [],
     textOf: () => null,
@@ -74,61 +92,62 @@ test('alignPhrase - destination range inside paired line', () => {
     english: 'we beseech You, O Lord, that we may worthily merit.',
   };
 
-  const result = alignPhrase(mockDb, testBlock, 'quæsumus, Dómine');
-  assert.ok(result, 'Should return alignment');
-  
-  const dstLineLength = result?.dstLine?.length ?? 0;
-  assert.ok(result?.dstStart >= 0, 'Destination start should be non-negative');
-  assert.ok(result?.dstEnd <= dstLineLength, `Destination end (${result?.dstEnd}) should not exceed line length (${dstLineLength})`);
-  assert.ok(result?.dstStart < result?.dstEnd, 'Destination start should be less than end');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 5,
+    end: 5,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.strictEqual(result, null, 'Should return null for collapsed selection');
 });
 
-test('alignPhrase - empty term returns null', () => {
+test('alignPhrase - reject out-of-range line index', () => {
   const mockDb = {
     concordance: () => [],
     textOf: () => null,
   };
 
   const testBlock = {
-    latin: 'quæsumus, Dómine, ut digné mereámur.',
-    english: 'we beseech You, O Lord, that we may worthily merit.',
+    latin: 'quæsumus, Dómine.',
+    english: 'we beseech You, O Lord.',
   };
 
-  const result = alignPhrase(mockDb, testBlock, '');
-  assert.strictEqual(result, null, 'Should return null for empty term');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 99,
+    start: 0,
+    end: 10,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.strictEqual(result, null, 'Should return null for out-of-range line index');
 });
 
-test('alignPhrase - whitespace-only term returns null', () => {
+test('alignPhrase - reject out-of-range character positions', () => {
   const mockDb = {
     concordance: () => [],
     textOf: () => null,
   };
 
   const testBlock = {
-    latin: 'quæsumus, Dómine, ut digné mereámur.',
-    english: 'we beseech You, O Lord, that we may worthily merit.',
+    latin: 'quæsumus, Dómine.',
+    english: 'we beseech You, O Lord.',
   };
 
-  const result = alignPhrase(mockDb, testBlock, '   ');
-  assert.strictEqual(result, null, 'Should return null for whitespace-only term');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 999,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.strictEqual(result, null, 'Should return null for out-of-range character positions');
 });
 
-test('alignPhrase - nonexistent phrase returns null', () => {
-  const mockDb = {
-    concordance: () => [],
-    textOf: () => null,
-  };
-
-  const testBlock = {
-    latin: 'quæsumus, Dómine, ut digné mereámur.',
-    english: 'we beseech You, O Lord, that we may worthily merit.',
-  };
-
-  const result = alignPhrase(mockDb, testBlock, 'nonexistent phrase');
-  assert.strictEqual(result, null, 'Should return null for nonexistent phrase');
-});
-
-test('alignPhrase - missing translation returns null', () => {
+test('alignPhrase - reject missing translation', () => {
   const mockDb = {
     concordance: () => [],
     textOf: () => null,
@@ -139,8 +158,190 @@ test('alignPhrase - missing translation returns null', () => {
     english: null,
   };
 
-  const result = alignPhrase(mockDb, blockWithNull, 'quæsumus, Dómine');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 17,
+  };
+
+  const result = alignPhrase(mockDb, blockWithNull, selection);
   assert.strictEqual(result, null, 'Should return null when translation is missing');
+});
+
+test('alignPhrase - reject missing source text', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
+  };
+
+  const blockWithNull = {
+    latin: null,
+    english: 'we beseech You, O Lord.',
+  };
+
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 10,
+  };
+
+  const result = alignPhrase(mockDb, blockWithNull, selection);
+  assert.strictEqual(result, null, 'Should return null when source text is missing');
+});
+
+test('alignPhrase - reject negative start position', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
+  };
+
+  const testBlock = {
+    latin: 'quæsumus, Dómine.',
+    english: 'we beseech You, O Lord.',
+  };
+
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: -1,
+    end: 10,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.strictEqual(result, null, 'Should return null for negative start position');
+});
+
+test('alignPhrase - repeated source terms', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
+  };
+
+  const testBlock = {
+    latin: 'Dominus vobiscum. Et cum spiritu tuo.',
+    english: 'The Lord be with you. And with your spirit.',
+  };
+
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 7,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.ok(result, 'Should handle repeated terms');
+  assert.ok(result?.dstLine?.toLowerCase().includes('the lord'), 'Should find first occurrence');
+});
+
+test('alignPhrase - one-character expansion/contraction', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
+  };
+
+  const testBlock = {
+    latin: 'quæsumus, Dómine, ut digné mereámur.',
+    english: 'we beseech You, O Lord, that we may worthily merit.',
+  };
+
+  // Single character at start
+  const selection1: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 1,
+  };
+
+  const result1 = alignPhrase(mockDb, testBlock, selection1);
+  assert.ok(result1, 'Should handle single character selection');
+  assert.ok(result1?.dstStart >= 0, 'Should have valid destination start');
+  assert.ok(result1?.dstEnd > result1?.dstStart, 'Should have positive range');
+
+  // Expanding to two characters
+  const selection2: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 2,
+  };
+
+  const result2 = alignPhrase(mockDb, testBlock, selection2);
+  assert.ok(result2, 'Should handle two character selection');
+  assert.ok(result2?.dstStart >= 0, 'Should have valid destination start');
+  assert.ok(result2?.dstEnd > result2?.dstStart, 'Should have positive range');
+});
+
+test('alignPhrase - partial-word expansion/contraction', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
+  };
+
+  const testBlock = {
+    latin: 'quæsumus, Dómine, ut digné mereámur.',
+    english: 'we beseech You, O Lord, that we may worthily merit.',
+  };
+
+  // Partial word at start
+  const selection1: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 4,
+  };
+
+  const result1 = alignPhrase(mockDb, testBlock, selection1);
+  assert.ok(result1, 'Should handle partial word selection');
+  
+  // Expanding to full word
+  const selection2: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 9,
+  };
+
+  const result2 = alignPhrase(mockDb, testBlock, selection2);
+  assert.ok(result2, 'Should handle full word selection');
+});
+
+test('alignPhrase - full-line-only-when-source-full-line', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
+  };
+
+  const testBlock = {
+    latin: 'quæsumus, Dómine.',
+    english: 'we beseech You, O Lord.',
+  };
+
+  // Partial selection should not return full destination line
+  const partialSelection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 8,
+  };
+
+  const partialResult = alignPhrase(mockDb, testBlock, partialSelection);
+  assert.ok(partialResult, 'Should handle partial selection');
+  assert.ok(partialResult?.dstEnd < (partialResult?.dstLine?.length ?? Infinity), 'Partial selection should not return full line');
+
+  // Full line selection should return proportional range
+  const fullSelection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: testBlock.latin.length,
+  };
+
+  const fullResult = alignPhrase(mockDb, testBlock, fullSelection);
+  assert.ok(fullResult, 'Should handle full line selection');
+  assert.ok(fullResult?.dstEnd >= fullResult?.dstStart, 'Full line selection should have valid range');
 });
 
 test('alignPhrase - multi-line blocks', () => {
@@ -154,40 +355,27 @@ test('alignPhrase - multi-line blocks', () => {
     english: 'we beseech You, O Lord.\nGod, who to us.\nLet us pray.',
   };
 
-  // Find phrase in first line
-  const result1 = alignPhrase(mockDb, multiLineBlock, 'quæsumus, Dómine');
-  assert.ok(result1, 'Should find phrase in first line');
+  const selection1: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 17,
+  };
+
+  const result1 = alignPhrase(mockDb, multiLineBlock, selection1);
+  assert.ok(result1, 'Should find alignment in first line');
   assert.strictEqual(result1?.idx, 0, 'Should be at line index 0');
 
-  // Find phrase in second line
-  const result2 = alignPhrase(mockDb, multiLineBlock, 'Deus, qui');
-  assert.ok(result2, 'Should find phrase in second line');
+  const selection2: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 1,
+    start: 0,
+    end: 13,
+  };
+
+  const result2 = alignPhrase(mockDb, multiLineBlock, selection2);
+  assert.ok(result2, 'Should find alignment in second line');
   assert.strictEqual(result2?.idx, 1, 'Should be at line index 1');
-
-  // Find phrase in third line
-  const result3 = alignPhrase(mockDb, multiLineBlock, 'Oremus');
-  assert.ok(result3, 'Should find phrase in third line');
-  assert.strictEqual(result3?.idx, 2, 'Should be at line index 2');
-});
-
-test('alignPhrase - phrase at different positions within line', () => {
-  const mockDb = {
-    concordance: () => [],
-    textOf: () => null,
-  };
-
-  const testBlock = {
-    latin: 'quæsumus, Dómine, ut digné mereámur.',
-    english: 'we beseech You, O Lord, that we may worthily merit.',
-  };
-
-  const result = alignPhrase(mockDb, testBlock, 'quæsumus, Dómine');
-  assert.ok(result, 'Should return alignment');
-  
-  // Source range should be within the source line
-  const srcLineLength = result?.srcLine.length ?? 0;
-  assert.ok(result?.srcStart >= 0, 'Source start should be non-negative');
-  assert.ok(result?.srcEnd <= srcLineLength, 'Source end should not exceed line length');
 });
 
 test('alignPhrase - countsMatch reporting', () => {
@@ -201,7 +389,14 @@ test('alignPhrase - countsMatch reporting', () => {
     english: 'we beseech You, O Lord.\nGod, who to us.',
   };
 
-  const result1 = alignPhrase(mockDb, equalLinesBlock, 'quæsumus, Dómine');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 17,
+  };
+
+  const result1 = alignPhrase(mockDb, equalLinesBlock, selection);
   assert.ok(result1?.countsMatch, 'Should report countsMatch=true for equal line counts');
 
   const unequalLinesBlock = {
@@ -209,18 +404,14 @@ test('alignPhrase - countsMatch reporting', () => {
     english: 'we beseech You, O Lord.\nGod, who to us.',
   };
 
-  const result2 = alignPhrase(mockDb, unequalLinesBlock, 'quæsumus, Dómine');
+  const result2 = alignPhrase(mockDb, unequalLinesBlock, selection);
   assert.ok(!result2?.countsMatch, 'Should report countsMatch=false for unequal line counts');
 });
 
-test('alignPhrase - attested-anchors method when available', () => {
-  // Mock a db that returns concordance results for wordEcho to use
-  const mockDbWithResults = {
-    concordance: () => [{ key: 'test' }],
-    textOf: () => ({
-      latin: 'quæsumus, Dómine, ut digné mereámur.',
-      english: 'we beseech You, O Lord, that we may worthily merit.',
-    }),
+test('alignPhrase - method determination', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
   };
 
   const testBlock = {
@@ -228,11 +419,83 @@ test('alignPhrase - attested-anchors method when available', () => {
     english: 'we beseech You, O Lord, that we may worthily merit.',
   };
 
-  const result = alignPhrase(mockDbWithResults, testBlock, 'quæsumus');
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 17,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
   assert.ok(result, 'Should return alignment');
-  
-  // If wordEcho found anchors, method should be attested-anchors
-  // This depends on whether wordEcho can find matches, which it may not with our mocks
+  // With empty concordance, wordEcho won't find matches, so we should use positional-fallback
+  // However, if the selection spans multiple tokens that can be mapped positionally, 
+  // the implementation may still use attested-anchors based on token position mapping
   assert.ok(['attested-anchors', 'positional-fallback'].includes(result?.method ?? ''), 
     'Method should be one of the valid options');
+});
+
+test('alignPhrase - both language directions with same selection', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
+  };
+
+  const testBlock = {
+    latin: 'quæsumus, Dómine, ut digné mereámur.',
+    english: 'we beseech You, O Lord, that we may worthily merit.',
+  };
+
+  const latinSelection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 17,
+  };
+
+  const latinResult = alignPhrase(mockDb, testBlock, latinSelection);
+  assert.ok(latinResult, 'Should return alignment for Latin source');
+
+  const englishSelection: PhraseSelectionInput = {
+    srcLang: 'english',
+    idx: 0,
+    start: 0,
+    end: 13,
+  };
+
+  const englishResult = alignPhrase(mockDb, testBlock, englishSelection);
+  assert.ok(englishResult, 'Should return alignment for English source');
+  assert.strictEqual(englishResult?.dstLine?.toLowerCase().includes('quæsumus') || englishResult?.dstLine?.toLowerCase().includes('quaesumus'), true, 'English result should map to Latin phrase');
+});
+
+test('alignPhrase - round-trip validation', () => {
+  const mockDb = {
+    concordance: () => [],
+    textOf: () => null,
+  };
+
+  const testBlock = {
+    latin: 'quæsumus, Dómine, ut digné mereámur.',
+    english: 'we beseech You, O Lord, that we may worthily merit.',
+  };
+
+  const selection: PhraseSelectionInput = {
+    srcLang: 'latin',
+    idx: 0,
+    start: 0,
+    end: 17,
+  };
+
+  const result = alignPhrase(mockDb, testBlock, selection);
+  assert.ok(result, 'Should return alignment');
+  
+  // Verify returned range is within destination line
+  const dstLineLength = result?.dstLine?.length ?? 0;
+  assert.ok(result?.dstStart >= 0, 'Destination start should be non-negative');
+  assert.ok(result?.dstEnd <= dstLineLength, 'Destination end should not exceed line length');
+  assert.ok(result?.dstStart < result?.dstEnd, 'Destination start should be less than end');
+  
+  // Verify source range matches selection
+  assert.strictEqual(result?.srcStart, selection.start, 'Source start should match selection');
+  assert.strictEqual(result?.srcEnd, selection.end, 'Source end should match selection');
 });

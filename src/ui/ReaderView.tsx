@@ -13,7 +13,7 @@ import type { Season } from '../core/calendar/computus.ts';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 import type { SidecarDb } from '../core/accompaniment/store.ts';
 import { massTextsForDay } from '../core/data/liturgicalDay.ts';
-import { alignSelection, alignPhrase, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
+import { alignSelection, alignPhrase, wordEcho, wordAtPoint, type WordEchoResult, type PhraseSelectionInput } from '../core/text/align.ts';
 import BilingualText, { TextLines, useNarrow, type SelectionEcho } from './BilingualText.tsx';
 
 export interface SelectionAction {
@@ -64,7 +64,6 @@ export default function ReaderView({
   const [noteFor, setNoteFor] = useState<Menu | null>(null);
   const [noteText, setNoteText] = useState('');
   const [annVersion, setAnnVersion] = useState(0);
-  const [sidecarVersion, setSidecarVersion] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   /** Until this timestamp the scroll-spy stays quiet — programmatic scrolls must not echo. */
   const spyMuteUntil = useRef(0);
@@ -208,57 +207,115 @@ export default function ReaderView({
   // simultaneously"). Anchor AND focus resolve to data-line spans; within
   // one section the echo covers the full [min,max] line range (BK.2).
   useEffect(() => {
-    const lineAt = (start: Node | null): { nodeKey: string; idx: number } | null => {
-      let el: Node | null = start;
+    const lineInfoAt = (node: Node | null): { nodeKey: string; idx: number; lang: 'latin' | 'english' | null; lineText: string; start: number; end: number } | null => {
+      let el: Node | null = node;
       while (el && el !== rootRef.current) {
         if (el instanceof HTMLElement && el.dataset.line !== undefined) {
           const sec = el.closest('section[data-nodekey]') as HTMLElement | null;
-          return sec?.dataset.nodekey ? { nodeKey: sec.dataset.nodekey, idx: Number(el.dataset.line) } : null;
+          if (!sec?.dataset.nodekey) return null;
+          const nodeKey = sec.dataset.nodekey;
+          const idx = Number(el.dataset.line);
+          const lang = (el.dataset.lang ?? null) as 'latin' | 'english' | null;
+          
+          // Get the full line text by finding the containing text node
+          const lineEl = el.closest('span[data-line]') as HTMLElement | null;
+          if (!lineEl) return null;
+          
+          const lineText = lineEl.textContent ?? '';
+          
+          // Find character offset within the line
+          let start = 0;
+          let end = lineText.length;
+          
+          // Walk from node to line element to find position
+          let current: Node | null = node;
+          let foundLine = false;
+          while (current && current !== lineEl) {
+            if (current.nodeType === Node.TEXT_NODE) {
+              const siblings = Array.from(lineEl.childNodes);
+              let pos = 0;
+              for (const sibling of siblings) {
+                if (sibling === current) {
+                  if (!foundLine) {
+                    start = pos;
+                  }
+                  break;
+                }
+                if (sibling.nodeType === Node.TEXT_NODE) {
+                  pos += (sibling.textContent ?? '').length;
+                }
+              }
+              foundLine = true;
+            }
+            current = current.parentNode;
+          }
+          
+          return { nodeKey, idx, lang, lineText, start, end };
         }
         el = el.parentNode;
       }
       return null;
     };
+
     const onSel = () => {
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !rootRef.current) {
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !rootRef.current) {
         setLivePhraseEcho(null);
         return;
       }
+
+      const range = sel.getRangeAt(0);
       
-      const a = lineAt(sel.anchorNode);
-      const f = lineAt(sel.focusNode);
+      const anchorInfo = lineInfoAt(range.startContainer);
+      const focusInfo = lineInfoAt(range.endContainer);
       
       // Only handle selection within one language/section/line
-      if (a && f && a.nodeKey === f.nodeKey && a.idx === f.idx) {
-        setEcho({ nodeKey: a.nodeKey, from: Math.min(a.idx, f.idx), to: Math.max(a.idx, f.idx) });
+      if (anchorInfo && focusInfo && 
+          anchorInfo.nodeKey === focusInfo.nodeKey && 
+          anchorInfo.idx === focusInfo.idx &&
+          anchorInfo.lang && focusInfo.lang &&
+          anchorInfo.lang === focusInfo.lang) {
         
-        // Derive selected text and call alignPhrase for live phrase echo
-        const selectedText = sel.toString().trim();
-        if (selectedText) {
-          const src = entries.find((en) => en.nodeKey === a.nodeKey);
-          if (src) {
-            const aligned = alignPhrase(db, { latin: src.latin, english: src.english }, selectedText);
-            if (aligned && aligned.dstLine) {
-              const dstLang = aligned.srcLang === 'latin' ? 'english' : 'latin';
-              setLivePhraseEcho({
-                lang: dstLang,
-                line: aligned.idx,
-                start: aligned.dstStart,
-                end: aligned.dstEnd,
-              });
-            } else {
-              setLivePhraseEcho(null);
-            }
+        setEcho({ nodeKey: anchorInfo.nodeKey, from: anchorInfo.idx, to: anchorInfo.idx });
+        
+        // Compute exact character endpoints from range
+        const rangeStartOffset = range.startOffset;
+        const rangeEndOffset = range.endOffset;
+        
+        // Build absolute character positions
+        const start = rangeStartOffset + (anchorInfo.start || 0);
+        const end = rangeEndOffset + (focusInfo.start || 0);
+        
+        // Call alignPhrase with exact selection
+        const src = entries.find((en) => en.nodeKey === anchorInfo.nodeKey);
+        if (src && anchorInfo.lang) {
+          const selection: PhraseSelectionInput = {
+            srcLang: anchorInfo.lang,
+            idx: anchorInfo.idx,
+            start: Math.min(start, end),
+            end: Math.max(start, end),
+          };
+          
+          const aligned = alignPhrase(db, { latin: src.latin, english: src.english }, selection);
+          if (aligned && aligned.dstLine) {
+            const dstLang = aligned.srcLang === 'latin' ? 'english' : 'latin';
+            setLivePhraseEcho({
+              lang: dstLang,
+              line: aligned.idx,
+              start: aligned.dstStart,
+              end: aligned.dstEnd,
+            });
+          } else {
+            setLivePhraseEcho(null);
           }
         } else {
           setLivePhraseEcho(null);
         }
-      } else if (a) {
-        setEcho({ nodeKey: a.nodeKey, from: a.idx, to: a.idx });
+      } else if (anchorInfo) {
+        setEcho({ nodeKey: anchorInfo.nodeKey, from: anchorInfo.idx, to: anchorInfo.idx });
         setLivePhraseEcho(null);
-      } else if (f) {
-        setEcho({ nodeKey: f.nodeKey, from: f.idx, to: f.idx });
+      } else if (focusInfo) {
+        setEcho({ nodeKey: focusInfo.nodeKey, from: focusInfo.idx, to: focusInfo.idx });
         setLivePhraseEcho(null);
       } else {
         setLivePhraseEcho(null);
@@ -285,20 +342,6 @@ export default function ReaderView({
     };
   }
 
-  async function highlightBoth(m: Menu) {
-    if (!sidecar || !m.nodeKey) return;
-    const capture = captureFrom(m);
-    sidecar.save({
-      exposure: 'journal',
-      anchors: [m.nodeKey],
-      quote: capture.quote,
-      quoteAlt: capture.quoteAlt ?? null,
-      color: 'gold',
-    });
-    await sidecar.persist();
-    setSidecarVersion((version) => version + 1);
-  }
-
   if (entries.length === 0) {
     return (
       <div className="content reader" ref={rootRef}>
@@ -310,8 +353,6 @@ export default function ReaderView({
       </div>
     );
   }
-
-  void sidecarVersion;
 
   return (
     <div
@@ -448,11 +489,6 @@ export default function ReaderView({
           {onCapture && (
             <button onClick={() => { onCapture(captureFrom(menu)); setMenu(null); }}>
               ✎ Add to Journal/Homily notes
-            </button>
-          )}
-          {sidecar && menu.nodeKey && (
-            <button onClick={() => { void highlightBoth(menu); setMenu(null); }}>
-              🖍 Highlight both panes
             </button>
           )}
         </div>
