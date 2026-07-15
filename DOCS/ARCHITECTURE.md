@@ -590,34 +590,63 @@ acceptance gate: BT.2 (`[X]`) and BT.2R (`[X]`) cannot receive ✅ until it land
 **Declaration strategy — exact typed exports for the actual production module.**
 `scripts/release-state.d.mts` is the exact, hand-authored TypeScript declaration
 companion to `scripts/release-state.mjs`: TypeScript resolves the `.mjs`
-import's types from this sibling `.d.mts` (same basename; `node16`/`nodenext`
-module resolution). Every public symbol carries **strict, explicit (non-inferred)
+import's types from this sibling `.d.mts` (same-basename declaration pairing,
+resolvable under **both** the project's `moduleResolution: bundler` — the project
+`tsc -b` / `npm run build` gate — and the forced `nodenext` strict gate; one symbol
+set, one resolution story). Every public symbol carries **strict, explicit (non-inferred)
 types** — no `any`, no implicit returns: the `ReleaseState` lock shape
 `{ version: string; sourceHead: string; startedAt: string; completedStages: string[] }`,
 `expandHomePath(value: string, home?: string): string`, `runReleaseStage(...)`
 with explicit param/return types, the lock read/validate/write functions,
-archive/restart, `interface ReleaseDeps`, and
+archive/restart, the unified `interface ReleaseDeps` (covers the stamp AND every stage; see below), and
 `main(argv: readonly string[], deps?: ReleaseDeps): Promise<number>`. The `.mjs`
 remains plain Node ESM (no TypeScript-only syntax) and is the single behaviour
 source.
 
-**Hermetic dependency- and env-selected command runner.** `main` resolves the
-stage command runner from injected `deps` (`ReleaseDeps.runStage`) when present,
-otherwise from the environment (an env-selected selector whose default resolves
-to the real `build-release.sh` stage commands). The whole surface — fresh,
-interrupted, resumed, mismatched, corrupt, `--restart`, completed/archive, and
-`--help`/`-h` — is reachable through this one injected/env runner, so tests stub
-stages and never run a real platform build, a real `npm run stamp`, or a real
-collect/archive. The `isMain` guard keeps import side-effect-free.
+**Hermetic unified command runner — covers the stamp AND every stage.** `main`
+never invokes the version stamp or any release stage directly. Every external
+command — the one version **stamp** (`'stamp'`, the `npm run stamp` equivalent)
+and every named release **stage** (`'test'`, `'web'`, `'linux'`, `'windows'`,
+`'android-debug'`, `'android-release'`, `'symbols'`, `'collect'`) — is funneled
+through a single injected/env-selected runner `runCommand(name)`. `main` resolves
+it as `deps?.runCommand` when injected, otherwise from the environment (an
+env-selected selector whose default maps the name to the real `build-release.sh`
+command — `'stamp'` to the stamp recipe, a stage name to `runReleaseStage`).
+Because the stamp and every stage share this one surface, a fresh `main` invoked
+with an injected stub `runCommand` executes **no** real `npm run stamp` and **no**
+real platform build/collect — the hermetic invariant is total, not partial. The
+whole CLI surface — fresh, interrupted, resumed, mismatched, corrupt, `--restart`,
+completed/archive, and `--help`/`-h` (nonmutating) — is reachable through this one
+runner. The `isMain` guard keeps import side-effect-free.
+
+**Deterministic fixture protocol.** Tests never touch the working tree. A fixture
+directory owns its own `release.lock`, outbox, and a `run-command.log`. The
+spawned CLI is pointed at it through two stable env selectors read from
+`deps.env` / `process.env`: `RELEASE_STATE_FIXTURE=<dir>` (lock, outbox, and log
+paths all live under it) and `RELEASE_STATE_RUNNER=stub` (selects the hermetic
+in-process stub; the real `build-release.sh` default otherwise). The stub runner
+appends each `runCommand(name)` invocation to `<fixtureDir>/run-command.log`, so
+after a spawn the test reads one deterministic ordered log — no wall-clock, and
+no real subprocess beyond `node scripts/release-state.mjs`. The import-and-call
+mode observes the same calls directly through the injected `deps.runCommand` spy.
 
 **Two exercising modes, no literal stand-ins.** The test never reimplements
 lock/stage logic: (1) it **imports and calls the production `main`** directly
-with injected stub `deps` for unit cases over every branch; (2) it **spawns the
-real CLI** (`node scripts/release-state.mjs`) against a hermetic fixture
-directory with an env-selected stub runner for help/fresh/interrupted/resumed/
-mismatched/corrupt/restart/completed-archive paths. At least one assertion makes
-**two real CLI invocations** that consume exactly one stub stamp and run each
-stage exactly once across the two (resume one-stamp/two-call idempotency).
+with an injected stub `runCommand` spy for unit cases over every branch (fresh,
+interrupted, resumed, mismatched, corrupt, `--restart`, completed/archive,
+`--help`); (2) it **spawns the real CLI** (`node scripts/release-state.mjs`)
+against a hermetic fixture with `RELEASE_STATE_RUNNER=stub` and
+`RELEASE_STATE_FIXTURE=<dir>` for the same paths.
+
+**Two-call invocation semantics (concrete).** One assertion spawns **two** real
+CLI invocations against one shared fixture: call 1 runs fresh — one `'stamp'`
+plus the leading stages, then is interrupted before completion by a stub that
+exits non-zero on a chosen stage; call 2 resumes the same lock — no `'stamp'`,
+the remaining stages. The test reads `<fixtureDir>/run-command.log` after both
+spawns and asserts the concatenated log lists the token `'stamp'` exactly once
+and each stage name exactly once, in canonical stage order: one stub stamp across
+two real calls and every stage run exactly once (resume one-stamp/two-call
+idempotency). No real platform build, no real `npm run stamp`, no real collect.
 
 **Byte-identical nonmutation on failure.** A corrupt or version-mismatched lock
 causes fail-closed behaviour and leaves the lock file byte-identical — never
@@ -636,9 +665,10 @@ gate the 76 strict-`tsc` errors close on. No platform build and no real stamp ru
 
 | Entity | Type | File:line | Role | Key signatures / fields |
 |---|---|---|---|---|
-| `scripts/release-state.d.mts` | TS declaration | `scripts/release-state.d.mts:1` | exact, hand-authored typed companion to the `.mjs` production module; strict non-inferred declarations resolved via `node16` module resolution | declares `ReleaseState`, `expandHomePath`, `runReleaseStage`, lock read/validate/write, archive/restart, `ReleaseDeps`, `main` |
-| `ReleaseDeps` | interface | `scripts/release-state.d.mts` | hermetic dependency / env-selected stage command runner injected into `main` | `{ runStage?: (name: string) => Promise<number \| void>; env?: Record<string, string \| undefined>; cwd?: string; ... }` |
-| `main` | fn | `scripts/release-state.mjs` | single entry over every path; `isMain` guard; imported-and-called by tests AND spawned as the real CLI | `main(argv: readonly string[], deps?: ReleaseDeps): Promise<number>` |
+| `scripts/release-state.d.mts` | TS declaration | `scripts/release-state.d.mts:1` | exact, hand-authored typed companion to the `.mjs` production module; strict non-inferred declarations resolved under **both** `bundler` (project `tsc -b`) and `nodenext` (forced strict gate) | declares `ReleaseState`, `expandHomePath`, `runReleaseStage`, lock read/validate/write, archive/restart, `ReleaseDeps`, `runCommand`, `main` |
+| `ReleaseDeps` | interface | `scripts/release-state.d.mts` | **unified** hermetic command runner covering the one **stamp** AND every named stage, injected into `main` | `{ runCommand?: (name: string) => Promise<number \| void>; env?: Record<string, string \| undefined>; cwd?: string; fixtureDir?: string }` |
+| `main` | fn | `scripts/release-state.mjs` | single entry over every path; `isMain` guard; imported-and-called by tests AND spawned as the real CLI; every external command (stamp + stages) funnels through `ReleaseDeps.runCommand` or its env-selected default | `main(argv: readonly string[], deps?: ReleaseDeps): Promise<number>` |
+| fixture selectors | env contract | `scripts/release-state.mjs` + `tests/releaseState.test.ts` | deterministic, working-tree-free hermetic harness | `RELEASE_STATE_FIXTURE=<dir>` (lock/outbox/log root), `RELEASE_STATE_RUNNER=stub` (in-process stub logging each `runCommand` to `<fixtureDir>/run-command.log`); default = real `build-release.sh` |
 | `release.lock` ignore | config | `.gitignore` | the resume lock is never tracked | `git check-ignore release.lock` exits 0 |
 
 BT.2 and BT.2R remain non-✅ until BT.2R2 is `[X]`/✅ and every Verify/Accept
