@@ -710,7 +710,7 @@ fresh GLM-5.2 seat; the idempotent Accept clauses below are coder gates.
 
 ## Stanza B-X — Reading geometry, themes, result navigation, and workspaces
 
-- [ ] **BX.1 Unobstructed bilingual word callout** — files: `src/core/ui/calloutPlacement.ts` (new), `src/ui/BibleView.tsx`, `src/styles.css`, `tests/calloutPlacement.test.ts` (new) — entities: `FloatingCalloutPlacement`, `placeFloatingCallout`, `BibleWordCallout`.
+- [X] **BX.1 Unobstructed bilingual word callout** — files: `src/core/ui/calloutPlacement.ts` (new), `src/ui/BibleView.tsx`, `src/styles.css`, `tests/calloutPlacement.test.ts` (new) — entities: `FloatingCalloutPlacement`, `placeFloatingCallout`, `BibleWordCallout`.
   - **Do (placement):** export `DOMRectLike { left;top;right;bottom;width;height }`, `Size { width;height }`, `FloatingCalloutPlacement { left;top;side:'above'|'below' }`, and `placeFloatingCallout(anchor,box,viewport,gap=12)`. Prefer above when it fits, otherwise below; if neither fully fits choose the side with more room. Clamp to an 8px viewport inset and guarantee the final callout rectangle does not intersect the anchor rectangle whenever either side has room.
   - **Do (BibleView):** replace pointer-coordinate-only callout state with the active word/verse-line anchor rectangle plus `WordEchoResult`. Render one measured `BibleWordCallout`; recompute after measurement and viewport resize. Do not change word lookup, echo caching, bilingual verse echo, context menu, or touch dismissal.
   - **Do (CSS):** remove the fixed `top: callout.y - 44` assumption; `.xlate-callout` remains pointer-transparent and gains a small side-aware caret without changing layout.

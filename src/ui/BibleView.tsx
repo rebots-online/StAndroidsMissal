@@ -18,6 +18,7 @@ import { alignSelection, alignPhrase, wordEcho, wordAtPoint, type WordEchoResult
 import { useNarrow, type SelectionEcho, TextLines } from './BilingualText.tsx';
 import BilingualText from './BilingualText.tsx';
 import ScriptureAtlas, { type AtlasMode } from './ScriptureAtlas.tsx';
+import { placeFloatingCallout, type DOMRectLike } from '../core/ui/calloutPlacement.ts';
 
 interface Props {
   db: CorpusDb;
@@ -66,10 +67,11 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
   const [echoVerse, setEchoVerse] = useState<number | null>(null);
   /** Live phrase echo: exact character-range reciprocal echo from alignPhrase. */
   const [livePhraseEcho, setLivePhraseEcho] = useState<SelectionEcho | null>(null);
-  const [callout, setCallout] = useState<{ x: number; y: number; echo: WordEchoResult } | null>(null);
+  const [callout, setCallout] = useState<{ anchor: DOMRectLike; echo: WordEchoResult; placement: { left: number; top: number; side: 'above' | 'below' } | null } | null>(null);
   const echoCache = useRef(new Map<string, WordEchoResult | null>());
   const lastWord = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const calloutRef = useRef<HTMLDivElement>(null);
   /** Below 1100px the two verse panes interleave into one column (§7.7). */
   const narrow = useNarrow(1100);
 
@@ -172,9 +174,48 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
       result = wordEcho(db, { latin: v.latin, english: v.english }, word);
       echoCache.current.set(cacheKey, result);
     }
-    if (result?.word) setCallout({ x: e.clientX, y: e.clientY, echo: result });
-    else setCallout(null);
+    if (result?.word) {
+      const verseEl = el?.closest('[data-verse]') as HTMLElement | null;
+      if (verseEl) {
+        const anchorRect = verseEl.getBoundingClientRect();
+        setCallout({ anchor: anchorRect, echo: result, placement: null });
+      } else {
+        setCallout(null);
+      }
+    } else {
+      setCallout(null);
+    }
   };
+
+  // Recompute callout placement after measurement and viewport resize.
+  useEffect(() => {
+    if (!callout || !calloutRef.current) return;
+
+    const calloutEl = calloutRef.current;
+    const box = { width: calloutEl.offsetWidth, height: calloutEl.offsetHeight };
+    const viewport = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
+
+    const placement = placeFloatingCallout(callout.anchor, box, viewport);
+    setCallout(prev => prev ? { ...prev, placement } : null);
+  }, [callout]);
+
+  // Recompute on viewport resize.
+  useEffect(() => {
+    if (!callout) return;
+
+    const handleResize = () => {
+      if (!callout || !calloutRef.current) return;
+      const calloutEl = calloutRef.current;
+      const box = { width: calloutEl.offsetWidth, height: calloutEl.offsetHeight };
+      const viewport = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
+
+      const placement = placeFloatingCallout(callout.anchor, box, viewport);
+      setCallout(prev => prev ? { ...prev, placement } : null);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [callout]);
 
   // Drag-selection lights the aligned verse in both panes.
   useEffect(() => {
@@ -535,7 +576,16 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
       </section>
 
       {callout && (
-        <div className="xlate-callout" style={{ left: Math.min(callout.x + 12, window.innerWidth - 260), top: callout.y - 44 }}>
+        <div
+          ref={calloutRef}
+          className="xlate-callout"
+          style={{
+            left: callout.placement ? callout.placement.left : callout.anchor.left,
+            top: callout.placement ? callout.placement.top : callout.anchor.top,
+            visibility: callout.placement ? 'visible' : 'hidden',
+          }}
+          data-side={callout.placement?.side}
+        >
           <b>{callout.echo.word}</b>
           <span className="xlate-callout-line">{(callout.echo.line ?? '').slice(0, 90)}</span>
         </div>
