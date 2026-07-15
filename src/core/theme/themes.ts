@@ -11,7 +11,8 @@ export type ThemeFamily =
   | 'retro-futurist'
   | 'brutalist'
   | 'neo-brutalist'
-  | 'sanctissimissa';
+  | 'sanctissimissa'
+  | 'hello-word-glow';
 export type ThemeMode = 'light' | 'dark';
 
 export const THEME_FAMILIES: { id: ThemeFamily; label: string }[] = [
@@ -22,6 +23,7 @@ export const THEME_FAMILIES: { id: ThemeFamily; label: string }[] = [
   { id: 'retro-futurist', label: 'Retro-futurist' },
   { id: 'brutalist', label: 'Brutalist' },
   { id: 'neo-brutalist', label: 'Neo-brutalist maximalist' },
+  { id: 'hello-word-glow', label: 'Hello Word Glow' },
 ];
 
 export const DEFAULT_FAMILY: ThemeFamily = 'skeuomorphic';

@@ -569,26 +569,248 @@ html[data-mode='dark'] {
 html[data-mode='dark'] .exegesis .hit,
 html[data-mode='dark'] .exegesis textarea { background: var(--card); color: var(--ink); }
 
+/* ── Family: skeuomorphic light (base default) ────────────────
+   Fabric-textured parchment surfaces with weft/warp woven gradients. */
+html[data-theme='skeuomorphic'] {
+  --surface: var(--parchment);
+  --surface-2: var(--vellum);
+  --card: var(--vellum);
+  --card-border: var(--parchment-deep);
+  --rail-bg: var(--rail);
+  --ink: #221c14;
+  --ink-soft: #4a4034;
+  --ink-faint: #8a7d6a;
+  --pane-latin-bg: rgba(84, 62, 26, 0.075);
+  --pane-english-bg: rgba(84, 62, 26, 0.035);
+  --card-shadow: none;
+  --rubric: #9c2733;
+  --dialogue-p: #9c2733;
+  --dialogue-s: #5d3a80;
+}
+/* Fabric texture for skeuomorphic bilingual surfaces */
+html[data-theme='skeuomorphic'] .bilingual .latin,
+html[data-theme='skeuomorphic'] .bilingual .english {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(84, 62, 26, 0.03) 2px,
+      rgba(84, 62, 26, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(84, 62, 26, 0.02) 2px,
+      rgba(84, 62, 26, 0.02) 4px
+    );
+}
+/* Piped border and tension shadow for skeuomorphic cards */
+html[data-theme='skeuomorphic'] .bilingual .latin,
+html[data-theme='skeuomorphic'] .bilingual .english,
+html[data-theme='skeuomorphic'] .reader-section,
+html[data-theme='skeuomorphic'] .exegesis .hit,
+html[data-theme='skeuomorphic'] .cal-cell,
+html[data-theme='skeuomorphic'] .hour-card {
+  border: 1px solid var(--card-border);
+  border-left: 3px solid rgba(84, 62, 26, 0.25);
+  border-right: 3px solid rgba(84, 62, 26, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* ── Family: glass-acrylic ────────────────────────────────────
+   Frosted glass surfaces with soft blur and subtle transparency. */
+html[data-theme='glass-acrylic'] {
+  --surface: #f8fafc;
+  --surface-2: #f1f5f9;
+  --card: rgba(255, 255, 255, 0.85);
+  --card-border: rgba(148, 163, 184, 0.3);
+  --rail-bg: #1e293b;
+  --ink: #0f172a;
+  --ink-soft: #475569;
+  --ink-faint: #94a3b8;
+  --pane-latin-bg: rgba(148, 163, 184, 0.08);
+  --pane-english-bg: rgba(148, 163, 184, 0.04);
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --rubric: #dc2626;
+  --dialogue-p: #dc2626;
+  --dialogue-s: #7c3aed;
+}
+html[data-theme='glass-acrylic'] .bilingual .latin,
+html[data-theme='glass-acrylic'] .bilingual .english,
+html[data-theme='glass-acrylic'] .reader-section,
+html[data-theme='glass-acrylic'] .exegesis .hit,
+html[data-theme='glass-acrylic'] .cal-cell,
+html[data-theme='glass-acrylic'] .hour-card {
+  backdrop-filter: blur(8px);
+}
+
+/* ── Family: glass-clear ──────────────────────────────────────
+   Ultra-clear glass with minimal blur and crisp edges. */
+html[data-theme='glass-clear'] {
+  --surface: #fafbfc;
+  --surface-2: #f3f4f6;
+  --card: rgba(255, 255, 255, 0.95);
+  --card-border: rgba(156, 163, 175, 0.2);
+  --rail-bg: #111827;
+  --ink: #030712;
+  --ink-soft: #4b5563;
+  --ink-faint: #9ca3af;
+  --pane-latin-bg: rgba(156, 163, 175, 0.06);
+  --pane-english-bg: rgba(156, 163, 175, 0.03);
+  --card-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --rubric: #ef4444;
+  --dialogue-p: #ef4444;
+  --dialogue-s: #8b5cf6;
+}
+
+/* ── Family: retro-futurist ────────────────────────────────────
+   Warm amber-tinted surfaces with 1970s aesthetic and soft glow. */
+html[data-theme='retro-futurist'] {
+  --surface: #fffbeb;
+  --surface-2: #fef3c7;
+  --card: #fef9c3;
+  --card-border: #fbbf24;
+  --rail-bg: #451a03;
+  --ink: #78350f;
+  --ink-soft: #92400e;
+  --ink-faint: #b45309;
+  --pane-latin-bg: rgba(251, 191, 36, 0.12);
+  --pane-english-bg: rgba(251, 191, 36, 0.06);
+  --card-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+  --rubric: #f97316;
+  --dialogue-p: #f97316;
+  --dialogue-s: #ec4899;
+}
+
+/* ── Family: brutalist ────────────────────────────────────────
+   Stark monochrome surfaces with sharp edges and high contrast. */
+html[data-theme='brutalist'] {
+  --surface: #ffffff;
+  --surface-2: #f5f5f5;
+  --card: #ffffff;
+  --card-border: #000000;
+  --rail-bg: #000000;
+  --ink: #000000;
+  --ink-soft: #404040;
+  --ink-faint: #808080;
+  --pane-latin-bg: #f5f5f5;
+  --pane-english-bg: #fafafa;
+  --card-shadow: 4px 4px 0 #000000;
+  --rubric: #dc2626;
+  --dialogue-p: #dc2626;
+  --dialogue-s: #000000;
+}
+
+/* ── Family: neo-brutalist ────────────────────────────────────
+   Maximalist bold surfaces with vibrant colors and thick borders. */
+html[data-theme='neo-brutalist'] {
+  --surface: #fef08a;
+  --surface-2: #fde047;
+  --card: #ffffff;
+  --card-border: #000000;
+  --rail-bg: #000000;
+  --ink: #000000;
+  --ink-soft: #3f3f46;
+  --ink-faint: #71717a;
+  --pane-latin-bg: #fef9c3;
+  --pane-english-bg: #fef08a;
+  --card-shadow: 6px 6px 0 #000000;
+  --rubric: #ff0000;
+  --dialogue-p: #ff0000;
+  --dialogue-s: #0000ff;
+}
+html[data-theme='neo-brutalist'] .reader-section {
+  border: 4px solid #000000;
+}
+
+/* ── Family: hello-word-glow ───────────────────────────────────
+   Midnight nave with subway-line glow pulse and Marian violet accents. */
+html[data-theme='hello-word-glow'] {
+  --surface: #07111f;
+  --surface-2: #0b1f3a;
+  --card: #0b1f3a;
+  --card-border: #63e6ff;
+  --rail-bg: #07111f;
+  --ink: #f3ebd8;
+  --ink-soft: #b8c8d8;
+  --ink-faint: #6b7c8c;
+  --pane-latin-bg: rgba(99, 230, 255, 0.08);
+  --pane-english-bg: rgba(99, 230, 255, 0.04);
+  --card-shadow: 0 0 20px rgba(99, 230, 255, 0.15);
+  --rubric: #ff6b72;
+  --dialogue-p: #ff6b72;
+  --dialogue-s: #8b7cff;
+}
+/* Glow pulse animation for hello-word-glow */
+html[data-theme='hello-word-glow'] .bilingual .latin,
+html[data-theme='hello-word-glow'] .bilingual .english,
+html[data-theme='hello-word-glow'] .reader-section,
+html[data-theme='hello-word-glow'] .exegesis .hit,
+html[data-theme='hello-word-glow'] .cal-cell,
+html[data-theme='hello-word-glow'] .hour-card {
+  animation: glow-pulse 4s ease-in-out infinite;
+  border: 1px solid var(--card-border);
+}
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(99, 230, 255, 0.1), var(--card-shadow);
+    border-color: rgba(99, 230, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(99, 230, 255, 0.3), var(--card-shadow);
+    border-color: rgba(99, 230, 255, 0.8);
+  }
+}
+/* Reduced motion override */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='hello-word-glow'] .bilingual .latin,
+  html[data-theme='hello-word-glow'] .bilingual .english,
+  html[data-theme='hello-word-glow'] .reader-section,
+  html[data-theme='hello-word-glow'] .exegesis .hit,
+  html[data-theme='hello-word-glow'] .cal-cell,
+  html[data-theme='hello-word-glow'] .hour-card {
+    animation: none;
+    border-color: var(--card-border);
+    box-shadow: var(--card-shadow);
+  }
+}
+
 /* ── Family: sanctissimissa (§7.7) ───────────────────────────
    Elevated white cards on the retained parchment framework; template
    liturgical red/purple voices; near-white bilingual panes. */
 html[data-theme='sanctissimissa'] {
+  --surface: var(--parchment);
+  --surface-2: #ffffff;
   --card: #ffffff;
+  --card-border: #e5e7eb;
+  --rail-bg: var(--rail);
+  --ink: #1f2937;
+  --ink-soft: #4b5563;
+  --ink-faint: #9ca3af;
+  --pane-latin-bg: #f8fafc;
+  --pane-english-bg: #fbfbf9;
   --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.06);
   --rubric: #b91c1c;
   --dialogue-p: #b91c1c;
   --dialogue-s: #4c1d95;
-  --pane-latin-bg: #f8fafc;
-  --pane-english-bg: #fbfbf9;
 }
 html[data-theme='sanctissimissa'][data-mode='dark'] {
+  --surface: #1c1915;
+  --surface-2: #262626;
   --card: #262626;
+  --card-border: #404040;
+  --rail-bg: var(--rail);
+  --ink: #f9fafb;
+  --ink-soft: #d1d5db;
+  --ink-faint: #9ca3af;
+  --pane-latin-bg: #2d2d2d;
+  --pane-english-bg: #282828;
   --card-shadow: 0 4px 10px -1px rgb(0 0 0 / 0.55), 0 2px 4px -2px rgb(0 0 0 / 0.45);
   --rubric: #e05c5c;
   --dialogue-p: #e05c5c;
   --dialogue-s: #a78bfa;
-  --pane-latin-bg: #2d2d2d;
-  --pane-english-bg: #282828;
 }
 
 /* sanctissimissa-scoped component idiom: sections as elevated cards */
