@@ -396,7 +396,7 @@ Supersessions within the entity table: `PlannerView`/`HomilyEditor` (P-D) are **
 3. **Sidecar persistence on web?** Single-blob IndexedDB write of the exported sql.js image, debounced — simplest crash-safe option without adding a dependency; OPFS rejected (Safari friction), localStorage rejected (size).
 4. **Homily yearly recycling model?** Base row (`year IS NULL`) + per-year overlay rows sharing `liturgical_key` (decision 11), not copy-on-write duplicates.
 5. **Do lore callouts gate on entitlements?** No — lore is core content; `FEATURE_GATES` covers planner/journal/themes-premium/export/share/office and ships all-`null` anyway (G3).
-6. **Theme count.** Plan says "6 families × light/dark" and also "twelve themes" — resolved as 6 × 2 = 12 (family list in `ThemeFamily`). *Amended 2026-07-14 (§7.7):* + `sanctissimissa` ⇒ 7 × 2 = 14; the v0.5 wave ships token blocks for `skeuomorphic` + `sanctissimissa` only, the other five families remain E2 work over the same token contract.
+6. **Theme count.** Plan says "6 families × light/dark" and also "twelve themes" — resolved as 6 × 2 = 12 (family list in `ThemeFamily`). *Amended 2026-07-14 (§7.7):* + `sanctissimissa` ⇒ 7 × 2 = 14; the v0.5 wave shipped token blocks for `skeuomorphic` + `sanctissimissa` only. *Superseded by §10/BX.3:* all retained families become token-complete and `hello-word-glow` becomes the eighth family (8 × 2 = 16 family/mode pairs).
 7. **SUPERSEDED (operator, 2026-07-06) — full office engine is IN SCOPE.** The original v0.2 carve-out ("pattern-based assembly; engine is backlog") was rejected: generating the complete Divine Office **is the product**. §7.5 is the binding contract; `HOUR_SECTION_PATTERNS` assembly survives only as the engine's proper-section selection layer, never as the shipped depth. The "no invented content" rationale was a category error — the engine deterministically *reckons* offices; implementing that reckoning (schema + population + directive interpretation) is the spec.
 8. **Shared-file ownership under parallel dispatch.** Exactly one CHECKLIST task owns each shared shell file (`src/App.tsx` → APP.1; `src/styles.css` → E2; `src/ui/SectionReader.tsx` created by B3.1 with APP.2 as its same-worktree follow-up) so the whole wave dispatches concurrently without merge collisions (I-22 axis 1). *Amended 2026-07-14 for the v0.5 wave:* `src/styles.css` → **BJ.2** (token refactor + `sanctissimissa` blocks + every §7.7 CSS block — interleave, glyph, atlas, workspace); `src/App.tsx` → **BO.3** (integration: ThemePicker mount, `View` additions, `#/acc/` route); `src/ui/ReaderView.tsx` → **BK.1** (BilingualText extraction) with BO.1 (ctx-menu capture) as its same-worktree follow-up; `src/ui/BibleView.tsx` → **BN.1** (atlas modes + commentary layer) with BO.1's Bible half as follow-up.
 9. **Gospel-parallels data source (operator, 2026-07-14).** Vendor the public-domain interpretive sources of `DOCS/ScripturalReferences-PublicDomain.md` (this wave: Haydock + Catena Aurea) rather than embedding-only derivation or a third-party synopsis dataset; the curated `PERICOPES` spine is cross-checked against the vendored Catena during ingest, embeddings supply complementarities only.
@@ -430,7 +430,7 @@ media-generation modules.
 
 | Entity | Type | File:line | Role | Key signatures / fields |
 |---|---|---|---|---|
-| `PhraseAlignment` / `alignPhrase` | type/fn | `src/core/text/align.ts:14` | corpus-attested phrase alignment: find the source paired-line index and character span, derive counterpart word anchors through `wordEcho`, and return the smallest destination span containing them; deterministic positional fallback stays inside the paired line | `PhraseAlignment { srcLang, idx, srcLine, srcStart, srcEnd, dstLine, dstStart, dstEnd, countsMatch, method: 'attested-anchors'\|'positional-fallback' }`; `alignPhrase(db, block, term): PhraseAlignment \| null` |
+| `PhraseSelectionInput` / `PhraseAlignment` / `alignPhrase` | types/fn | `src/core/text/align.ts:14` | corpus-attested live range alignment: use the exact source language, paired-line index and character endpoints (not a first text match), derive counterpart token anchors through `wordEcho`, and map partial boundary tokens by normalized grapheme proportion; deterministic positional fallback stays inside the paired line | `PhraseSelectionInput { srcLang, idx, start, end }`; `PhraseAlignment { srcLang, idx, srcLine, srcStart, srcEnd, dstLine, dstStart, dstEnd, countsMatch, method: 'attested-anchors'\|'positional-fallback' }`; `alignPhrase(db, block, selection:PhraseSelectionInput): PhraseAlignment \| null` |
 | `SelectionEcho` | type | `src/ui/BilingualText.tsx:79` | visual counterpart phrase range; native DOM selection remains on the dragged side because browsers expose one selection, while the counterpart is marked in real time | `{ lang: 'latin'\|'english'; line: number; start: number; end: number }` |
 | `TextLines.selectionEcho` / `BilingualText.selectionEcho` | props | `src/ui/BilingualText.tsx:87` | renders only the aligned counterpart phrase as `mark.selection-echo`; line-level `.xlate-echo` remains the fallback/context band | optional `selectionEcho?: SelectionEcho` |
 | `ReaderView.livePhraseEcho` | state/effect | `src/ui/ReaderView.tsx:75` | on every `selectionchange`, identify language/line/text, call `alignPhrase`, and update the other pane without opening the context menu; collapsed/empty selections clear it | `SelectionEcho \| null` |
@@ -444,6 +444,19 @@ phrase with bold italic marker treatment; every result shows the other language
 immediately beneath, indented, lighter and italic. Missing translations degrade
 to primary-only. Context-first nuclei remain first and every remaining result
 stays in the accessible long tail.
+
+**Operator clarification (2026-07-14, supersedes BO.1's persistent-highlight
+menu wording and BS.1's text-only lookup).** Reciprocal highlighting is always
+the default during native cursor drag. Every `selectionchange` while extending,
+contracting, or reversing the range updates the other language. The native side
+keeps its exact character endpoints; the visual counterpart never expands to a
+whole line. A boundary cut through a word maps to a proportional normalized
+grapheme boundary inside the attested destination token. Repeated source text is
+resolved by the explicit line/range, not `indexOf(term)`. Browsers still expose
+only one native selection, so the counterpart remains `mark.selection-echo`.
+The `Highlight both panes` context-menu action is removed from both ReaderView
+and BibleView; live selection is transient and does not silently persist a
+sidecar annotation. `Add to Journal/Homily notes` remains available.
 
 ### 9.2 Ecclesiastical Latin analysis (staged, nonblocking)
 
@@ -607,9 +620,10 @@ privacy, version, and links; the old 440px modal is removed.
 ### 10.3 Ordering and ownership
 
 BX.1, BX.2, and BX.3 are independent worktree cohorts. BX.4 begins only after
-BS.3 lands because it reorganizes the shared bilingual result renderer. BX.5
-begins after BX.3 because Settings owns `ThemePicker`; BX.5 is the sole
-`src/App.tsx` owner for this wave. CSS merges keep one labelled block per task.
+BS.3 lands because it reorganizes the shared bilingual result renderer. BX.2
+owns the first `src/App.tsx` layout edit; BX.5 begins after BX.2 and BX.3, then
+becomes the serialized final `src/App.tsx` navigation owner because Settings
+owns `ThemePicker`. CSS merges keep one labelled block per task.
 
 ### 10.4 Fresh-verifier browser protocol (not a CHECKLIST Accept clause)
 
