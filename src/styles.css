@@ -1188,3 +1188,195 @@ html[data-theme='sanctissimissa'] .hour-card {
 .canonical-other-hits {
   padding: 14px;
 }
+
+/* ── Settings workspace (BX.5) ─────────────────────────────────── */
+.settings-workspace {
+  font-family: var(--serif);
+}
+.settings-workspace h2 {
+  font-family: var(--serif);
+  font-size: 24px;
+  margin: 0 0 16px;
+  color: var(--accent);
+}
+.settings-workspace h3 {
+  font-family: var(--serif);
+  font-size: 18px;
+  margin: 20px 0 8px;
+  color: var(--ink);
+}
+.settings-workspace .settings-section {
+  margin: 0 0 24px;
+  padding: 16px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+}
+.settings-workspace .settings-desc {
+  font-family: var(--serif);
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.settings-workspace .settings-controls {
+  display: flex;
+  justify-content: flex-start;
+}
+.settings-workspace .theme-picker {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  color: var(--ink);
+}
+.settings-workspace .theme-picker select,
+.settings-workspace .theme-picker button {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--card-border);
+  color-scheme: light;
+}
+html[data-mode='dark'] .settings-workspace .theme-picker select,
+html[data-mode='dark'] .settings-workspace .theme-picker button {
+  background: var(--card);
+  color: var(--ink);
+  color-scheme: dark;
+}
+.settings-workspace .theme-preview {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  font-family: var(--serif);
+}
+.settings-workspace .preview-line {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.settings-workspace .preview-line:last-child {
+  margin-bottom: 0;
+}
+.settings-workspace .preview-la {
+  display: block;
+  font-family: var(--serif);
+  color: var(--ink);
+}
+.settings-workspace .preview-en {
+  display: block;
+  margin-left: 1.2em;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 0.95em;
+}
+.settings-workspace .preview-rubric .preview-la {
+  color: var(--rubric);
+  font-style: italic;
+}
+.settings-workspace .preview-dialogue-p .preview-la {
+  color: var(--dialogue-p);
+  font-weight: 600;
+}
+.settings-workspace .preview-dialogue-s .preview-la {
+  color: var(--dialogue-s);
+  font-weight: 600;
+}
+
+/* ── About workspace (BX.5) ───────────────────────────────────── */
+.about-workspace {
+  font-family: var(--serif);
+}
+.about-workspace h2 {
+  font-family: var(--serif);
+  font-size: 26px;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.about-workspace .tagline {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 24px;
+  font-size: 16px;
+}
+.about-workspace .about-section {
+  margin: 0 0 28px;
+}
+.about-workspace h3 {
+  font-family: var(--serif);
+  font-size: 20px;
+  margin: 0 0 12px;
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 6px;
+}
+.about-workspace .about-prose {
+  font-family: var(--serif);
+  line-height: 1.65;
+  color: var(--ink);
+  margin: 0 0 16px;
+}
+.about-workspace .about-prose p {
+  margin: 0 0 14px;
+}
+.about-workspace .about-prose p:last-child {
+  margin-bottom: 0;
+}
+.about-workspace .about-meta {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 6px 14px;
+  margin: 0 0 16px;
+  font-family: var(--serif);
+}
+.about-workspace .about-meta dt {
+  font-weight: 700;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  align-self: baseline;
+}
+.about-workspace .about-meta dd {
+  margin: 0;
+  color: var(--ink);
+}
+.about-workspace .about-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+.about-workspace .about-links a {
+  color: var(--accent);
+  text-decoration: none;
+  font-family: var(--serif);
+}
+.about-workspace .about-links a:hover {
+  text-decoration: underline dotted;
+}
+.about-workspace .about-copyright {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+  color: var(--ink-faint);
+  font-size: 12px;
+  font-family: var(--sans);
+}
+
+/* ── Typography for narrative/editor/calendar prose (BX.5) ────── */
+/* Journal and Homily Writer inherit serif from body; buttons/labels/metadata use sans */
+.content.settings-workspace,
+.content.about-workspace,
+.content.journal-workspace,
+.content.homily-workspace {
+  font-family: var(--serif);
+}
+.content.settings-workspace button,
+.content.settings-workspace select,
+.content.about-workspace button,
+.content.about-workspace a,
+.content.journal-workspace button,
+.content.journal-workspace input,
+.content.homily-workspace button {
+  font-family: var(--sans);
+}

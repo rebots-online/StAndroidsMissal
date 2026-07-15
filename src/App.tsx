@@ -14,15 +14,15 @@ import CalendarView from './ui/CalendarView.tsx';
 import OfficeView from './ui/OfficeView.tsx';
 import BibleView from './ui/BibleView.tsx';
 import { parseHashRoute } from './core/share/shareLink.ts';
-import { APP_LINKS } from './core/model/appLinks.ts';
 import { SidecarDb } from './core/accompaniment/store.ts';
 import JournalSidecar from './ui/JournalSidecar.tsx';
 import JournalView from './ui/JournalView.tsx';
 import HomilyPlanner from './ui/HomilyPlanner.tsx';
-import ThemePicker from './ui/ThemePicker.tsx';
+import SettingsView from './ui/SettingsView.tsx';
+import AboutView from './ui/AboutView.tsx';
 import ResizableInspectorLayout from './ui/ResizableInspectorLayout.tsx';
 
-type View = 'map' | 'reader' | 'calendar' | 'office' | 'bible' | 'journal';
+type View = 'map' | 'reader' | 'calendar' | 'office' | 'bible' | 'journal' | 'homily' | 'settings' | 'about';
 
 const NAV: { id: View; ico: string; label: string }[] = [
   { id: 'map', ico: '🚇', label: 'Subway Map' },
@@ -30,7 +30,13 @@ const NAV: { id: View; ico: string; label: string }[] = [
   { id: 'calendar', ico: '📅', label: 'Perpetual Calendar' },
   { id: 'office', ico: '🕰', label: 'Divine Office' },
   { id: 'bible', ico: '📜', label: 'Sacred Scripture' },
-  { id: 'journal', ico: '✎', label: 'Journal & Homilies' },
+  { id: 'journal', ico: '✎', label: 'Journal' },
+  { id: 'homily', ico: '✍', label: 'Homily Writer' },
+];
+
+const UTIL_NAV: { id: View; ico: string; label: string }[] = [
+  { id: 'settings', ico: '⚙', label: 'Settings' },
+  { id: 'about', ico: 'ℹ', label: 'Help · About' },
 ];
 
 export default function App() {
@@ -51,12 +57,10 @@ export default function App() {
   // The map strip's you-are-here (station id) and the office strip's hour.
   const [activeStation, setActiveStation] = useState<string | null>(null);
   const [officeHour, setOfficeHour] = useState('laudes');
-  const [aboutOpen, setAboutOpen] = useState(false);
   // Bible deep-link focus ("Gen/1/5"); nonce bumps so re-navigating re-scrolls.
   const [bibleFocus, setBibleFocus] = useState<{ ref: string | null; nonce: number }>({ ref: null, nonce: 0 });
   const [sidecar, setSidecar] = useState<SidecarDb | null>(null);
   const [capture, setCapture] = useState<{ quote: string; quoteAlt?: string; anchor: string | null } | null>(null);
-  const [journalTab, setJournalTab] = useState<'timeline' | 'planner'>('timeline');
 
   useEffect(() => {
     loadCorpusBytes()
@@ -240,12 +244,17 @@ export default function App() {
             <span className="label">{n.label}</span>
           </button>
         ))}
-        <ThemePicker sidecar={sidecar} />
         <div className="spacer" />
-        <button className="nav" onClick={() => setAboutOpen(true)}>
-          <span className="ico">ℹ</span>
-          <span className="label">Help · About</span>
-        </button>
+        {UTIL_NAV.map((n) => (
+          <button
+            key={n.id}
+            className={`nav${view === n.id ? ' active' : ''}`}
+            onClick={() => setView(n.id)}
+          >
+            <span className="ico">{n.ico}</span>
+            <span className="label">{n.label}</span>
+          </button>
+        ))}
         <div className="day-chip">
           <div className="date-row">
             <span className="swatch" title={`Liturgical color: ${day?.color}`} />
@@ -320,17 +329,19 @@ export default function App() {
                 />
               )}
               {view === 'journal' && sidecar && (
-                <div className="content">
-                  <div className="cal-head">
-                    <button className={journalTab==='timeline'?'active':''} onClick={() => setJournalTab('timeline')}>Journal timeline</button>
-                    <button className={journalTab==='planner'?'active':''} onClick={() => setJournalTab('planner')}>Homily planner</button>
-                  </div>
-                  {journalTab==='timeline' ? <JournalView db={db} sidecar={sidecar} day={day} onOpenKey={onOpenKey} /> : <HomilyPlanner db={db} sidecar={sidecar} day={day} />}
-                </div>
+                <JournalView db={db} sidecar={sidecar} day={day} onOpenKey={onOpenKey} />
               )}
               {view === 'journal' && !sidecar && (
                 <div className="content"><p>Opening your journal…</p></div>
               )}
+              {view === 'homily' && sidecar && (
+                <HomilyPlanner db={db} sidecar={sidecar} day={day} />
+              )}
+              {view === 'homily' && !sidecar && (
+                <div className="content"><p>Opening your homily planner…</p></div>
+              )}
+              {view === 'settings' && <SettingsView />}
+              {view === 'about' && <AboutView />}
             </>
           }
           inspector={
@@ -348,28 +359,7 @@ export default function App() {
         v{versionInfo.version}
       </div>
 
-      {aboutOpen && (
-        <div className="about-overlay" onClick={() => setAboutOpen(false)}>
-          <div className="about-card" role="dialog" aria-label="About" onClick={(e) => e.stopPropagation()}>
-            <button className="close" onClick={() => setAboutOpen(false)}>✕</button>
-            <h2>✠ St. Android&apos;s Missal</h2>
-            <p className="tagline">The Traditional Latin Mass and Divine Office as a navigable subway map.</p>
-            <dl>
-              <dt>Version</dt><dd>{versionInfo.version} (code {versionInfo.versionCode})</dd>
-              <dt>Built</dt><dd>{new Date(versionInfo.buildDate).toLocaleString()}</dd>
-              <dt>Corpus</dt><dd>Divinum Officium (László Kiss, MIT) — vendored, re-realized as graph + vector SQLite</dd>
-              <dt>Identifier</dt><dd>{versionInfo.packageName}</dd>
-            </dl>
-            <p className="about-links">
-              <a href={APP_LINKS.appSite} target="_blank" rel="noreferrer">✠ {APP_LINKS.appSiteLabel}</a>
-              {APP_LINKS.blog && (
-                <a href={APP_LINKS.blog} target="_blank" rel="noreferrer">✎ {APP_LINKS.blogLabel}</a>
-              )}
-            </p>
-            <p className="copyright">© 2026 Robin L. M. Cheung, MBA. All rights reserved.</p>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
