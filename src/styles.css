@@ -1084,3 +1084,107 @@ html[data-theme='sanctissimissa'] .hour-card {
   color-scheme: dark;
 }
 .theme-picker select:hover, .theme-picker button:hover { border-color: #ffffff5c; }
+
+/* ── Canonical Bible-order result navigation (BX.4) ───────── */
+.result-grouping-toolbar {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.result-grouping-toolbar button {
+  flex: 1;
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: 600 12px var(--sans);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.result-grouping-toolbar button:hover {
+  border-color: var(--accent);
+  background: var(--card);
+}
+.result-grouping-toolbar button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.result-total-count {
+  font: 600 11px var(--sans);
+  color: var(--ink-faint);
+  margin: 6px 0 8px;
+  text-align: right;
+}
+.canonical-book-group {
+  background: var(--surface-2);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  margin: 10px 0;
+}
+.canonical-book-group.other-group {
+  margin-top: 16px;
+}
+.canonical-book-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px 14px;
+  font: 600 13px var(--sans);
+  color: var(--ink);
+  user-select: none;
+}
+.canonical-book-header:hover {
+  background: var(--card);
+}
+.canonical-book-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.canonical-book-count {
+  font: 600 11px var(--sans);
+  color: var(--ink-faint);
+}
+.canonical-book-chapters {
+  padding: 0 14px 14px;
+}
+.canonical-chapter-group {
+  margin: 8px 0 0;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+}
+.canonical-chapter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 12px;
+  font: 600 12px var(--sans);
+  color: var(--ink-soft);
+  user-select: none;
+}
+.canonical-chapter-header:hover {
+  background: var(--surface-2);
+}
+.canonical-chapter-count {
+  font: 600 10px var(--sans);
+  color: var(--ink-faint);
+}
+.canonical-chapter-verses {
+  padding: 0 12px 12px;
+}
+.canonical-verse-hits {
+  margin-top: 8px;
+}
+.canonical-verse-header {
+  font: 600 11px var(--sans);
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.canonical-other-hits {
+  padding: 14px;
+}

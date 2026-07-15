@@ -17,6 +17,7 @@ import type {
 } from '../core/data/types.ts';
 import { bestClause } from '../core/vector/clause.ts';
 import { buildBilingualResult } from '../core/text/bilingualResult.ts';
+import { organizeResultsByCanon, type ResultGroupingMode } from '../core/text/resultHierarchy.ts';
 import { ResultSnippet } from './ResultSnippet.tsx';
 import SimilarityGlyph from './SimilarityGlyph.tsx';
 
@@ -324,8 +325,125 @@ function ConceptTag({
   );
 }
 
+/**
+ * Two-button toolbar for switching result grouping modes.
+ */
+function ResultGroupingToolbar({ mode, onChange }: { mode: ResultGroupingMode; onChange: (mode: ResultGroupingMode) => void }) {
+  return (
+    <div className="result-grouping-toolbar">
+      <button
+        className={mode === 'themes' ? 'active' : ''}
+        onClick={() => onChange('themes')}
+      >
+        Themes
+      </button>
+      <button
+        className={mode === 'biblical-order' ? 'active' : ''}
+        onClick={() => onChange('biblical-order')}
+      >
+        Biblical order
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Render a canonical Bible book group with nested details for chapters/verses.
+ */
+function CanonicalResultTree({
+  db,
+  tree,
+  query,
+  onOpenKey,
+}: {
+  db: CorpusDb;
+  tree: ReturnType<typeof organizeResultsByCanon>;
+  query: string;
+  onOpenKey: (k: string) => void;
+}) {
+  return (
+    <>
+      {/* Bible groups */}
+      {tree.bible.map((book) => {
+        const chapterEntries = Array.from(book.chapters.entries()).sort(
+          ([chA], [chB]) => chA - chB,
+        );
+        return (
+          <details key={book.book} className="canonical-book-group" open>
+            <summary className="canonical-book-header">
+              <span className="canonical-book-title">{book.title}</span>
+              <span className="canonical-book-count">
+                {chapterEntries.reduce((sum, [, verses]) => sum + verses.size, 0)} chapters
+              </span>
+            </summary>
+            <div className="canonical-book-chapters">
+              {chapterEntries.map(([chapter, verses]) => {
+                const verseEntries = Array.from(verses.entries()).sort(
+                  ([vA], [vB]) => vA - vB,
+                );
+                return (
+                  <details key={chapter} className="canonical-chapter-group" open>
+                    <summary className="canonical-chapter-header">
+                      Chapter {chapter}
+                      <span className="canonical-chapter-count">
+                        {verseEntries.reduce((sum, [, hits]) => sum + hits.length, 0)} verses
+                      </span>
+                    </summary>
+                    <div className="canonical-chapter-verses">
+                      {verseEntries.map(([verse, hits]) => (
+                        <div key={verse} className="canonical-verse-hits">
+                          <div className="canonical-verse-header">v{verse}</div>
+                          {hits.map((item) => (
+                            <NucleatedHitRow
+                              key={item.hit.key}
+                              db={db}
+                              item={item}
+                              siblings={[]}
+                              nucleus={null}
+                              query={query}
+                              onOpenKey={onOpenKey}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </details>
+        );
+      })}
+
+      {/* Other liturgical sources */}
+      {tree.other.length > 0 && (
+        <details className="canonical-book-group other-group" open>
+          <summary className="canonical-book-header">
+            <span className="canonical-book-title">Other liturgical and commentary sources</span>
+            <span className="canonical-book-count">{tree.other.length} hits</span>
+          </summary>
+          <div className="canonical-other-hits">
+            {tree.other.map((item) => (
+              <NucleatedHitRow
+                key={item.hit.key}
+                db={db}
+                item={item}
+                siblings={[]}
+                nucleus={null}
+                query={query}
+                onOpenKey={onOpenKey}
+              />
+            ))}
+          </div>
+        </details>
+      )}
+    </>
+  );
+}
+
 export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) {
   const { kind, term, nodeKey } = action;
+  const [groupingMode, setGroupingMode] = useState<ResultGroupingMode>('themes');
 
   return (
     <aside className="exegesis">
@@ -370,7 +488,37 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
           })()}
 
           <div className="group-title">Nearest by meaning (vector)</div>
-          <NucleatedResults db={db} term={term} excludeKey={nodeKey ?? undefined} onOpenKey={onOpenKey} />
+          {(() => {
+            const set = db.nucleatedSimilarToText(term, { candidateK: 64, nucleusK: 5, excludeKey: nodeKey ?? undefined });
+            if (set.candidateCount === 0) return <div className="hit">No similar passages found.</div>;
+
+            // Flatten representatives + tail for canonical organization
+            const allItems: NucleatedSimilarityHit[] = [];
+            for (const group of set.groups) {
+              allItems.push(...group.representatives);
+            }
+            allItems.push(...set.tail);
+
+            return (
+              <>
+                <ResultGroupingToolbar mode={groupingMode} onChange={setGroupingMode} />
+
+                {groupingMode === 'themes' ? (
+                  <NucleatedResults db={db} term={term} excludeKey={nodeKey ?? undefined} onOpenKey={onOpenKey} />
+                ) : (
+                  <>
+                    <div className="result-total-count">Total: {set.candidateCount} hits</div>
+                    <CanonicalResultTree
+                      db={db}
+                      tree={organizeResultsByCanon(allItems, db.getBooks())}
+                      query={term}
+                      onOpenKey={onOpenKey}
+                    />
+                  </>
+                )}
+              </>
+            );
+          })()}
 
           <div className="llm-slot">
             ✠ <b>Next major:</b> a fine-tuned model on ecclesiastical Latin and Catholic
@@ -384,7 +532,37 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
         <>
           <h2>Similar passages</h2>
           <div className="term">“{term.slice(0, 120)}”</div>
-          <NucleatedResults db={db} term={term} excludeKey={nodeKey ?? undefined} onOpenKey={onOpenKey} />
+          {(() => {
+            const set = db.nucleatedSimilarToText(term, { candidateK: 64, nucleusK: 5, excludeKey: nodeKey ?? undefined });
+            if (set.candidateCount === 0) return <div className="hit">No similar passages found.</div>;
+
+            // Flatten representatives + tail for canonical organization
+            const allItems: NucleatedSimilarityHit[] = [];
+            for (const group of set.groups) {
+              allItems.push(...group.representatives);
+            }
+            allItems.push(...set.tail);
+
+            return (
+              <>
+                <ResultGroupingToolbar mode={groupingMode} onChange={setGroupingMode} />
+
+                {groupingMode === 'themes' ? (
+                  <NucleatedResults db={db} term={term} excludeKey={nodeKey ?? undefined} onOpenKey={onOpenKey} />
+                ) : (
+                  <>
+                    <div className="result-total-count">Total: {set.candidateCount} hits</div>
+                    <CanonicalResultTree
+                      db={db}
+                      tree={organizeResultsByCanon(allItems, db.getBooks())}
+                      query={term}
+                      onOpenKey={onOpenKey}
+                    />
+                  </>
+                )}
+              </>
+            );
+          })()}
         </>
       )}
 
