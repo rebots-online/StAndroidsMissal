@@ -543,6 +543,18 @@ supplemental projections. The configured candidate is the operator's Wan2.2 14B
 Hugging Face Space. Manual review is accommodated but automated rubric checks
 must make the pipeline function without it.
 
+### 9.7 Release-state executable correction (BT.2R)
+
+`scripts/release-state.mjs` is a plain Node ESM executable because
+`scripts/build-release.sh` invokes it as `node scripts/release-state.mjs`.
+Therefore it contains no TypeScript-only syntax. `ReleaseState` is expressed as
+JSDoc and the production functions are exported behind an `isMain` CLI guard so
+tests import the exact implementation. `expandHomePath(value, home)` replaces
+the nonexistent Node API `path.expanduser`; it handles `~` and `~/...`
+deterministically and rejects unsupported `~user` syntax. `--help` is a true
+nonmutating path. Tests spawn the real CLI in a hermetic fixture and must never
+reimplement lock logic.
+
 **Attestation (2026-07-14, fourth re-attestation).** Amended per operator direction (this session): §7.7 presentation & meaning plane added (v0.5, labelled P-T in the entity table) — `sanctissimissa` theme family (7th family; decision 13 + open question 6 amended; text-role tokens `--rubric`/`--dialogue-p`/`--dialogue-s` with render-level `dialogueClass`), interleaved bilingual mode (`BilingualText` extraction, selection-range echo), similarity UX (clause focus `bestClause`, `SimilarityGlyph`, `IMAGERY_CONCEPTS`), Scripture Atlas (imagery/scenario + Gospel-parallels navigation, `PERICOPES` spine), generalized interpretive layer (`ingest-commentary.mjs`, `COMMENTS_ON` edges; Haydock + Catena Aurea this wave, 13-source PD roadmap), and the journal sidecar workspace (`JournalSidecar`/`ConnectionsPanel`, capture + highlight-both-panes context actions, destinations → exposure/selectors). Open question 8 amended with v0.5 shared-file ownership; open question 9 added (parallels data source).
 
 **Attestation.** This document is complete, stub-free, and depicts the end-state production release: every named entity carries an exact identifier, target `file:line`, role, and signature; no TBD markers remain; open questions are resolved above. Shipped rows were verified against the working tree via codegraph on the date below; planned rows are normative targets and are cited verbatim by `CHECKLIST.md` stanzas (v0.2 wave, O-stanzas, B-stanzas, and the v0.5 BJ–BO stanzas). Re-attested after adding §7.7 + the P-T entity rows.
