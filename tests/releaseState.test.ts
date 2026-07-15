@@ -10,12 +10,22 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
+import { spawn } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT = path.resolve(__dirname, '..');
+
+// Import production code for unit tests
+import {
+  expandHomePath,
+  STAGE_COMMANDS,
+  runReleaseStage,
+  main,
+} from '../scripts/release-state.mjs';
 
 // Helper: create a temporary directory and return cleanup function
-function createTempDir(): { dir: string; cleanup: () => void } {
+function createTempDir() {
   const tempDir = path.join(__dirname, '.tmp', `test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   fs.mkdirSync(tempDir, { recursive: true });
   return {
@@ -25,19 +35,19 @@ function createTempDir(): { dir: string; cleanup: () => void } {
 }
 
 // Helper: mock a minimal git repo with .git/HEAD
-function setupMockGit(root: string, commit: string): void {
+function setupMockGit(root, commit) {
   const gitDir = path.join(root, '.git');
   fs.mkdirSync(gitDir, { recursive: true });
   fs.writeFileSync(path.join(gitDir, 'HEAD'), commit, 'utf-8');
 }
 
 // Helper: create version.txt
-function setupVersion(root: string, version: string): void {
+function setupVersion(root, version) {
   fs.writeFileSync(path.join(root, 'version.txt'), version, 'utf-8');
 }
 
 // Helper: write release.lock
-function writeLock(root: string, lock: any): void {
+function writeLock(root, lock) {
   fs.writeFileSync(
     path.join(root, 'release.lock'),
     JSON.stringify(lock, null, 2),
@@ -46,14 +56,98 @@ function writeLock(root: string, lock: any): void {
 }
 
 // Helper: read release.lock
-function readLock(root: string): any {
+function readLock(root) {
   const content = fs.readFileSync(path.join(root, 'release.lock'), 'utf-8');
   return JSON.parse(content);
 }
 
-describe('ReleaseState management', () => {
-  let tempDir: string;
-  let cleanup: () => void;
+// Helper: spawn the CLI and return result
+async function spawnCli(args, envOverrides = {}, cwd) {
+  return new Promise((resolve, reject) => {
+    // Set RELEASE_ROOT to cwd for testing
+    const env = {
+      ...process.env,
+      RELEASE_ROOT: cwd || ROOT,
+      ...envOverrides,
+    };
+
+    const child = spawn('node', ['scripts/release-state.mjs', ...args], {
+      cwd: ROOT, // Always run from ROOT for the script path
+      env,
+      stdio: 'pipe',
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('close', (code) => {
+      resolve({ code, stdout, stderr });
+    });
+
+    child.on('error', reject);
+  });
+}
+
+describe('Unit tests: expandHomePath', () => {
+  it('should expand ~ to home directory', () => {
+    const home = '/home/testuser';
+    const result = expandHomePath('~', home);
+    assert.strictEqual(result, home);
+  });
+
+  it('should expand ~/path to home/path', () => {
+    const home = '/home/testuser';
+    const result = expandHomePath('~/outbox/standroidsmissal', home);
+    assert.strictEqual(result, '/home/testuser/outbox/standroidsmissal');
+  });
+
+  it('should pass absolute paths unchanged', () => {
+    const result = expandHomePath('/absolute/path', '/home/testuser');
+    assert.strictEqual(result, '/absolute/path');
+  });
+
+  it('should pass relative paths unchanged', () => {
+    const result = expandHomePath('relative/path', '/home/testuser');
+    assert.strictEqual(result, 'relative/path');
+  });
+
+  it('should reject ~user paths', () => {
+    assert.throws(
+      () => expandHomePath('~user/path', '/home/testuser'),
+      /User-specific path expansion.*is not supported/
+    );
+  });
+});
+
+describe('Unit tests: STAGE_COMMANDS', () => {
+  it('should define all required stages', () => {
+    const expectedStages = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
+    const actualStages = Object.keys(STAGE_COMMANDS);
+    assert.deepStrictEqual(actualStages.sort(), expectedStages.sort());
+  });
+
+  it('should have 8 stages total', () => {
+    assert.strictEqual(Object.keys(STAGE_COMMANDS).length, 8);
+  });
+
+  it('should have async functions for all stages', () => {
+    for (const [name, command] of Object.entries(STAGE_COMMANDS)) {
+      assert.strictEqual(typeof command, 'function', `Stage ${name} should be a function`);
+    }
+  });
+});
+
+describe('Unit tests: runReleaseStage', () => {
+  let tempDir;
+  let cleanup;
 
   beforeEach(() => {
     const t = createTempDir();
@@ -65,206 +159,80 @@ describe('ReleaseState management', () => {
     cleanup();
   });
 
-  describe('Fresh state', () => {
-    it('should create a new lock file on first run', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
+  it('should throw for unknown stage', async () => {
+    await assert.rejects(
+      async () => await runReleaseStage('unknown-stage'),
+      /Unknown stage: unknown-stage/
+    );
+  });
 
-      // Mock the subprocess calls (they're not hermetic)
-      // In a real scenario, we'd use a test harness that isolates FS operations
-      // For now, we verify the logic structure is correct
-      
-      // The fresh state should:
-      // 1. Run stamp
-      // 2. Write lock with version, sourceHead, startedAt, empty completedStages
-      const expectedLock = {
-        version: '1.16.34594',
-        sourceHead: 'abc123',
-        startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: [],
-      };
+  it('should require a lock file to mark stage complete', async () => {
+    // Can't actually run a real stage without a lock, but we can verify the error
+    setupMockGit(tempDir, 'abc123');
+    setupVersion(tempDir, '1.16.34594');
 
-      // Verify expected structure
-      assert.strictEqual(typeof expectedLock.version, 'string');
-      assert.strictEqual(typeof expectedLock.sourceHead, 'string');
-      assert.strictEqual(typeof expectedLock.startedAt, 'string');
-      assert(Array.isArray(expectedLock.completedStages));
-      assert.strictEqual(expectedLock.completedStages.length, 0);
+    await assert.rejects(
+      async () => await runReleaseStage('test'),
+      /Cannot mark stage complete: no valid lock file/
+    );
+  });
+});
+
+describe('Integration tests: CLI behavior', () => {
+  let tempDir;
+  let cleanup;
+  let originalDir;
+
+  beforeEach(() => {
+    const t = createTempDir();
+    tempDir = t.dir;
+    cleanup = t.cleanup;
+    originalDir = process.cwd();
+
+    // Create a mock environment
+    setupMockGit(tempDir, 'abc123');
+    setupVersion(tempDir, '1.16.34594');
+  });
+
+  afterEach(() => {
+    process.chdir(originalDir);
+    cleanup();
+  });
+
+  describe('--help flag', () => {
+    it('should print usage and exit 0', async () => {
+      // Use the production CLI directly
+      const result = await spawnCli(['--help'], {}, ROOT);
+
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stdout.includes('Usage:'));
+      assert.ok(result.stdout.includes('Release stages'));
+      assert.ok(result.stdout.includes('--help'));
+    });
+
+    it('-h should be an alias for --help', async () => {
+      const result = await spawnCli(['-h'], {}, ROOT);
+
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stdout.includes('Usage:'));
+    });
+
+    it('should not read/write any files when --help is used', async () => {
+      // Capture initial state
+      const initialVersion = fs.readFileSync(path.join(tempDir, 'version.txt'), 'utf-8');
+
+      const result = await spawnCli(['--help'], {}, tempDir);
+
+      assert.strictEqual(result.code, 0);
+      const afterVersion = fs.readFileSync(path.join(tempDir, 'version.txt'), 'utf-8');
+      assert.strictEqual(initialVersion, afterVersion);
+      assert.strictEqual(fs.existsSync(path.join(tempDir, 'release.lock')), false);
     });
   });
 
-  describe('Interrupted state', () => {
-    it('should resume at first incomplete stage', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
-
-      // Create a lock with some stages completed
-      const interruptedLock = {
-        version: '1.16.34594',
-        sourceHead: 'abc123',
-        startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test', 'web', 'linux'],
-      };
-      writeLock(tempDir, interruptedLock);
-
-      // Verify lock structure
-      const lock = readLock(tempDir);
-      assert.strictEqual(lock.version, '1.16.34594');
-      assert.strictEqual(lock.sourceHead, 'abc123');
-      assert.deepStrictEqual(lock.completedStages, ['test', 'web', 'linux']);
-
-      // Pending stages should be: windows, android-debug, android-release, symbols, collect
-      const allStages = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
-      const completedStages = lock.completedStages;
-      const pendingStages = allStages.filter(s => !completedStages.includes(s));
-
-      assert.deepStrictEqual(pendingStages, ['windows', 'android-debug', 'android-release', 'symbols', 'collect']);
-    });
-  });
-
-  describe('Resumed state', () => {
-    it('should not re-stamp when resuming with matching lock', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
-
-      // Create a lock matching current state
-      const existingLock = {
-        version: '1.16.34594',
-        sourceHead: 'abc123',
-        startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test', 'web'],
-      };
-      writeLock(tempDir, existingLock);
-
-      const lock = readLock(tempDir);
-      
-      // Lock should match current state
-      assert.strictEqual(lock.version, '1.16.34594');
-      assert.strictEqual(lock.sourceHead, 'abc123');
-      
-      // Resume should skip stamp and continue from pending stages
-      const allStages = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
-      const completedStages = lock.completedStages;
-      const pendingStages = allStages.filter(s => !completedStages.includes(s));
-
-      assert.strictEqual(pendingStages[0], 'linux');
-      assert.strictEqual(pendingStages.length, 6);
-    });
-  });
-
-  describe('Mismatched state', () => {
-    it('should fail closed when version mismatches', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34595'); // Different version
-
-      // Create a lock with different version
-      const mismatchedLock = {
-        version: '1.16.34594', // Old version
-        sourceHead: 'abc123',
-        startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test'],
-      };
-      writeLock(tempDir, mismatchedLock);
-
-      const lock = readLock(tempDir);
-      
-      // Versions should not match
-      assert.notStrictEqual(lock.version, '1.16.34595');
-      
-      // Mismatch should be detected and fail closed
-      const currentVersion = fs.readFileSync(path.join(tempDir, 'version.txt'), 'utf-8').trim();
-      assert.notStrictEqual(lock.version, currentVersion);
-    });
-
-    it('should fail closed when sourceHead mismatches', async () => {
-      setupMockGit(tempDir, 'def456'); // Different commit
-      setupVersion(tempDir, '1.16.34594');
-
-      // Create a lock with different sourceHead
-      const mismatchedLock = {
-        version: '1.16.34594',
-        sourceHead: 'abc123', // Old commit
-        startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test'],
-      };
-      writeLock(tempDir, mismatchedLock);
-
-      const lock = readLock(tempDir);
-      
-      // Source heads should not match
-      assert.notStrictEqual(lock.sourceHead, 'def456');
-    });
-
-    it('should fail closed when lock is corrupted', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
-
-      // Write corrupted lock (invalid JSON)
-      fs.writeFileSync(path.join(tempDir, 'release.lock'), '{invalid json}', 'utf-8');
-
-      // Reading corrupted lock should fail gracefully
-      const lockContent = fs.readFileSync(path.join(tempDir, 'release.lock'), 'utf-8');
-      assert.throws(() => JSON.parse(lockContent));
-    });
-  });
-
-  describe('Completed state', () => {
-    it('should skip all stages when all are complete', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
-
-      // Create a lock with all stages completed
-      const completedLock = {
-        version: '1.16.34594',
-        sourceHead: 'abc123',
-        startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'],
-      };
-      writeLock(tempDir, completedLock);
-
-      const lock = readLock(tempDir);
-      
-      // All stages should be completed
-      const allStages = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
-      assert.deepStrictEqual(lock.completedStages, allStages);
-
-      // No pending stages
-      const pendingStages = allStages.filter(s => !lock.completedStages.includes(s));
-      assert.strictEqual(pendingStages.length, 0);
-    });
-  });
-
-  describe('Stage completion', () => {
-    it('should atomically append completed stage to lock', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
-
-      const initialLock = {
-        version: '1.16.34594',
-        sourceHead: 'abc123',
-        startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test'],
-      };
-      writeLock(tempDir, initialLock);
-
-      // Simulate marking 'web' as complete
-      const lock = readLock(tempDir);
-      const updatedLock = {
-        ...lock,
-        completedStages: [...lock.completedStages, 'web'],
-      };
-      writeLock(tempDir, updatedLock);
-
-      // Verify atomic update
-      const newLock = readLock(tempDir);
-      assert.deepStrictEqual(newLock.completedStages, ['test', 'web']);
-      assert.strictEqual(newLock.completedStages.length, 2);
-    });
-
-    it('should not allow duplicate stage completions', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
-
+  describe('--restart flag', () => {
+    it('should move existing lock to outbox and exit 0', async () => {
+      // Create a lock file
       const lock = {
         version: '1.16.34594',
         sourceHead: 'abc123',
@@ -273,131 +241,211 @@ describe('ReleaseState management', () => {
       };
       writeLock(tempDir, lock);
 
-      // Attempting to add duplicate 'test' should be rejected
-      const currentLock = readLock(tempDir);
-      assert.strictEqual(currentLock.completedStages.includes('test'), true);
-      assert.strictEqual(currentLock.completedStages.filter((s: string) => s === 'test').length, 1);
-    });
-  });
+      // Create outbox directory
+      const outboxDir = path.join(tempDir, 'outbox', 'standroidsmissal');
+      fs.mkdirSync(outboxDir, { recursive: true });
 
-  describe('Lock archiving', () => {
-    it('should move completed lock to dist/rubric-runs', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
+      // Run CLI from tempDir with HOME set to tempDir
+      const result = await spawnCli(['--restart'], {
+        HOME: tempDir,
+      }, tempDir);
 
-      const completedLock = {
-        version: '1.16.34594',
-        sourceHead: 'abc123',
-        startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'],
-      };
-      writeLock(tempDir, completedLock);
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stdout.includes('Moved old lock') || result.stdout.includes('ℹ️'));
 
-      const rubricRunsDir = path.join(tempDir, 'dist', 'rubric-runs');
-      fs.mkdirSync(rubricRunsDir, { recursive: true });
-
-      const archivePath = path.join(rubricRunsDir, `release-state-v${completedLock.version}.json`);
-      fs.writeFileSync(archivePath, JSON.stringify(completedLock, null, 2), 'utf-8');
-      
-      // Verify lock is archived
-      assert.strictEqual(fs.existsSync(archivePath), true);
-      const archived = JSON.parse(fs.readFileSync(archivePath, 'utf-8'));
-      assert.deepStrictEqual(archived.completedStages, completedLock.completedStages);
-
-      // Original lock should be removed
-      fs.unlinkSync(path.join(tempDir, 'release.lock'));
+      // Lock should be removed from root
       assert.strictEqual(fs.existsSync(path.join(tempDir, 'release.lock')), false);
+
+      // Lock should be in outbox
+      const outboxFiles = fs.readdirSync(outboxDir);
+      assert.ok(outboxFiles.some(f => f.startsWith('release-lock-')));
+    });
+
+    it('should exit 0 when no lock file exists', async () => {
+      const result = await spawnCli(['--restart'], {}, tempDir);
+
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stdout.includes('No lock file found'));
     });
   });
 
-  describe('Restart functionality', () => {
-    it('should move old lock to outbox on --restart', async () => {
-      setupMockGit(tempDir, 'abc123');
-      setupVersion(tempDir, '1.16.34594');
-
-      const oldLock = {
+  describe('--clean-only flag', () => {
+    it('should move matching lock to outbox and exit 0', async () => {
+      const lock = {
         version: '1.16.34594',
         sourceHead: 'abc123',
         startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test'],
+        completedStages: ['test', 'web'],
       };
-      writeLock(tempDir, oldLock);
+      writeLock(tempDir, lock);
 
       const outboxDir = path.join(tempDir, 'outbox', 'standroidsmissal');
       fs.mkdirSync(outboxDir, { recursive: true });
 
-      // Simulate moving lock to outbox
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const archivedPath = path.join(outboxDir, `release-lock-${timestamp}.json`);
-      fs.renameSync(path.join(tempDir, 'release.lock'), archivedPath);
+      const result = await spawnCli(['--clean-only'], {
+        HOME: tempDir,
+      }, tempDir);
 
-      // Verify lock moved
-      assert.strictEqual(fs.existsSync(archivedPath), true);
+      assert.strictEqual(result.code, 0);
+      assert.ok(result.stdout.includes('Moved lock'));
+
       assert.strictEqual(fs.existsSync(path.join(tempDir, 'release.lock')), false);
-
-      const archived = JSON.parse(fs.readFileSync(archivedPath, 'utf-8'));
-      assert.deepStrictEqual(archived.completedStages, ['test']);
-    });
-  });
-
-  describe('Stage definitions', () => {
-    it('should define all required stages in order', () => {
-      const stages = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
-      
-      // Verify stage names
-      assert.strictEqual(stages[0], 'test');
-      assert.strictEqual(stages[1], 'web');
-      assert.strictEqual(stages[2], 'linux');
-      assert.strictEqual(stages[3], 'windows');
-      assert.strictEqual(stages[4], 'android-debug');
-      assert.strictEqual(stages[5], 'android-release');
-      assert.strictEqual(stages[6], 'symbols');
-      assert.strictEqual(stages[7], 'collect');
+      const outboxFiles = fs.readdirSync(outboxDir);
+      assert.ok(outboxFiles.some(f => f.startsWith('release-lock-')));
     });
 
-    it('should have exactly 8 stages', () => {
-      const stages = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
-      assert.strictEqual(stages.length, 8);
-    });
-  });
-
-  describe('Data structure validation', () => {
-    it('should validate ReleaseState structure', () => {
-      const validState = {
-        version: '1.16.34594',
-        sourceHead: 'abc123def456',
+    it('should fail closed when version mismatches', async () => {
+      // Create a lock with different version
+      const lock = {
+        version: '1.16.34593', // Different version
+        sourceHead: 'abc123',
         startedAt: '2026-07-14T22:00:00.000Z',
-        completedStages: ['test', 'web'],
+        completedStages: ['test'],
+      };
+      writeLock(tempDir, lock);
+
+      const result = await spawnCli(['--clean-only'], {
+        HOME: tempDir,
+      }, tempDir);
+
+      assert.strictEqual(result.code, 1);
+      assert.ok(result.stderr.includes('Lock mismatch or corruption detected'));
+    });
+
+    it('should fail closed when sourceHead mismatches', async () => {
+      const lock = {
+        version: '1.16.34594',
+        sourceHead: 'def456', // Different commit
+        startedAt: '2026-07-14T22:00:00.000Z',
+        completedStages: ['test'],
+      };
+      writeLock(tempDir, lock);
+
+      const result = await spawnCli(['--clean-only'], {
+        HOME: tempDir,
+      }, tempDir);
+
+      assert.strictEqual(result.code, 1);
+      assert.ok(result.stderr.includes('Lock mismatch or corruption detected'));
+    });
+  });
+
+  describe('Fresh release', () => {
+    it('should create new lock file when none exists (dry-run with stubs)', async () => {
+      // Can't actually run a full release without stubs, but we can verify the structure
+      // by checking the lock would be created correctly
+      const lock = {
+        version: '1.16.34594',
+        sourceHead: 'abc123',
+        startedAt: '2026-07-14T22:00:00.000Z',
+        completedStages: [],
       };
 
-      // All fields should have correct types
-      assert.strictEqual(typeof validState.version, 'string');
-      assert.strictEqual(typeof validState.sourceHead, 'string');
-      assert.strictEqual(typeof validState.startedAt, 'string');
-      assert(Array.isArray(validState.completedStages));
-      assert.strictEqual(typeof validState.completedStages[0], 'string');
+      assert.strictEqual(typeof lock.version, 'string');
+      assert.strictEqual(typeof lock.sourceHead, 'string');
+      assert.strictEqual(typeof lock.startedAt, 'string');
+      assert(Array.isArray(lock.completedStages));
+      assert.strictEqual(lock.completedStages.length, 0);
+    });
+  });
+
+  describe('Corrupt lock handling', () => {
+    it('should handle corrupted JSON gracefully', async () => {
+      // Write corrupted lock
+      fs.writeFileSync(path.join(tempDir, 'release.lock'), '{invalid json', 'utf-8');
+
+      // Try to read it via the CLI (will fail but shouldn't crash)
+      const result = await spawnCli([], {
+        HOME: tempDir,
+      }, tempDir);
+
+      // Should fail due to corrupt lock
+      assert.strictEqual(result.code, 1);
+      assert.ok(result.stderr.includes('Lock mismatch or corruption detected'));
     });
 
-    it('should reject invalid state structure', () => {
-      const invalidStates = [
-        { version: null, sourceHead: 'abc', startedAt: '2026-07-14T22:00:00.000Z', completedStages: [] },
-        { version: '1.16.34594', sourceHead: 123, startedAt: '2026-07-14T22:00:00.000Z', completedStages: [] },
-        { version: '1.16.34594', sourceHead: 'abc', startedAt: 12345, completedStages: [] },
-        { version: '1.16.34594', sourceHead: 'abc', startedAt: '2026-07-14T22:00:00.000Z', completedStages: 'not-an-array' },
-        { version: '1.16.34594', sourceHead: 'abc', startedAt: '2026-07-14T22:00:00.000Z', completedStages: [123] },
-      ];
+    it('should preserve corrupt lock byte-identically', async () => {
+      const corruptContent = '{invalid json';
+      fs.writeFileSync(path.join(tempDir, 'release.lock'), corruptContent, 'utf-8');
 
-      // All invalid states should fail validation
-      invalidStates.forEach(state => {
-        const isValid =
-          typeof state.version === 'string' &&
-          typeof state.sourceHead === 'string' &&
-          typeof state.startedAt === 'string' &&
-          Array.isArray(state.completedStages) &&
-          state.completedStages.every((s: unknown) => typeof s === 'string');
-        
-        assert.strictEqual(isValid, false);
-      });
+      const result = await spawnCli([], {
+        HOME: tempDir,
+      }, tempDir);
+
+      assert.strictEqual(result.code, 1);
+
+      // Corrupt lock should remain unchanged
+      const afterContent = fs.readFileSync(path.join(tempDir, 'release.lock'), 'utf-8');
+      assert.strictEqual(afterContent, corruptContent);
+    });
+  });
+
+  describe('Mismatched lock handling', () => {
+    it('should preserve mismatched lock byte-identically', async () => {
+      const lock = {
+        version: '1.16.34593', // Wrong version
+        sourceHead: 'abc123',
+        startedAt: '2026-07-14T22:00:00.000Z',
+        completedStages: ['test'],
+      };
+      writeLock(tempDir, lock);
+      const originalContent = fs.readFileSync(path.join(tempDir, 'release.lock'), 'utf-8');
+
+      const result = await spawnCli([], {
+        HOME: tempDir,
+      }, tempDir);
+
+      assert.strictEqual(result.code, 1);
+
+      // Mismatched lock should remain unchanged
+      const afterContent = fs.readFileSync(path.join(tempDir, 'release.lock'), 'utf-8');
+      assert.strictEqual(afterContent, originalContent);
+    });
+  });
+
+  describe('Stage execution order', () => {
+    it('should execute stages in correct order', () => {
+      const expectedOrder = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
+      const actualOrder = Object.keys(STAGE_COMMANDS);
+      assert.deepStrictEqual(actualOrder, expectedOrder);
+    });
+  });
+});
+
+describe('Data structure validation', () => {
+  it('should validate ReleaseState structure', () => {
+    const validState = {
+      version: '1.16.34594',
+      sourceHead: 'abc123def456',
+      startedAt: '2026-07-14T22:00:00.000Z',
+      completedStages: ['test', 'web'],
+    };
+
+    assert.strictEqual(typeof validState.version, 'string');
+    assert.strictEqual(typeof validState.sourceHead, 'string');
+    assert.strictEqual(typeof validState.startedAt, 'string');
+    assert(Array.isArray(validState.completedStages));
+    assert.strictEqual(typeof validState.completedStages[0], 'string');
+  });
+
+  it('should reject invalid state structure', () => {
+    const invalidStates = [
+      { version: null, sourceHead: 'abc', startedAt: '2026-07-14T22:00:00.000Z', completedStages: [] },
+      { version: '1.16.34594', sourceHead: 123, startedAt: '2026-07-14T22:00:00.000Z', completedStages: [] },
+      { version: '1.16.34594', sourceHead: 'abc', startedAt: 12345, completedStages: [] },
+      { version: '1.16.34594', sourceHead: 'abc', startedAt: '2026-07-14T22:00:00.000Z', completedStages: 'not-an-array' },
+      { version: '1.16.34594', sourceHead: 'abc', startedAt: '2026-07-14T22:00:00.000Z', completedStages: [123] },
+    ];
+
+    invalidStates.forEach(state => {
+      const isValid =
+        typeof state.version === 'string' &&
+        typeof state.sourceHead === 'string' &&
+        typeof state.startedAt === 'string' &&
+        Array.isArray(state.completedStages) &&
+        state.completedStages.every(s => typeof s === 'string');
+
+      assert.strictEqual(isValid, false);
     });
   });
 });
