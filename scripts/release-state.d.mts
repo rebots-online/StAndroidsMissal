@@ -16,6 +16,30 @@ export interface ReleaseState {
 }
 
 /**
+ * Interrupt receipt structure
+ */
+export interface InterruptReceipt {
+  target: string;
+  consumed: true;
+  writtenAt: string;
+}
+
+/**
+ * Interrupt receipt filename
+ */
+export const INTERRUPT_RECEIPT_FILENAME: 'interrupt-receipt.json';
+
+/**
+ * Exit code when controlled interrupt occurs
+ */
+export const INTERRUPT_EXIT_CODE: 70;
+
+/**
+ * Exit code when receipt validation fails
+ */
+export const RECEIPT_MISMATCH_EXIT_CODE: 71;
+
+/**
  * Dependency injection interface for hermetic testing
  */
 export interface ReleaseDeps {
@@ -26,7 +50,10 @@ export interface ReleaseDeps {
    */
   runCommand?: (name: string) => Promise<number | void>;
   /**
-   * Environment variables override
+   * Environment variables override.
+   * In stub mode (RELEASE_STATE_RUNNER=stub + RELEASE_STATE_FIXTURE set),
+   * RELEASE_STATE_INTERRUPT_AT=<canonical-stage> enables controlled interrupt
+   * at the specified stage (default unset; ignored in production).
    */
   env?: Record<string, string | undefined>;
   /**
@@ -64,6 +91,28 @@ export function expandHomePath(value: string, home?: string): string;
  * Canonical stage order
  */
 export const STAGE_ORDER: readonly string[];
+
+/**
+ * Get interrupt receipt path for fixture directory.
+ * @param fixtureDir - The fixture directory path
+ * @returns The interrupt receipt file path
+ */
+export function getReceiptPath(fixtureDir: string): string;
+
+/**
+ * Read and validate interrupt receipt from fixture directory.
+ * @param fixtureDir - The fixture directory path
+ * @returns The parsed receipt, or null if file doesn't exist
+ * @throws Error if the file exists but is invalid JSON or structurally malformed
+ */
+export function readInterruptReceipt(fixtureDir: string): InterruptReceipt | null;
+
+/**
+ * Atomically write interrupt receipt for a target stage.
+ * @param target - The stage name being interrupted
+ * @param fixtureDir - The fixture directory path
+ */
+export function writeInterruptReceipt(target: string, fixtureDir: string): void;
 
 /**
  * Print usage information

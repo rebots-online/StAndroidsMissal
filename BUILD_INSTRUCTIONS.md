@@ -112,6 +112,32 @@ The release driver automatically manages stamped resume via `release.lock`:
 
 The lock file is gitignored and never committed. It lives only in the worktree.
 
+### BT.2R3 controlled interrupt/resume
+
+The release state management includes a production-owned one-shot controlled
+interrupt protocol for testing:
+
+- **Interrupt constants**: `INTERRUPT_RECEIPT_FILENAME='interrupt-receipt.json'`,
+  `INTERRUPT_EXIT_CODE=70`, `RECEIPT_MISMATCH_EXIT_CODE=71`.
+- **Receipt helpers**: `getReceiptPath(fixtureDir)`, `readInterruptReceipt(fixtureDir)`,
+  `writeInterruptReceipt(target, fixtureDir)` (atomic via `.tmp` + `renameSync`).
+- **Interrupt protocol**: In stub mode only (`RELEASE_STATE_RUNNER=stub` +
+  `RELEASE_STATE_FIXTURE` set), the environment variable
+  `RELEASE_STATE_INTERRUPT_AT=<canonical-stage>` triggers a controlled interrupt:
+  - First reach of target stage: write receipt `{target, consumed:true, writtenAt}`,
+    log the stage to `run-command.log`, and exit with `INTERRUPT_EXIT_CODE`.
+  - Second reach with matching receipt: skip logging, exit 0 (resume without
+    re-stamping).
+  - Invalid receipt target or corrupt JSON: fail closed with `RECEIPT_MISMATCH_EXIT_CODE`.
+  - Non-target stages: log normally and continue.
+- **Two-spawn invariant**: Two real CLI spawns prove one stamp (first spawn only),
+  each stage exactly once (resume completes remaining stages without re-stamping),
+  and receipt byte-identical after resume.
+- **Fail-closed nonmutation**: Corrupt or mismatched receipts fail closed without
+  mutating `release.lock` byte-identically.
+- **Production-only**: `RELEASE_STATE_INTERRUPT_AT` has no effect unless in stub
+  mode; normal production release is unchanged.
+
 ### Strict real-CLI acceptance gate
 
 The release state management is validated by a strict, automated acceptance gate
@@ -128,9 +154,11 @@ that requires no manual steps or platform builds:
   two ways: (1) importing and calling `main()` with injected stub `runCommand`,
   and (2) spawning the real CLI with `RELEASE_STATE_RUNNER=stub`. No literal
   stand-ins or duplicated implementations exist.
-- **One-stamp/stage-once verification**: Tests prove two real CLI invocations
-  against a shared fixture log `stamp` exactly once and each stage exactly once,
-  with resume skipping stamp on the second call.
+- **BT.2R3 controlled interrupt/resume**: Tests prove two real CLI invocations
+  against a shared fixture with `RELEASE_STATE_INTERRUPT_AT=<stage>` (stub mode
+  only) execute a one-shot controlled interrupt followed by resume, with one
+  stamp total, each stage exactly once, and receipt byte-identical after resume.
+  Corrupt or mismatched receipts fail closed without mutating the lock.
 - **Byte-identical nonmutation**: Corrupt and mismatched lock files remain
   byte-identical after failure (fail-closed; never overwritten).
 - **Strict TypeScript compilation**: A forced strict compilation over the test
@@ -144,7 +172,13 @@ node --check scripts/release-state.mjs
 node scripts/release-state.mjs --help  # exits 0
 git diff --exit-code -- version.txt version.json package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
 git check-ignore release.lock  # exits 0
-grep -c 'path\.expanduser' scripts/release-state.mjs  # → 0
+grep -c 'RELEASE_STATE_INTERRUPT_AT' scripts/release-state.mjs  # ≥ 1
+grep -c 'INTERRUPT_EXIT_CODE' scripts/release-state.mjs  # ≥ 2
+grep -c 'RECEIPT_MISMATCH_EXIT_CODE' scripts/release-state.mjs  # ≥ 4
+grep -c 'interrupt-receipt.json' scripts/release-state.mjs  # ≥ 1
+grep -c 'RELEASE_STATE_INTERRUPT_AT' tests/releaseState.test.ts  # ≥ 3
+grep -c "simulate this by" tests/releaseState.test.ts  # → 0
+grep -c "doesn't actually interrupt" tests/releaseState.test.ts  # → 0
 npx tsc --noEmit --strict --module nodenext --moduleResolution nodenext scripts/release-state.d.mts tests/releaseState.test.ts  # zero errors
 node --experimental-strip-types --test tests/releaseState.test.ts
 npx tsc -b --pretty false

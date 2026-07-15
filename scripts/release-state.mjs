@@ -186,6 +186,92 @@ function lockMatchesCurrent(lock, root) {
 export const STAGE_ORDER = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
 
 /**
+ * Interrupt receipt filename
+ */
+export const INTERRUPT_RECEIPT_FILENAME = 'interrupt-receipt.json';
+
+/**
+ * Exit code when controlled interrupt occurs
+ */
+export const INTERRUPT_EXIT_CODE = 70;
+
+/**
+ * Exit code when receipt validation fails
+ */
+export const RECEIPT_MISMATCH_EXIT_CODE = 71;
+
+/**
+ * Interrupt receipt structure
+ * @typedef {Object} InterruptReceipt
+ * @property {string} target - The stage name where interrupt occurred
+ * @property {true} consumed - Receipt consumption flag (always true)
+ * @property {string} writtenAt - ISO 8601 timestamp when receipt was written
+ */
+
+/**
+ * Get interrupt receipt path for fixture directory
+ * @param {string} fixtureDir - The fixture directory path
+ * @returns {string} The interrupt receipt file path
+ */
+export function getReceiptPath(fixtureDir) {
+  return path.join(fixtureDir, INTERRUPT_RECEIPT_FILENAME);
+}
+
+/**
+ * Read and validate interrupt receipt from fixture directory
+ * @param {string} fixtureDir - The fixture directory path
+ * @returns {InterruptReceipt|null} The parsed receipt, or null if file doesn't exist
+ * @throws {Error} If the file exists but is invalid JSON or structurally malformed
+ */
+export function readInterruptReceipt(fixtureDir) {
+  const receiptPath = getReceiptPath(fixtureDir);
+
+  if (!fs.existsSync(receiptPath)) {
+    return null;
+  }
+
+  try {
+    const content = fs.readFileSync(receiptPath, 'utf-8');
+    const parsed = JSON.parse(content);
+
+    // Validate structure: { target: string, consumed: true, writtenAt: string }
+    if (
+      typeof parsed.target !== 'string' ||
+      parsed.consumed !== true ||
+      typeof parsed.writtenAt !== 'string'
+    ) {
+      throw new Error('Invalid interrupt receipt structure');
+    }
+
+    return parsed;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error('Interrupt receipt contains invalid JSON');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Atomically write interrupt receipt for a target stage
+ * @param {string} target - The stage name being interrupted
+ * @param {string} fixtureDir - The fixture directory path
+ */
+export function writeInterruptReceipt(target, fixtureDir) {
+  const receiptPath = getReceiptPath(fixtureDir);
+  const tempPath = `${receiptPath}.tmp`;
+
+  const receipt = {
+    target,
+    consumed: true,
+    writtenAt: new Date().toISOString(),
+  };
+
+  fs.writeFileSync(tempPath, JSON.stringify(receipt, null, 2), 'utf-8');
+  fs.renameSync(tempPath, receiptPath);
+}
+
+/**
  * Unified command runner for stamp and stages.
  * Resolves from injected deps, environment, or runs real commands.
  * @param {string} name - Command name ('stamp' or stage name)
@@ -206,7 +292,53 @@ async function runCommand(name, deps, root) {
   const fixtureDir = deps?.fixtureDir || env.RELEASE_STATE_FIXTURE;
 
   if (isStub && fixtureDir) {
-    // Log to run-command.log in fixture directory
+    // Controlled interrupt protocol (stub mode only)
+    const interruptTarget = env.RELEASE_STATE_INTERRUPT_AT;
+    if (interruptTarget !== undefined) {
+      // Validate interrupt target is a known stage
+      if (!STAGE_ORDER.includes(interruptTarget)) {
+        console.error(`❌ RELEASE_STATE_INTERRUPT_AT must be a canonical stage: ${STAGE_ORDER.join(', ')}`);
+        return RECEIPT_MISMATCH_EXIT_CODE;
+      }
+
+      // Handle interrupt at target stage
+      if (name === interruptTarget) {
+        try {
+          const receipt = readInterruptReceipt(fixtureDir);
+
+          // First reach: write receipt and interrupt
+          if (receipt === null) {
+            const logPath = path.join(fixtureDir, 'run-command.log');
+            fs.appendFileSync(logPath, name + '\n', 'utf-8');
+            writeInterruptReceipt(name, fixtureDir);
+            console.log(`⏸️  Controlled interrupt at ${name} (receipt written)`);
+            return INTERRUPT_EXIT_CODE;
+          }
+
+          // Receipt mismatch: fail closed
+          if (receipt.target !== interruptTarget) {
+            console.error(`❌ Interrupt receipt mismatch: receipt.target=${receipt.target}, RELEASE_STATE_INTERRUPT_AT=${interruptTarget}`);
+            return RECEIPT_MISMATCH_EXIT_CODE;
+          }
+
+          // Resume: receipt matches, continue without re-stamping
+          console.log(`▶️  Resuming from ${name} (receipt matched)`);
+          return 0;
+        } catch (err) {
+          console.error(`❌ Interrupt receipt error: ${err.message}`);
+          return RECEIPT_MISMATCH_EXIT_CODE;
+        }
+      }
+
+      // Non-target stages: log normally
+      const logPath = path.join(fixtureDir, 'run-command.log');
+      const logLine = `${name}\n`;
+      fs.appendFileSync(logPath, logLine, 'utf-8');
+      console.log(`🔧 [STUB] ${name}`);
+      return 0;
+    }
+
+    // Normal stub logging (no interrupt requested)
     const logPath = path.join(fixtureDir, 'run-command.log');
     const logLine = `${name}\n`;
     fs.appendFileSync(logPath, logLine, 'utf-8');

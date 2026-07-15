@@ -673,43 +673,116 @@ describe('Integration tests: Real CLI spawning', () => {
     });
   });
 
-  describe('Two-call interrupt/resume test (one stamp, stage once)', () => {
-    it('should prove two real CLI invocations consume one stub stamp and run each stage once', async () => {
-      // Create a stub runner that fails on a specific stage
-      const interruptStage = 'linux';
-
-      // First call: fresh release, interrupted at linux
-      const result1 = await spawnCli([], {
+  describe('BT.2R3 controlled interrupt/resume (two real CLI spawns)', () => {
+    it('two real CLI spawns prove controlled interrupt then resume (one stamp, each stage once)', async () => {
+      const env = {
         RELEASE_STATE_RUNNER: 'stub',
         RELEASE_STATE_FIXTURE: tempDir,
-        INTERRUPT_AT: interruptStage, // Custom env for test control
+        RELEASE_STATE_INTERRUPT_AT: 'linux',
+      };
+
+      // Call 1: fresh release, interrupted at linux
+      const r1 = await spawnCli([], env, tempDir);
+
+      // Should exit nonzero (interrupted)
+      assert.notStrictEqual(r1.code, 0);
+
+      // Lock should show partial completion (test, web only)
+      const lock1 = readLock(tempDir);
+      assert.deepStrictEqual(lock1.completedStages, ['test', 'web']);
+
+      // Receipt should exist with target='linux'
+      assert.ok(fs.existsSync(path.join(tempDir, 'interrupt-receipt.json')));
+      const receipt1 = JSON.parse(fs.readFileSync(path.join(tempDir, 'interrupt-receipt.json'), 'utf-8'));
+      assert.strictEqual(receipt1.target, 'linux');
+      assert.strictEqual(receipt1.consumed, true);
+
+      // Call 2: resume from same env, same fixture/lock/receipt
+      const receiptBeforeBytes = fs.readFileSync(path.join(tempDir, 'interrupt-receipt.json'), 'utf-8');
+      const r2 = await spawnCli([], env, tempDir);
+
+      // Should exit 0 (resume succeeded)
+      assert.strictEqual(r2.code, 0);
+
+      // Receipt bytes unchanged by call 2
+      const receiptAfterBytes = fs.readFileSync(path.join(tempDir, 'interrupt-receipt.json'), 'utf-8');
+      assert.strictEqual(receiptAfterBytes, receiptBeforeBytes);
+
+      // After both spawns: log should show stamp once, each stage once, in order
+      const loggedCommands = readRunCommandLog(tempDir).trim().split('\n').filter(l => l);
+      assert.deepStrictEqual(loggedCommands, ['stamp', 'test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect']);
+
+      // Stamp appears exactly once
+      assert.strictEqual(loggedCommands.filter(c => c === 'stamp').length, 1);
+    });
+
+    it('corrupt interrupt receipt fails closed without mutating the lock', async () => {
+      // Seed lock with test,web completed (linux is first pending)
+      writeLock(tempDir, {
+        version: '2.17.34595',
+        sourceHead: 'abc123def456',
+        startedAt: '2026-07-15T00:00:00.000Z',
+        completedStages: ['test', 'web'],
+      });
+
+      // Write corrupt receipt
+      fs.writeFileSync(path.join(tempDir, 'interrupt-receipt.json'), '{invalid json', 'utf-8');
+
+      // Record lock bytes before spawn
+      const lockBefore = fs.readFileSync(path.join(tempDir, 'release.lock'), 'utf-8');
+
+      // Spawn with interrupt at linux
+      const r = await spawnCli([], {
+        RELEASE_STATE_RUNNER: 'stub',
+        RELEASE_STATE_FIXTURE: tempDir,
+        RELEASE_STATE_INTERRUPT_AT: 'linux',
       }, tempDir);
 
-      // The stub mode doesn't actually interrupt - it logs all commands
-      // For this test, we verify the log shows stamp + all stages once
-      assert.strictEqual(result1.code, 0);
-      assert.ok(result1.stdout.includes('Starting fresh release'));
+      // Should exit nonzero
+      assert.notStrictEqual(r.code, 0);
 
-      const logContent1 = readRunCommandLog(tempDir);
-      const loggedCommands1 = logContent1.trim().split('\n').filter(l => l);
+      // Lock byte-identical (no mutation)
+      assert.strictEqual(fs.readFileSync(path.join(tempDir, 'release.lock'), 'utf-8'), lockBefore);
 
-      // Verify stamp appears exactly once
-      const stampCount1 = loggedCommands1.filter(c => c === 'stamp').length;
-      assert.strictEqual(stampCount1, 1, 'Stamp should appear exactly once');
+      // Receipt byte-identical (no mutation)
+      assert.strictEqual(fs.readFileSync(path.join(tempDir, 'interrupt-receipt.json'), 'utf-8'), '{invalid json');
+    });
 
-      // Verify each stage appears exactly once
-      for (const stage of CANONICAL_STAGE_ORDER) {
-        const stageCount = loggedCommands1.filter(c => c === stage).length;
-        assert.strictEqual(stageCount, 1, `Stage ${stage} should appear exactly once`);
-      }
+    it('mismatched interrupt receipt fails closed without mutating the lock', async () => {
+      // Seed lock with test,web completed (linux is first pending)
+      writeLock(tempDir, {
+        version: '2.17.34595',
+        sourceHead: 'abc123def456',
+        startedAt: '2026-07-15T00:00:00.000Z',
+        completedStages: ['test', 'web'],
+      });
 
-      // For a true interrupt/resume test, we need to modify the stub runner
-      // Since the stub runner logs all commands, we simulate this by:
-      // 1. First call runs fresh (simulated by checking the log)
-      // 2. Second call would resume (but we already verified it doesn't stamp)
+      // Write structurally valid but mismatched receipt (target='windows' not 'linux')
+      fs.writeFileSync(path.join(tempDir, 'interrupt-receipt.json'), JSON.stringify({
+        target: 'windows',
+        consumed: true,
+        writtenAt: '2026-07-15T00:00:00.000Z',
+      }), 'utf-8');
 
-      // The key verification: stamp appears exactly once in the log
-      // This proves the hermetic stub mode works correctly
+      // Record lock and receipt bytes before spawn
+      const lockBefore = fs.readFileSync(path.join(tempDir, 'release.lock'), 'utf-8');
+      const receiptBefore = fs.readFileSync(path.join(tempDir, 'interrupt-receipt.json'), 'utf-8');
+
+      // Spawn with interrupt at linux
+      const r = await spawnCli([], {
+        RELEASE_STATE_RUNNER: 'stub',
+        RELEASE_STATE_FIXTURE: tempDir,
+        RELEASE_STATE_INTERRUPT_AT: 'linux',
+      }, tempDir);
+
+      // Should exit nonzero
+      assert.notStrictEqual(r.code, 0);
+
+      // Lock byte-identical (no mutation)
+      assert.strictEqual(fs.readFileSync(path.join(tempDir, 'release.lock'), 'utf-8'), lockBefore);
+
+      // Receipt byte-identical (no mutation)
+      assert.strictEqual(fs.readFileSync(path.join(tempDir, 'interrupt-receipt.json'), 'utf-8'), receiptBefore);
     });
   });
 
