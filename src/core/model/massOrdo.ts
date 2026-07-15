@@ -172,3 +172,34 @@ export function stationActive(station: Station, season: Season): boolean {
   if (!station.activeIn) return true;
   return station.activeIn.includes(season);
 }
+
+/**
+ * The ever-present map strip's station sequence: both trunks (skeleton only —
+ * detail stations stay folded) with the season's active chant switch(es)
+ * spliced in at their liturgical slot, right after the Epistle.
+ */
+export function stripStations(season: Season): Station[] {
+  const cat = trunkOf('catechumens').filter((s) => !s.detail);
+  const chant = branchOf('chant').filter((s) => stationActive(s, season));
+  const fai = trunkOf('faithful').filter((s) => !s.detail);
+  const at = cat.findIndex((s) => s.id === 'lectio') + 1;
+  return [...cat.slice(0, at), ...chant, ...cat.slice(at), ...fai];
+}
+
+/**
+ * Inverse of the reader's anchor scheme, for scroll-spy: which station does a
+ * `data-section` anchor ("Introitus", "Oratio 2", "ordo:Canon") belong to?
+ */
+export function stationForAnchor(anchor: string): string | null {
+  if (anchor.startsWith('ordo:')) {
+    const sec = anchor.slice(5);
+    const hit =
+      MASS_ORDO.find((s) => !s.detail && ORDO_STATION_SECTION[s.id] === sec) ??
+      MASS_ORDO.find((s) => ORDO_STATION_SECTION[s.id] === sec);
+    return hit?.id ?? null;
+  }
+  const exact = MASS_ORDO.find((s) => s.sectionKey === anchor);
+  if (exact) return exact.id;
+  const base = anchor.replace(/ \d+$/, '');
+  return MASS_ORDO.find((s) => s.sectionKey === base)?.id ?? null;
+}

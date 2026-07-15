@@ -166,12 +166,17 @@ export function getSeason(weekKey: string): Season {
   return 'Time after Pentecost';
 }
 
-/** Season fallback color, with feast-title overrides (martyr/virgin/confessor). */
+/** Season fallback color, with feast-title overrides (martyr/virgin/confessor…). */
 export function seasonColor(weekKey: string, feast: string | null = null): LiturgicalColor {
   if (feast) {
     const f = feast.toLowerCase();
+    // Red before white: virgin-martyrs are red; Cathedra Petri before Apostoli.
+    if (f.includes('cathedra')) return 'white';
     if (f.includes('martyr')) return 'red';
+    if (f.includes('sanguinis') || f.includes('crucis') || f.includes('passion')) return 'red';
+    if (f.includes('apostol') || f.includes('evangelist')) return 'red';
     if (f.includes('virgin') || f.includes('confessor')) return 'white';
+    if (f.includes('mariæ') || f.includes('mariae') || f.includes('angel')) return 'white';
   }
   switch (getSeason(weekKey)) {
     case 'Advent':
@@ -200,4 +205,21 @@ export function transferKeys(year: number): { easterCode: string; letter: string
 
 export function isLeapYear(year: number): boolean {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+/**
+ * Inverse of getWeekKey: the date nearest `nearISO` whose week key matches —
+ * lets a Tempora reference ("Tempora/Pent05-3") open on its real calendar day.
+ * Searches outward ±450 days (covers any movable-feast drift); null if the
+ * key never occurs (malformed).
+ */
+export function dateForWeekKey(weekKey: string, nearISO: string): string | null {
+  const near = parseISODate(nearISO);
+  for (let off = 0; off <= 450; off++) {
+    for (const sign of off === 0 ? [1] : [1, -1]) {
+      const d = new Date(near.getTime() + sign * off * 86400000);
+      if (getWeekKey(d) === weekKey) return toISODate(d);
+    }
+  }
+  return null;
 }

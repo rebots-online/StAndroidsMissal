@@ -16,7 +16,7 @@ Phase 2, the whole Divine Office in the Extraordinary Form.
 
 | Entity | Type | File:line | Role | Key signatures / fields |
 |--------|------|-----------|------|------------------------|
-| `computus` | TS module | `src/core/calendar/computus.ts` | Butcher's Easter + DO week keys + season/color; perpetual universal calendar | `getEaster(year)`, `getWeekKey(date)`, `getSeason(weekKey)`, `seasonColor(weekKey, feast?)` |
+| `computus` | TS module | `src/core/calendar/computus.ts` | Butcher's Easter + DO week keys + season/color; perpetual universal calendar | `getEaster(year)`, `getWeekKey(date)`, `getSeason(weekKey)`, `seasonColor(weekKey, feast?)`, `dateForWeekKey(weekKey, nearISO)` |
 | `resolveWinner` | TS fn | `src/core/calendar/precedence.ts` | 1962 precedence: tempora vs sancti, privileged Lenten ferias, Sunday ranks | `resolveWinner(date, season, tempora, sancti[])` |
 | `MASS_ORDO` | TS const | `src/core/model/massOrdo.ts` | The skeleton of the Mass as subway stations (2 lines + branches) | `Station { id, latin, english, kind, line, sectionKey?, when? }` |
 | `OFFICE_CURSUS` | TS const | `src/core/model/officeCursus.ts` | Eight canonical hours as a loop line | `Hour { id, latin, english, parts[] }` |
@@ -29,12 +29,19 @@ Phase 2, the whole Divine Office in the Extraordinary Form.
 | `ingest-corpus` | Node script | `scripts/ingest-corpus.mjs` | HelloWord `liturgical.db` → `assets/missal.db` (graph+vector) | `node --experimental-strip-types scripts/ingest-corpus.mjs <src> <out>` |
 | `CorpusDb` | TS class | `src/core/data/corpusDb.ts` | Single query layer over sql.js — identical on web and Tauri (collinear rule) | `openCorpus(bytes)`, `getFileNode`, `getSanctiForDate`, `getMassTexts`, `similar`, `concordance`, `crossRefs` |
 | `loadCorpusBytes` | TS fn | `src/core/data/loadCorpus.ts` | Web: `fetch('/missal.db')` · Tauri: `invoke('load_corpus')` | `loadCorpusBytes(): Promise<Uint8Array>` |
+| `massTextsForDay` | TS fn | `src/core/data/liturgicalDay.ts` | Day's Mass propers with ferial delegation: Tempora feria with no Mass sections says the week's Sunday Mass ("de Dominica"), rows keep their real sourcePath | `massTextsForDay(db, day): { texts, sourcePath }` |
 | `annotations` | TS module | `src/core/annotations/store.ts` | Highlights + margin notes, localStorage v1 (schema mirrors future sync table) | `Annotation { id, nodeKey, quote, note, color, createdAt }` |
 | `SubwayMap` | React comp | `src/ui/SubwayMap.tsx` | SVG subway map of the whole Mass; stations clickable → reader | props: `day`, `onStation(id)` |
-| `ReaderView` | React comp | `src/ui/ReaderView.tsx` | Bilingual exegetical reader; selection → context menu | props: `day`, `focusSection` |
+| `MapStrip` | React comp | `src/ui/MapStrip.tsx` | Ever-present compact subway strip pinned under the masthead on every view (the HelloWord sticky-header mechanism, re-themed): Mass line normally, Office cursus when `view === 'office'`; index-based past/active/future states; click navigates | props: `day`, `view`, `activeStation`, `officeHour`, `onStation(s)`, `onHour(id)` |
+| `stripStations` | TS fn | `src/core/model/massOrdo.ts` | The strip's station sequence: both trunks (non-detail) with the season's active chant switch(es) inserted after the Epistle | `stripStations(season): Station[]` |
+| `stationForAnchor` | TS fn | `src/core/model/massOrdo.ts` | Inverse mapping reader anchor → station id for scroll-spy ("Introitus", "Oratio 2", "ordo:Canon" → station) | `stationForAnchor(anchor): string \| null` |
+| `STATION_INFO` / `HOUR_INFO` | TS consts | `src/core/model/stationLore.ts` | One-breath "what this is" + planned media asset per Mass station / canonical hour, feeding the hover flyout (asset inventory: `DOCS/MEDIA-PLAN.md`) | `StationInfo { about, media: { id, kind: 'video'\|'photo', caption } }` |
+| `stationIncipits` | TS fn | `src/core/data/stationIncipits.ts` | First words of the day's actual text per station — dual-language (Latin normative, English when present) | `stationIncipits(db, day): Map<stationId, Incipit { la, en }>` |
+| `MapFlyout` | React comp | `src/ui/MapFlyout.tsx` | Hover/focus flyout shared by the map strip and the full map: section title, dual-language incipit of the day, description, flagged media slot (never fabricated — "planned" until the asset exists) | props: `title, subtitle, incipit, about, media, x, y` |
+| `ReaderView` | React comp | `src/ui/ReaderView.tsx` | Bilingual exegetical reader; selection → context menu; IntersectionObserver scroll-spy reports the section under the reading band | props: `day`, `focusSection`, `onVisibleSection?(anchor)` |
 | `MeaningPanel` | React comp | `src/ui/MeaningPanel.tsx` | "Catholic meaning of &lt;selection&gt;": concordance + vector neighbours (+ LLM slot, Phase 2) | props: `term` |
 | `CalendarView` | React comp | `src/ui/CalendarView.tsx` | Perpetual month grid, computed on demand (never pre-generated) | props: `ym`, `onPick(date)` |
-| `OfficeView` | React comp | `src/ui/OfficeView.tsx` | Divine Office loop line (8 hours) | props: `day` |
+| `OfficeView` | React comp | `src/ui/OfficeView.tsx` | Divine Office loop line (8 hours); hour selection lifted to App (controlled) so the strip and the loop stay in sync | props: `day`, `hour`, `onHour(id)` |
 | `load_corpus` | Rust cmd | `src-tauri/src/lib.rs` | Returns embedded `missal.db` bytes to the shared sql.js layer | `#[tauri::command] load_corpus() -> Response` |
 
 ## Data Flow
@@ -79,11 +86,16 @@ Runtime day resolution is **computed on demand** (computus → `Tempora/<weekKey
 7. **One version string** (`0.1.0`) across package.json, tauri.conf.json, Cargo.toml —
    HelloWord's four-way version drift is not inherited.
 8. **Namespace** `mba.robin.standroidsmissal` per the all-projects namespace SOP.
+9. *(v0.2 addendum — the authoritative text lives in `DOCS/ARCHITECTURE.md` Decision 17.)*
+   **The map is ever-present**: persistent `MapStrip` shell element, HelloWord mechanism,
+   our theming, Office variant. The Phase-M entity rows in this file are a historical
+   convenience; `DOCS/ARCHITECTURE.md` §8 is the binding entity table.
 
 ## UI Surfaces (major-release inventory)
 
 | Surface | Route | What it shows |
 |---------|-------|---------------|
+| Map Strip | (persistent, all routes) | Compact always-visible subway strip under the masthead: the Mass line with you-are-here tracking (or the Office cursus in the office view); every station clickable → reader/hour |
 | Subway Map | `map` | Whole Mass as two lines — *Catechumens* and *Faithful* — with the Ember-Day loop between Oratio and Lectio, the seasonal Graduale/Alleluia/Tractus parallel tracks, Super populum spur, conditional Gloria/Credo stations; propers rendered as interchange stations colored by the day |
 | Reader | `reader` | Bilingual Latin/English propers of the actual day in canonical order; annotation highlights; selection context menu → Catholic meaning · similar passages · cross-references · annotate |
 | Meaning | (panel) | Concordance (FTS5) + vector-similar passages for the selected term; Phase-2 slot for the fine-tuned ecclesiastical LLM |

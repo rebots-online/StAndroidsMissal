@@ -14,7 +14,7 @@
 import { parseISODate, getWeekKey, getSeason, seasonColor, transferKeys, isLeapYear } from '../calendar/computus.ts';
 import { resolveWinner, type DayFileMeta } from '../calendar/precedence.ts';
 import type { CorpusDb } from './corpusDb.ts';
-import type { DayInfo } from './types.ts';
+import type { DayInfo, SectionText } from './types.ts';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -51,6 +51,25 @@ function yearTransfers(db: CorpusDb, year: number): Map<string, string> {
     apply(String(next), 2);
   }
   return map;
+}
+
+/**
+ * The day's Mass propers with ferial delegation: a Tempora feria whose file
+ * carries Office texts but no Mass sections says the preceding Sunday's Mass
+ * ("de Dominica praecedenti", Divinum Officium behavior). Every returned row
+ * keeps its real sourcePath, so delegated texts are labelled honestly.
+ */
+export function massTextsForDay(db: CorpusDb, day: DayInfo): { texts: SectionText[]; sourcePath: string } {
+  const primary = day.winner?.key ?? day.temporaPath;
+  let texts = db.getMassTexts(primary);
+  if (texts.length > 0) return { texts, sourcePath: primary };
+  const feria = primary.match(/^(Tempora\/.+)-[1-6]$/);
+  if (feria) {
+    const sunday = `${feria[1]}-0`;
+    texts = db.getMassTexts(sunday);
+    if (texts.length > 0) return { texts, sourcePath: sunday };
+  }
+  return { texts: [], sourcePath: primary };
 }
 
 export function resolveDay(db: CorpusDb, iso: string): DayInfo {

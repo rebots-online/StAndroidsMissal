@@ -29,23 +29,31 @@ sudo apt-get install -y \
 
 ### Android (APK)
 
-- Android SDK (cmdline-tools, platform-tools, platforms;android-34, build-tools;34.0.0)
-- `ANDROID_HOME` / `ANDROID_SDK_ROOT` environment variables
-- `cargo-ndk` (`cargo install cargo-ndk`)
-- Rust Android targets:
-  ```bash
-  rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
-  ```
+Already present on the operator workstation:
+- Android SDK at `~/Android/Sdk` (platforms 35/36, build-tools 34/35/36, platform-tools, NDK 27.0.12077973)
+- Rust Android targets: `aarch64-linux-android`, `armv7-linux-androideabi`, `i686-linux-android`, `x86_64-linux-android`
 
-If the Android SDK is not yet installed, the kickstart script handles it:
+Installed during this build:
+- `cargo-ndk` v4.1.2 (`cargo install cargo-ndk`)
+- `src-tauri/tauri` symlink → `../node_modules/.bin/tauri` (Gradle's Rust plugin calls `node tauri ...` from `src-tauri/`; the symlink makes the CLI resolvable)
+
+Environment variables required:
+```bash
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
+export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
+```
+
+The kickstart script handles all of this:
 ```bash
 ~/Admin-Manual/scripts/kickstart-tauri-build.sh android
 ```
 
-### Windows (NSIS)
+### Windows 11 x64
 
-Cross-compiled from Linux using `cargo-xwin`. Not yet tested for this project.
-Will be documented when first built.
+Cross-compiled from Linux using `cargo-xwin`. The verified artifact is the
+standalone PE executable. NSIS remains a Windows-host packaging layer because
+Ubuntu NSIS 3.09 cannot expand Tauri's generated `NSISCOMCALL` macro.
 
 ## Build steps
 
@@ -55,7 +63,25 @@ Will be documented when first built.
 npm install
 ```
 
-### 2. Rebuild the corpus database (optional — `assets/missal.db` is committed)
+### 2. Stamp version (exactly once per release invocation)
+
+Version follows the `MAJOR.MINOR.BUILD` scheme per `BUILD_CONVENTIONS.md`.
+Canonical source is `version.txt`. `version.json` is the runtime/build mirror.
+MINOR increments unconditionally and BUILD is computed as
+`epoch_minutes % 100000` at stamp time.
+
+```bash
+npm run stamp
+```
+
+This updates `version.json`, `package.json`, `package-lock.json`,
+`tauri.conf.json` (including `bundle.android.versionCode`), and `Cargo.toml`.
+`prebuild` only syncs the corpus; it never stamps.
+
+Never hand-edit version in a platform manifest. Change only MAJOR in
+`version.txt` at a milestone; the stamper owns MINOR and BUILD.
+
+### 3. Rebuild the corpus database (optional — `assets/missal.db` is committed)
 
 ```bash
 npm run ingest
@@ -95,16 +121,27 @@ The `prebuild` step syncs `assets/missal.db` → `public/missal.db`.
 ```
 
 Artifacts:
-- `src-tauri/target/release/bundle/deb/St. Android's Missal_0.1.0_amd64.deb`
-- `src-tauri/target/release/bundle/appimage/St. Android's Missal_0.1.0_amd64.AppImage`
+- `src-tauri/target/release/bundle/deb/St. Android's Missal_<version>_amd64.deb`
+- `src-tauri/target/release/bundle/appimage/St. Android's Missal_<version>_amd64.AppImage`
 
-#### Android (APK)
+#### Windows 11 x64 standalone
 
 ```bash
-./node_modules/.bin/tauri android build
+npm run build:windows:unstamped
 ```
 
-Artifact: `src-tauri/gen/android/app/build/outputs/apk/`
+Artifact: `src-tauri/target/x86_64-pc-windows-msvc/release/st-androids-missal.exe`.
+
+#### Android (production APK/AAB + preserved debug APK + symbols)
+
+The release driver signs production APK/AAB outputs from the Admin-Manual
+production keystore, preserves a separately signed debug APK, disables Cargo
+stripping only for the release-symbol pass, and packages all four ABI symbol
+tables.
+
+```bash
+npm run build:release
+```
 
 #### All platforms via kickstart script
 
@@ -127,15 +164,47 @@ npm run tauri dev     # desktop shell (launches Vite + Tauri window)
 
 The dev port is fixed at 5173 because Tauri's `devUrl` expects it.
 
+### 7. Collect artifacts to `dist/`
+
+After building, collect all artifacts with compliant filenames:
+
+```bash
+npm run collect-artifacts
+```
+
+This copies a complete build set to tracked, LFS-backed `dist/` with
+`standroidsmissal-v<MAJOR.MINOR.BUILD>-<qualifier>.<ext>` filenames. It fails
+closed on a missing member, validates embedded Android versions/signatures,
+hashes every final file, and emits JSON/XML release manifests.
+
+| Artifact | Filename pattern | Size |
+|----------|------------------|------|
+| deb | `standroidsmissal-v<ver>-linux-amd64.deb` |
+| AppImage | `standroidsmissal-v<ver>-linux-amd64.AppImage` |
+| Windows PE | `standroidsmissal-v<ver>-windows-x64-standalone.exe` |
+| Debug APK | `standroidsmissal-v<ver>-android-universal-debug.apk` |
+| Production APK | `standroidsmissal-v<ver>-android-universal-release.apk` |
+| Production AAB | `standroidsmissal-v<ver>-android-universal-release.aab` |
+| Native symbols | `standroidsmissal-v<ver>-android-native-debug-symbols.zip` |
+| Web/PWA | `standroidsmissal-v<ver>-web-pwa.zip` |
+
 ## Version
 
-One version string (`0.1.0`) across `package.json`, `src-tauri/tauri.conf.json`,
-`src-tauri/Cargo.toml` — keep them in lock-step.
+Follows `MAJOR.MINOR.BUILD` scheme per `BUILD_CONVENTIONS.md`.
+Canonical source: `version.txt`; `version.json` is the mirror. Run
+`npm run build:release` for the one-stamp complete artifact set. Never chain
+the stamping per-target entrypoints for one release.
+
+`versionCode` (Android) = `MAJOR * 100000 + MINOR` — never user-facing (CC7).
 
 ## Verified builds
 
 | Date | Version | Target | Result | Compile time |
 |------|---------|--------|--------|--------------|
-| 2026-07-11 | 0.1.0 | deb + AppImage | ✅ | 2m28s |
-| 2026-07-11 | 0.1.0 | web (tsc + vite) | ✅ | <1s + 738ms |
-| 2026-07-11 | 0.1.0 | tests (37/37) | ✅ | 269ms |
+| 2026-07-11 | 1.0.30227 | web (tsc + vite) | ✅ | <1s + 738ms |
+| 2026-07-11 | 1.0.30227 | tests (37/37) | ✅ | 269ms |
+| 2026-07-11 | 1.0.30227 | deb + AppImage | ✅ | 2m28s |
+| 2026-07-11 | 1.0.30227 | APK (universal, unsigned) | ✅ | ~10m (4 ABIs) |
+| 2026-07-11 | 1.0.30227 | AAB (universal) | ✅ | (same build) |
+| 2026-07-14 | 1.16.34594 | web + deb + AppImage + Windows x64 exe + debug APK + production APK/AAB + native symbols | ✅ | complete coherent set |
+| 2026-07-14 | 1.16.34594 | production APK on Android 35 emulator; 49.997s automated screencast | ✅ | cold launch 294ms |

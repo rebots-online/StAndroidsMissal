@@ -8,6 +8,12 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    watch: {
+      // The vendored corpus snapshot is ~90k flat-text files; watching it
+      // exhausts the OS inotify limit (ENOSPC) and it is never a dev input —
+      // the app only ever reads the ingested missal.db.
+      ignored: ['**/VENDORED/**', '**/src-tauri/**', '**/assets/**'],
+    },
   },
   envPrefix: ['VITE_', 'TAURI_'],
   build: {

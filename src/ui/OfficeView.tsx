@@ -6,8 +6,8 @@
  * canticles, orations — all real corpus rows, Latin normative).
  */
 
-import { useMemo, useState } from 'react';
-import { OFFICE_CURSUS, type Hour } from '../core/model/officeCursus.ts';
+import { useEffect, useMemo, useState } from 'react';
+import { OFFICE_CURSUS } from '../core/model/officeCursus.ts';
 import { buildHour, type OfficeEntry } from '../core/office/engine.ts';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { DayInfo } from '../core/data/types.ts';
@@ -15,6 +15,9 @@ import type { DayInfo } from '../core/data/types.ts';
 interface Props {
   db: CorpusDb;
   day: DayInfo | null;
+  /** Selected hour id — lifted to App so the map strip stays in sync. */
+  hour: string;
+  onHour: (id: string) => void;
 }
 
 /** Corpus text renderer: "!Citation" lines become styled rubric refs. */
@@ -40,11 +43,22 @@ function OfficeText({ text }: { text: string }) {
   );
 }
 
-export default function OfficeView({ db, day }: Props) {
-  const [sel, setSel] = useState<Hour>(OFFICE_CURSUS[1]); // Lauds by default
+export default function OfficeView({ db, day, hour, onHour }: Props) {
+  const sel = OFFICE_CURSUS.find((h) => h.id === hour) ?? OFFICE_CURSUS[1];
+  /** Accordion: folded section indices (per hour; reset on hour change). */
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const toggle = (i: number) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
   const R = 92;
   const CX = 130;
   const CY = 130;
+
+  useEffect(() => setCollapsed(new Set()), [sel.id, day?.date]);
 
   const entries: OfficeEntry[] = useMemo(() => {
     if (!day) return [];
@@ -74,7 +88,7 @@ export default function OfficeView({ db, day }: Props) {
             const ly = CY + (R + 24) * Math.sin(ang);
             const active = sel.id === h.id;
             return (
-              <g className="hour-node" key={h.id} onClick={() => setSel(h)}>
+              <g className="hour-node" key={h.id} onClick={() => onHour(h.id)}>
                 <circle cx={x} cy={y} r={18} fill="transparent" stroke="none" />
                 <circle cx={x} cy={y} r={active ? 10 : 7} fill="#fff" stroke={active ? 'var(--accent)' : 'var(--line-office)'} strokeWidth={active ? 4 : 3} />
                 <text x={lx} y={ly + 3} textAnchor="middle" fontSize={10} fontFamily="var(--serif)" fontStyle="italic" fill="var(--ink)">
@@ -109,11 +123,19 @@ export default function OfficeView({ db, day }: Props) {
               {e.title}
             </h2>
           ) : (
-            <section className="reader-section" key={i} data-nodekey={e.source}>
-              <div className="head">
+            <section className={`reader-section${collapsed.has(i) ? ' collapsed' : ''}`} key={i} data-nodekey={e.source}>
+              <div
+                className="head"
+                onClick={() => toggle(i)}
+                role="button"
+                aria-expanded={!collapsed.has(i)}
+                title={collapsed.has(i) ? 'Unfold section' : 'Fold section away'}
+              >
+                <span className="chev">{collapsed.has(i) ? '▸' : '▾'}</span>
                 <h3>{e.title}</h3>
                 <span className="src">{e.source.replace(/^section:/, '')}</span>
               </div>
+              {collapsed.has(i) ? null : (
               <div className="bilingual">
                 <div className="latin" lang="la">
                   <span className="lang-tag">Latine</span>
@@ -124,6 +146,7 @@ export default function OfficeView({ db, day }: Props) {
                   {e.english ? <OfficeText text={e.english} /> : <p style={{ opacity: 0.5 }}>—</p>}
                 </div>
               </div>
+              )}
             </section>
           ),
         )}

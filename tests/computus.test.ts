@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getEaster, getWeekKey, getSeason, seasonColor, parseISODate, toISODate } from '../src/core/calendar/computus.ts';
+import { getEaster, getWeekKey, getSeason, seasonColor, parseISODate, toISODate, dateForWeekKey } from '../src/core/calendar/computus.ts';
 import { resolveWinner } from '../src/core/calendar/precedence.ts';
 
 // Known Easter dates (Gregorian), including the earliest possible (Mar 22)
@@ -75,4 +75,18 @@ test('1960 occurrence: privileged Lenten ferias, Sundays, feasts of the Lord', (
   assert.equal(resolveWinner(0, 'Time after Pentecost', sunday, [maternity])?.key, 'Tempora/Pent20-0');
   assert.equal(resolveWinner(0, 'Time after Pentecost', sunday, [transfig])?.key, 'Sancti/08-06');
   assert.equal(resolveWinner(0, 'Time after Pentecost', sunday, [allSaints])?.key, 'Sancti/11-01');
+});
+
+test('feast-title color fallback: Precious Blood, Cross, Apostles, Cathedra', () => {
+  assert.equal(seasonColor('Pent05-3', 'Pretiosissimi Sanguinis Domini Nostri Jesu Christi'), 'red');
+  assert.equal(seasonColor('Pent14-2', 'In Exaltatione Sanctae Crucis'), 'red');
+  assert.equal(seasonColor('Pent06-4', 'S. N. Apostoli'), 'red');
+  assert.equal(seasonColor('Epi3-6', 'Cathedra S. Petri'), 'white');
+  assert.equal(seasonColor('Pent12-4', 'S. N. Virginis et Martyris'), 'red'); // martyr outranks virgin
+});
+
+test('dateForWeekKey inverts getWeekKey near a reference date', () => {
+  assert.equal(dateForWeekKey('Pent05-3', '2026-07-11'), '2026-07-01');
+  assert.equal(getWeekKey(parseISODate(dateForWeekKey('Adv1-0', '2026-07-11')!)), 'Adv1-0');
+  assert.equal(dateForWeekKey('NoSuchKey-9', '2026-07-11'), null);
 });

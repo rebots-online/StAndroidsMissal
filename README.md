@@ -50,19 +50,30 @@ npm run tauri dev     # desktop shell
 ## Native builds
 
 ```bash
-# Linux (deb + AppImage)
-./node_modules/.bin/tauri build --bundles deb,appimage
-
-# Android (APK) — requires ANDROID_HOME + cargo-ndk
-./node_modules/.bin/tauri android build
+# One stamp, then web + Linux + Windows x64 + Android production/debug/symbols
+export ANDROID_HOME="$HOME/Android/Sdk"
+npm run build:release
 
 # Or use the kickstart script (idempotent — installs missing prerequisites)
 ~/Admin-Manual/scripts/kickstart-tauri-build.sh linux
 ~/Admin-Manual/scripts/kickstart-tauri-build.sh android
 ```
 
-Artifacts land in `src-tauri/target/release/bundle/` (Linux) or
-`src-tauri/gen/android/app/build/outputs/apk/` (Android).
+Artifacts are collected in `dist/` with compliant filenames:
+```
+standroidsmissal-v1.16.34594-linux-amd64.deb
+standroidsmissal-v1.16.34594-linux-amd64.AppImage
+standroidsmissal-v1.16.34594-windows-x64-standalone.exe
+standroidsmissal-v1.16.34594-android-universal-release.apk
+standroidsmissal-v1.16.34594-android-universal-release.aab
+standroidsmissal-v1.16.34594-android-native-debug-symbols.zip
+```
+
+The release driver collects only after every platform succeeds and emits
+slug-first files plus SHA-256 JSON/XML manifests.
+
+Version follows `MAJOR.MINOR.BUILD` (per `BUILD_CONVENTIONS.md`).
+Canonical source: `version.txt`; `version.json` is the generated mirror.
 
 ## Documentation
 

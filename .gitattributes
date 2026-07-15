@@ -5,3 +5,18 @@ VENDORED/**/*.jpg binary
 VENDORED/**/*.gif binary
 VENDORED/**/*.ico binary
 assets/missal.db filter=lfs diff=lfs merge=lfs -text
+dist/**/*.db filter=lfs diff=lfs merge=lfs -text
+dist/*.db filter=lfs diff=lfs merge=lfs -text
+dist/**/*.apk filter=lfs diff=lfs merge=lfs -text
+dist/*.apk filter=lfs diff=lfs merge=lfs -text
+dist/**/*.aab filter=lfs diff=lfs merge=lfs -text
+dist/*.aab filter=lfs diff=lfs merge=lfs -text
+dist/**/*.deb filter=lfs diff=lfs merge=lfs -text
+dist/*.deb filter=lfs diff=lfs merge=lfs -text
+dist/**/*.AppImage filter=lfs diff=lfs merge=lfs -text
+dist/*.AppImage filter=lfs diff=lfs merge=lfs -text
+dist/**/*.exe filter=lfs diff=lfs merge=lfs -text
+dist/*.exe filter=lfs diff=lfs merge=lfs -text
+dist/**/*.zip filter=lfs diff=lfs merge=lfs -text
+dist/*.zip filter=lfs diff=lfs merge=lfs -text
+dist/**/*.mp4 filter=lfs diff=lfs merge=lfs -text

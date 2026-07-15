@@ -11,11 +11,16 @@
  * reader at that section.
  */
 
-import { useState } from 'react';
-import { trunkOf, branchOf, stationActive, type Station } from '../core/model/massOrdo.ts';
+import { useMemo, useRef, useState } from 'react';
+import { MASS_ORDO, trunkOf, branchOf, stationActive, type Station } from '../core/model/massOrdo.ts';
+import { STATION_INFO } from '../core/model/stationLore.ts';
+import { stationIncipits, type Incipit } from '../core/data/stationIncipits.ts';
+import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { DayInfo } from '../core/data/types.ts';
+import MapFlyout, { type FlyoutData } from './MapFlyout.tsx';
 
 interface Props {
+  db: CorpusDb | null;
   day: DayInfo | null;
   onStation: (station: Station) => void;
 }
@@ -53,7 +58,7 @@ function StationRow({
     <button
       className={`vstation${active ? '' : ' inactive'}${small ? ' small' : ''}`}
       onClick={() => active && onStation(s)}
-      title={s.note ?? undefined}
+      data-sid={s.id}
       disabled={!active}
     >
       <Dot s={s} accent={accent} />
@@ -93,10 +98,40 @@ function Branch({
   );
 }
 
-export default function SubwayMap({ day, onStation }: Props) {
+export default function SubwayMap({ db, day, onStation }: Props) {
   const accent = ACCENTS[String(day?.color ?? 'green')] ?? '#3f7a52';
   const season = day?.season ?? 'Time after Pentecost';
   const [full, setFull] = useState(false);
+  const [flyout, setFlyout] = useState<FlyoutData | null>(null);
+  const hoverSid = useRef<string | null>(null);
+
+  const incipits = useMemo(
+    () => (db && day ? stationIncipits(db, day) : new Map<string, Incipit>()),
+    [db, day],
+  );
+
+  // Event delegation: one hover handler for every station row, trunk or branch.
+  function onOver(e: React.MouseEvent) {
+    const btn = (e.target as HTMLElement).closest('button.vstation') as HTMLElement | null;
+    const sid = btn?.dataset.sid ?? null;
+    if (sid === hoverSid.current) return;
+    hoverSid.current = sid;
+    if (!sid || !btn) {
+      setFlyout(null);
+      return;
+    }
+    const s = MASS_ORDO.find((x) => x.id === sid);
+    if (!s) return;
+    const r = btn.getBoundingClientRect();
+    setFlyout({
+      title: s.latin,
+      subtitle: s.english + (s.note ? ` — ${s.note}` : ''),
+      incipit: incipits.get(sid) ?? null,
+      about: STATION_INFO[sid]?.about ?? null,
+      x: Math.min(r.left + 64, window.innerWidth - 340),
+      y: r.bottom + 6,
+    });
+  }
 
   const filterDetail = (s: Station) => full || !s.detail;
   const cat = trunkOf('catechumens').filter(filterDetail);
@@ -120,7 +155,8 @@ export default function SubwayMap({ day, onStation }: Props) {
   );
 
   return (
-    <div className="vmap">
+    <div className="vmap" onMouseOver={onOver} onMouseLeave={() => { hoverSid.current = null; setFlyout(null); }}>
+      {flyout && <MapFlyout {...flyout} />}
       <div className="vmap-toolbar">
         <span className="vmap-hint">the whole Mass, one line, top to bottom</span>
         <button className="vmap-toggle" onClick={() => setFull(!full)}>
