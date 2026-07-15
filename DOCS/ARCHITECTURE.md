@@ -674,6 +674,146 @@ gate the 76 strict-`tsc` errors close on. No platform build and no real stamp ru
 BT.2 and BT.2R remain non-✅ until BT.2R2 is `[X]`/✅ and every Verify/Accept
 command exits 0.
 
+### 9.10 Release-state controlled interrupt/resume (BT.2R3 — mandatory correction)
+
+The §9.9 BT.2R2 contract (declaration-typed surface, hermetic unified runner,
+real-CLI-spawned tests, byte-identical nonmutation, gitignored lock) is
+necessary but not sufficient. Fresh Phase verification (2026-07-15) shows the
+shipped BT.2R2 stub `runCommand` returns `0` unconditionally in the
+`RELEASE_STATE_RUNNER=stub` + `RELEASE_STATE_FIXTURE` branch — there is no
+mechanism by which a stage can fail under the stub, so no interruption can be
+produced. The committed "two-call interrupt/resume" test spawns exactly one
+successful CLI invocation (`code === 0`), sets an `INTERRUPT_AT` environment
+variable that no production code reads, and records its own admission in
+comments ("The stub mode doesn't actually interrupt"; "we simulate this by…"):
+there is no second spawn, no nonzero exit, and no production-written partial
+lock. The resume idempotency §9.9 claims to prove is therefore unproven — no
+test demonstrates that a real production-written partial `release.lock` survives
+a real nonzero interruption and is resumed without re-stamping. BT.2R3 is the
+mandatory correction: it adds a deterministic, production-owned
+controlled-interrupt protocol to the stub runner and a committed two-real-spawn
+test that proves one stamp and every stage exactly once across two actual CLI
+processes. BT.2 (`[X]`), BT.2R (`[X]`), and BT.2R2 (`[X]`) cannot receive ✅
+until BT.2R3 is `[X]`/✅.
+
+**Scope — strictly hermetic; normal production unchanged.** The interrupt
+protocol is honoured exclusively inside the existing `isStub && fixtureDir`
+branch of `runCommand` (`scripts/release-state.mjs:208`). It is selected by one
+new environment selector read from `deps.env` / `process.env`:
+`RELEASE_STATE_INTERRUPT_AT=<canonical-stage>`. The selector is ignored entirely
+unless `RELEASE_STATE_RUNNER=stub` and a valid `RELEASE_STATE_FIXTURE=<dir>` are
+both set; with neither (the real `build-release.sh` default) the selector has no
+effect and normal production release behaviour is byte-identical to before. If
+the selector is set inside stub+fixture mode but its value is not one of the
+eight canonical `STAGE_ORDER` members, production fails closed before any command
+runs.
+
+**One-shot receipt state.** A fourth artifact joins the fixture directory:
+alongside `release.lock` and `run-command.log`, production owns
+`interrupt-receipt.json` (`INTERRUPT_RECEIPT_FILENAME`). The receipt is the
+single source of truth that the configured target has already been
+interrupted-and-logged; it is written by production, never by the test. Its
+shape is the strict interface
+`InterruptReceipt { target: string; consumed: true; writtenAt: string }`, where
+`target` is the canonical stage equal to the `RELEASE_STATE_INTERRUPT_AT` value,
+`consumed` is the literal `true` marker, and `writtenAt` is the ISO 8601
+timestamp production stamped at write time.
+
+**Deterministic interrupt semantics (first reach of the target).** Inside the
+stub branch, when `name === RELEASE_STATE_INTERRUPT_AT` and no valid receipt
+exists (`readInterruptReceipt(fixtureDir)` returns `null`), production (i)
+appends `${name}\n` to the shared `run-command.log` — the command genuinely
+executed, (ii) atomically writes `interrupt-receipt.json` via
+`writeInterruptReceipt(name, fixtureDir)` (temp-file + `renameSync`, mirroring
+`writeLock` at `:141`), and (iii) returns the named nonzero constant
+`INTERRUPT_EXIT_CODE` (`70`). `runReleaseStage` (`:298`) observes the nonzero
+return and throws before `markStageComplete` (`:152`) runs, so the target is NOT
+appended to `release.lock.completedStages`; `main`'s rejection propagates to the
+`isMain` `.catch` handler (`:514`) and the process exits nonzero. End state of
+call 1: process exit nonzero; `release.lock.completedStages` contains exactly
+the stages that completed before the target; `run-command.log` ends with the
+target line; `interrupt-receipt.json` exists and is valid.
+
+**Deterministic resume semantics (second reach of the target).** Call 2 is
+spawned against the SAME fixture with the SAME env (`RELEASE_STATE_RUNNER=stub`,
+`RELEASE_STATE_FIXTURE`, `RELEASE_STATE_INTERRUPT_AT`) and the UNTOUCHED
+production-written lock and receipt; it does not stamp (the lock validates and
+resumes). Because the target was the stage at which call 1 was interrupted, it
+is the first member of `pendingStages`, so it is the first `runCommand`
+invocation of call 2. When `name === RELEASE_STATE_INTERRUPT_AT` and a valid
+receipt exists with `receipt.target === RELEASE_STATE_INTERRUPT_AT`, production
+recognises the consumed receipt, returns `0` for that already-logged target
+WITHOUT appending to `run-command.log` a second time, and `runReleaseStage`
+marks the target complete and `main` continues the later stages. The receipt is
+one-shot and target-specific: it is consumed exactly once and only matches its
+own target.
+
+**Combined invariant across exactly two spawned CLI processes.** After call 1
+(nonzero exit) and call 2 (zero exit) against one shared fixture — with no
+manual lock creation/editing, no log reset, no second fixture, and no test-only
+reimplementation — the single shared `run-command.log` reads exactly `stamp`,
+then every canonical stage in `STAGE_ORDER` order: `stamp` once and each
+canonical stage exactly once total, and the archived lock records all eight
+stages complete.
+
+**Explicit failure semantics (fail closed, no lock mutation).** A corrupt
+receipt (file present but invalid JSON, or structurally not `InterruptReceipt`)
+or a mismatched receipt (`receipt.target !== RELEASE_STATE_INTERRUPT_AT`) causes
+production to return the named nonzero `RECEIPT_MISMATCH_EXIT_CODE` (`71`) at the
+moment the target is first reached in the run; because the target is the first
+pending stage on a proper resume, `markStageComplete` has not yet run, so
+`release.lock` is left byte-identical and `interrupt-receipt.json` is left
+byte-identical. An invalid `RELEASE_STATE_INTERRUPT_AT` value (not a canonical
+stage) fails closed with the same `RECEIPT_MISMATCH_EXIT_CODE` on the first
+`runCommand` invocation, before any stamp or stage. The existing
+corrupt/version/`sourceHead` lock byte-identical failure paths (§9.9) and the
+nonmutating `--help`/`-h` path remain binding and unchanged.
+
+**Declaration surface — strict typed additions.** `scripts/release-state.d.mts`
+preserves every existing declaration and gains strict, explicit (non-inferred)
+declarations for the new entities: the `InterruptReceipt` interface, the
+`INTERRUPT_RECEIPT_FILENAME` / `INTERRUPT_EXIT_CODE` / `RECEIPT_MISMATCH_EXIT_CODE`
+constants, the `getReceiptPath` / `readInterruptReceipt` / `writeInterruptReceipt`
+function signatures, and documentation of the `RELEASE_STATE_INTERRUPT_AT` env
+selector on `ReleaseDeps.env`. The `.mjs` remains plain Node ESM and the single
+behaviour source. The forced strict `tsc` gate (§9.9) compiles the updated
+declaration tree and `tests/releaseState.test.ts` to zero errors.
+
+**Committed test — exactly two real spawns, no stand-ins.** The shipped fake
+"two-call interrupt/resume" test (which spawns once, asserts `code === 0`, and
+describes resume in comments) is deleted. Its replacement spawns two real
+`node scripts/release-state.mjs` processes against one shared fixture: call 1
+sets `RELEASE_STATE_RUNNER=stub`, `RELEASE_STATE_FIXTURE`, and
+`RELEASE_STATE_INTERRUPT_AT=linux` and asserts a nonzero process exit plus a
+production-written partial lock whose `completedStages` ends before `linux` and a
+production-written `interrupt-receipt.json`; call 2 uses the same
+env/fixture/lock/receipt and asserts a zero exit. After both spawns, the test
+asserts receipt continuity (the same file, unchanged by call 2) and that the
+single shared `run-command.log` is exactly
+`['stamp','test','web','linux','windows','android-debug','android-release','symbols','collect']`
+— `stamp` once, every canonical stage exactly once, in order. Two further
+real-spawn tests assert the corrupt-receipt and mismatched-receipt fail-closed
+paths leave `release.lock` byte-identical. No preseeded/manual lock mutation, no
+log reset, no second fixture, no literal stand-in, no custom test-only
+reimplementation.
+
+| Entity | Type | File:line | Role | Key signatures / fields |
+|---|---|---|---|---|
+| `RELEASE_STATE_INTERRUPT_AT` | env selector | `scripts/release-state.mjs` (`runCommand` stub branch, `:208`) | selects the canonical target stage at which the hermetic stub interrupts; honoured ONLY when `RELEASE_STATE_RUNNER=stub` + `RELEASE_STATE_FIXTURE` are set; ignored in real `build-release.sh` mode | read from `deps.env` / `process.env`; value must be a member of `STAGE_ORDER`; default unset |
+| `InterruptReceipt` | interface | `scripts/release-state.d.mts` (new) + `scripts/release-state.mjs` (JSDoc `@typedef`) | the one-shot consumed-receipt shape written by production | `{ target: string; consumed: true; writtenAt: string }` |
+| `INTERRUPT_RECEIPT_FILENAME` | const | `scripts/release-state.mjs` (new, near `STAGE_ORDER` `:186`) + `.d.mts` | the receipt filename inside the fixture dir | `'interrupt-receipt.json'` |
+| `INTERRUPT_EXIT_CODE` | const | `scripts/release-state.mjs` (new) + `.d.mts` | named nonzero code returned on first reach of the target (controlled interrupt) | `70` |
+| `RECEIPT_MISMATCH_EXIT_CODE` | const | `scripts/release-state.mjs` (new) + `.d.mts` | named nonzero code for corrupt/mismatched receipt or invalid target (fail closed) | `71` |
+| `getReceiptPath` | fn | `scripts/release-state.mjs` (new) + `.d.mts` | resolves the receipt path inside the fixture | `(fixtureDir: string): string` |
+| `readInterruptReceipt` | fn | `scripts/release-state.mjs` (new) + `.d.mts` | reads + validates the receipt; `null` if absent; throws on corrupt | `(fixtureDir: string): InterruptReceipt \| null` |
+| `writeInterruptReceipt` | fn | `scripts/release-state.mjs` (new) + `.d.mts` | atomically writes the consumed receipt (temp + `renameSync`) | `(target: string, fixtureDir: string): void` |
+| `runCommand` (stub branch) | fn | `scripts/release-state.mjs:196` (stub branch `:208–215` extended) | gains the controlled-interrupt protocol inside `isStub && fixtureDir`; real-`execSync` and injected-`deps.runCommand` branches unchanged | `runCommand(name: string, deps?: ReleaseDeps, root?: string): Promise<number>` (signature unchanged) |
+| two-spawn test | test | `tests/releaseState.test.ts` (replaces `:676–714`) | proves one stamp + each stage once across two real CLI spawns; corrupt + mismatched receipt fail-closed | `describe('BT.2R3 controlled interrupt/resume (two real CLI spawns)')`; its `'two real CLI spawns prove controlled interrupt then resume (one stamp, each stage once)'`, `'corrupt interrupt receipt fails closed without mutating the lock'`, `'mismatched interrupt receipt fails closed without mutating the lock'` |
+
+BT.2, BT.2R, and BT.2R2 remain non-✅ until BT.2R3 is `[X]`/✅, every
+Verify/Accept command exits 0, and a fresh independent (GLM-5.2) replay of the
+exact gates semantically confirms production is the sole behaviour source.
+
 **Attestation (2026-07-14, fourth re-attestation).** Amended per operator direction (this session): §7.7 presentation & meaning plane added (v0.5, labelled P-T in the entity table) — `sanctissimissa` theme family (7th family; decision 13 + open question 6 amended; text-role tokens `--rubric`/`--dialogue-p`/`--dialogue-s` with render-level `dialogueClass`), interleaved bilingual mode (`BilingualText` extraction, selection-range echo), similarity UX (clause focus `bestClause`, `SimilarityGlyph`, `IMAGERY_CONCEPTS`), Scripture Atlas (imagery/scenario + Gospel-parallels navigation, `PERICOPES` spine), generalized interpretive layer (`ingest-commentary.mjs`, `COMMENTS_ON` edges; Haydock + Catena Aurea this wave, 13-source PD roadmap), and the journal sidecar workspace (`JournalSidecar`/`ConnectionsPanel`, capture + highlight-both-panes context actions, destinations → exposure/selectors). Open question 8 amended with v0.5 shared-file ownership; open question 9 added (parallels data source).
 
 **Attestation.** This document is complete, stub-free, and depicts the end-state production release: every named entity carries an exact identifier, target `file:line`, role, and signature; no TBD markers remain; open questions are resolved above. Shipped rows were verified against the working tree via codegraph on the date below; planned rows are normative targets and are cited verbatim by `CHECKLIST.md` stanzas (v0.2 wave, O-stanzas, B-stanzas, and the v0.5 BJ–BO stanzas). Re-attested after adding §7.7 + the P-T entity rows.
