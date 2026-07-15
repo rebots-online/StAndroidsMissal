@@ -15,7 +15,7 @@ import type { SelectionAction } from './ReaderView.tsx';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 import { verseHash } from '../core/share/shareLink.ts';
 import { alignSelection, alignPhrase, wordEcho, wordAtPoint, type WordEchoResult, type PhraseSelectionInput } from '../core/text/align.ts';
-import { useNarrow } from './BilingualText.tsx';
+import { useNarrow, type SelectionEcho } from './BilingualText.tsx';
 import ScriptureAtlas, { type AtlasMode } from './ScriptureAtlas.tsx';
 
 interface Props {
@@ -64,6 +64,35 @@ function markedText(text: string, quotes: string[]): (string | ReactElement)[] {
   return rendered;
 }
 
+function renderWithSelectionEcho(
+  text: string | null,
+  quotes: string[],
+  verseIndex: number,
+  lang: 'latin' | 'english',
+  livePhraseEcho: SelectionEcho | null
+): (string | ReactElement)[] {
+  if (!text) return [<span style={{ opacity: 0.5 }}>—</span>];
+  
+  // Check if there's a selection echo for this verse and language
+  const echo = livePhraseEcho?.line === verseIndex && livePhraseEcho.lang === lang ? livePhraseEcho : null;
+  
+  if (!echo) {
+    return markedText(text, quotes);
+  }
+  
+  // Split text into before, selected, and after parts
+  const before = text.slice(0, echo.start);
+  const selected = text.slice(echo.start, echo.end);
+  const after = text.slice(echo.end);
+  
+  // Render each part with quotes, wrap the selected part in a mark
+  return [
+    ...markedText(before, quotes),
+    <mark key="selection-echo" className="selection-echo">{markedText(selected, quotes)}</mark>,
+    ...markedText(after, quotes),
+  ];
+}
+
 export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar, onCapture, onOpenKey }: Props) {
   const books = useMemo(() => db.getBooks(), [db]);
   const [book, setBook] = useState<string | null>(null);
@@ -77,6 +106,8 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
   const [atlasMode, setAtlasMode] = useState<AtlasMode>('canonical');
   /** Verse echo: hover/tap/selection lights the aligned verse in BOTH panes. */
   const [echoVerse, setEchoVerse] = useState<number | null>(null);
+  /** Live phrase echo: exact character-range reciprocal echo from alignPhrase. */
+  const [livePhraseEcho, setLivePhraseEcho] = useState<SelectionEcho | null>(null);
   const [callout, setCallout] = useState<{ x: number; y: number; echo: WordEchoResult } | null>(null);
   const echoCache = useRef(new Map<string, WordEchoResult | null>());
   const lastWord = useRef<string | null>(null);
@@ -210,7 +241,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
     const onSel = () => {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !rootRef.current) {
-        setEchoVerse(null);
+        setLivePhraseEcho(null);
         return;
       }
 
@@ -282,15 +313,23 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
             
             const aligned = alignPhrase(db, { latin: v.latin, english: v.english }, selection);
             if (aligned && aligned.dstLine) {
-              setEchoVerse(anchorInfo.verse);
+              // Consume dstStart/dstEnd from alignment result
+              setLivePhraseEcho({
+                lang: aligned.srcLang === 'latin' ? 'english' : 'latin',
+                line: aligned.idx,
+                start: aligned.dstStart,
+                end: aligned.dstEnd,
+              });
             } else {
-              setEchoVerse(anchorInfo.verse);
+              setLivePhraseEcho(null);
             }
           } else {
-            setEchoVerse(anchorInfo.verse);
+            setLivePhraseEcho(null);
           }
         }
       } else {
+        // Clear phrase echo on cross-line or cross-language selections
+        setLivePhraseEcho(null);
         // Still light up the verse echo for cross-line selections
         if (anchorInfo) {
           setEchoVerse(anchorInfo.verse);
@@ -417,6 +456,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
       onPointerLeave={() => {
         lastWord.current = null;
         setCallout(null);
+        setLivePhraseEcho(null);
       }}
       onClick={verseFromEvent}
     >
@@ -468,6 +508,7 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
               const n = Number(v.nodeKey.split('/').pop());
               const echoed = echoVerse === n;
               const quotes = verseQuotes.get(v.nodeKey) ?? [];
+              const verseIndex = n - 1; // Convert to 0-based line index
               return (
                 <p
                   key={v.nodeKey}
@@ -475,12 +516,12 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
                   data-verse={n}
                   className={`bible-verse il-pair${focusVerse === n ? ' focus' : ''}${echoed ? ' xlate-echo' : ''}`}
                 >
-                  <span className={`il-la${echoed ? ' xlate-echo' : ''}`} data-lang="la" lang="la">
-                    <sup>{n}</sup> {v.latin ? markedText(v.latin, quotes) : <span style={{ opacity: 0.5 }}>—</span>}
+                  <span className={`il-la${echoed ? ' xlate-echo' : ''}`} data-lang="la" lang="la" data-line={verseIndex}>
+                    <sup>{n}</sup> {renderWithSelectionEcho(v.latin, quotes, verseIndex, 'latin', livePhraseEcho)}
                   </span>
                   {v.english !== null && (
-                    <span className={`il-en${echoed ? ' xlate-echo' : ''}`} data-lang="en" lang="en">
-                      {markedText(v.english, quotes)}
+                    <span className={`il-en${echoed ? ' xlate-echo' : ''}`} data-lang="en" lang="en" data-line={verseIndex}>
+                      {renderWithSelectionEcho(v.english, quotes, verseIndex, 'english', livePhraseEcho)}
                     </span>
                   )}
                 </p>
@@ -494,9 +535,10 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
             {verses.map((v) => {
               const n = Number(v.nodeKey.split('/').pop());
               const quotes = verseQuotes.get(v.nodeKey) ?? [];
+              const verseIndex = n - 1; // Convert to 0-based line index
               return (
                 <p key={v.nodeKey} data-nodekey={v.nodeKey} data-verse={n} className={`bible-verse${focusVerse === n ? ' focus' : ''}${echoVerse === n ? ' xlate-echo' : ''}`}>
-                  <sup>{n}</sup> {v.latin ? markedText(v.latin, quotes) : <span style={{ opacity: 0.5 }}>—</span>}
+                  <sup>{n}</sup> {renderWithSelectionEcho(v.latin, quotes, verseIndex, 'latin', livePhraseEcho)}
                 </p>
               );
             })}
@@ -506,9 +548,10 @@ export default function BibleView({ db, focusRef, focusNonce, onAction, sidecar,
             {verses.map((v) => {
               const n = Number(v.nodeKey.split('/').pop());
               const quotes = verseQuotes.get(v.nodeKey) ?? [];
+              const verseIndex = n - 1; // Convert to 0-based line index
               return (
                 <p key={v.nodeKey} data-nodekey={v.nodeKey} data-verse={n} className={`bible-verse${focusVerse === n ? ' focus' : ''}${echoVerse === n ? ' xlate-echo' : ''}`}>
-                  <sup>{n}</sup> {v.english ? markedText(v.english, quotes) : <span style={{ opacity: 0.5 }}>—</span>}
+                  <sup>{n}</sup> {renderWithSelectionEcho(v.english, quotes, verseIndex, 'english', livePhraseEcho)}
                 </p>
               );
             })}

@@ -142,20 +142,6 @@ export function wordEcho(db: EchoDb, block: { latin: string | null; english: str
   return { word: display, line: aligned.dstLine, srcLang: aligned.srcLang };
 }
 
-/** Word under a pointer event, via caret hit-testing (no per-word DOM spans). */
-export interface PhraseAlignment {
-  srcLang: 'latin' | 'english';
-  idx: number;
-  srcLine: string;
-  srcStart: number;
-  srcEnd: number;
-  dstLine: string;
-  dstStart: number;
-  dstEnd: number;
-  countsMatch: boolean;
-  method: 'attested-anchors' | 'positional-fallback';
-}
-
 export function alignPhrase(
   db: EchoDb,
   block: { latin: string | null; english: string | null },
