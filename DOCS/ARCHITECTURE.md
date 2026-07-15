@@ -554,7 +554,11 @@ tests import the exact implementation. `expandHomePath(value, home)` replaces
 the nonexistent Node API `path.expanduser`; it handles `~` and `~/...`
 deterministically and rejects unsupported `~user` syntax. `--help` is a true
 nonmutating path. Tests spawn the real CLI in a hermetic fixture and must never
-reimplement lock logic.
+reimplement lock logic. §9.9 (BT.2R2) is the mandatory strict acceptance gate
+that extends this contract: the BT.2R test must pass a forced strict `tsc`,
+exercise `main` by import and by real-CLI spawn on every path (no literal
+stand-ins), prove one stub stamp across two real calls, keep corrupt/mismatched
+locks byte-identical, and gitignore `release.lock`.
 
 ### 9.8 BibleView reciprocal range echo (BS.1R2 — mandatory correction)
 
@@ -569,6 +573,76 @@ The §9.1 echo contract is binding for **every** bilingual reader surface, not o
 **Duplicate interface.** `src/core/text/align.ts` keeps exactly one `interface PhraseAlignment` (the §9.1 normative declaration); the redundant duplicate declaration is removed. No signature changes.
 
 **Verification is fully automated and idempotent (no manual dependency).** A focused source-contract test, `tests/bibleEchoContract.test.ts`, reads `src/core/text/align.ts` and `src/ui/BibleView.tsx` as text and **fails** if any of these regress: more than one `interface PhraseAlignment` (or `interface PhraseSelectionInput`) survives; `BibleView` does not import `SelectionEcho`; `livePhraseEcho` is not `SelectionEcho | null`; the `alignPhrase(...)` result's `.dstStart` / `.dstEnd` are not referenced (discarded); the reciprocal destination range is routed only through `echoVerse`; or `selectionEcho={livePhraseEcho` is absent from any bilingual render pane (Latin column, English column, interleaved). The same test also exercises `alignPhrase` behaviorally with a stub `EchoDb` for Latin→English and English→Latin over forward / reverse endpoints, repeated source phrases, one-character and partial-word boundary expansion and contraction, and asserts every returned `dstStart` / `dstEnd` lies inside `dstLine` and round-trips to the reported destination substring, with a full source line mapping to the full destination line but a sub-phrase never returning the whole line. BS.1 and BS.1R cannot be marked ✅ (and BS.1R's existing `[X]` cannot advance to ✅) until BS.1R2 is `[X]` / ✅ and every Verify / Accept command exits 0. The fresh-verifier browser protocol of §10.4 remains optional confirmation, not an Accept gate.
+
+### 9.9 Release-state strict real-CLI acceptance (BT.2R2)
+
+The §9.7 BT.2R contract (plain-ESM executable, JSDoc `ReleaseState`,
+`expandHomePath`, nonmutating `--help`, real-CLI-spawned tests) is necessary but
+not sufficient. Fresh Phase verification (2026-07-15) shows the shipped BT.2R
+test fails a forced strict `tsc` with **76 errors**, `main` is exported but
+**never called** on any path, the Fresh/Stage test cases are **literal
+stand-ins** that reimplement lock/stage behaviour instead of importing or
+spawning production code, **no test proves** two real CLI invocations consume
+one stamp and run each stage exactly once, and `release.lock` is **not
+gitignored** (the tool writes a tracked file). BT.2R2 is the mandatory
+acceptance gate: BT.2 (`[X]`) and BT.2R (`[X]`) cannot receive ✅ until it lands.
+
+**Declaration strategy — exact typed exports for the actual production module.**
+`scripts/release-state.d.mts` is the exact, hand-authored TypeScript declaration
+companion to `scripts/release-state.mjs`: TypeScript resolves the `.mjs`
+import's types from this sibling `.d.mts` (same basename; `node16`/`nodenext`
+module resolution). Every public symbol carries **strict, explicit (non-inferred)
+types** — no `any`, no implicit returns: the `ReleaseState` lock shape
+`{ version: string; sourceHead: string; startedAt: string; completedStages: string[] }`,
+`expandHomePath(value: string, home?: string): string`, `runReleaseStage(...)`
+with explicit param/return types, the lock read/validate/write functions,
+archive/restart, `interface ReleaseDeps`, and
+`main(argv: readonly string[], deps?: ReleaseDeps): Promise<number>`. The `.mjs`
+remains plain Node ESM (no TypeScript-only syntax) and is the single behaviour
+source.
+
+**Hermetic dependency- and env-selected command runner.** `main` resolves the
+stage command runner from injected `deps` (`ReleaseDeps.runStage`) when present,
+otherwise from the environment (an env-selected selector whose default resolves
+to the real `build-release.sh` stage commands). The whole surface — fresh,
+interrupted, resumed, mismatched, corrupt, `--restart`, completed/archive, and
+`--help`/`-h` — is reachable through this one injected/env runner, so tests stub
+stages and never run a real platform build, a real `npm run stamp`, or a real
+collect/archive. The `isMain` guard keeps import side-effect-free.
+
+**Two exercising modes, no literal stand-ins.** The test never reimplements
+lock/stage logic: (1) it **imports and calls the production `main`** directly
+with injected stub `deps` for unit cases over every branch; (2) it **spawns the
+real CLI** (`node scripts/release-state.mjs`) against a hermetic fixture
+directory with an env-selected stub runner for help/fresh/interrupted/resumed/
+mismatched/corrupt/restart/completed-archive paths. At least one assertion makes
+**two real CLI invocations** that consume exactly one stub stamp and run each
+stage exactly once across the two (resume one-stamp/two-call idempotency).
+
+**Byte-identical nonmutation on failure.** A corrupt or version-mismatched lock
+causes fail-closed behaviour and leaves the lock file byte-identical — never
+overwritten, never moved. A test records the fixture lock bytes, runs the failing
+path, and asserts they are unchanged.
+
+**`release.lock` is gitignored.** `.gitignore` carries `release.lock`; the resume
+lock is never tracked. `git check-ignore release.lock` exits 0.
+
+**Verification is automated, manual-free, and idempotent, including a forced
+strict `tsc`.** Every Verify/Accept clause is a repeatable shell command
+depending on no human step, and the suite includes a forced strict type-check of
+the test and declaration tree (compiling `tests/releaseState.test.ts` through
+`scripts/release-state.d.mts` under `strict`) that exits 0 with zero errors — the
+gate the 76 strict-`tsc` errors close on. No platform build and no real stamp run.
+
+| Entity | Type | File:line | Role | Key signatures / fields |
+|---|---|---|---|---|
+| `scripts/release-state.d.mts` | TS declaration | `scripts/release-state.d.mts:1` | exact, hand-authored typed companion to the `.mjs` production module; strict non-inferred declarations resolved via `node16` module resolution | declares `ReleaseState`, `expandHomePath`, `runReleaseStage`, lock read/validate/write, archive/restart, `ReleaseDeps`, `main` |
+| `ReleaseDeps` | interface | `scripts/release-state.d.mts` | hermetic dependency / env-selected stage command runner injected into `main` | `{ runStage?: (name: string) => Promise<number \| void>; env?: Record<string, string \| undefined>; cwd?: string; ... }` |
+| `main` | fn | `scripts/release-state.mjs` | single entry over every path; `isMain` guard; imported-and-called by tests AND spawned as the real CLI | `main(argv: readonly string[], deps?: ReleaseDeps): Promise<number>` |
+| `release.lock` ignore | config | `.gitignore` | the resume lock is never tracked | `git check-ignore release.lock` exits 0 |
+
+BT.2 and BT.2R remain non-✅ until BT.2R2 is `[X]`/✅ and every Verify/Accept
+command exits 0.
 
 **Attestation (2026-07-14, fourth re-attestation).** Amended per operator direction (this session): §7.7 presentation & meaning plane added (v0.5, labelled P-T in the entity table) — `sanctissimissa` theme family (7th family; decision 13 + open question 6 amended; text-role tokens `--rubric`/`--dialogue-p`/`--dialogue-s` with render-level `dialogueClass`), interleaved bilingual mode (`BilingualText` extraction, selection-range echo), similarity UX (clause focus `bestClause`, `SimilarityGlyph`, `IMAGERY_CONCEPTS`), Scripture Atlas (imagery/scenario + Gospel-parallels navigation, `PERICOPES` spine), generalized interpretive layer (`ingest-commentary.mjs`, `COMMENTS_ON` edges; Haydock + Catena Aurea this wave, 13-source PD roadmap), and the journal sidecar workspace (`JournalSidecar`/`ConnectionsPanel`, capture + highlight-both-panes context actions, destinations → exposure/selectors). Open question 8 amended with v0.5 shared-file ownership; open question 9 added (parallels data source).
 
