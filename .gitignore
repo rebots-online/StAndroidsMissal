@@ -17,3 +17,4 @@ src-tauri/gen/schemas/
 **/*.keystore
 **/*.jks
 **/*.p12
+release.lock

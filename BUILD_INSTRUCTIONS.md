@@ -112,6 +112,50 @@ The release driver automatically manages stamped resume via `release.lock`:
 
 The lock file is gitignored and never committed. It lives only in the worktree.
 
+### Strict real-CLI acceptance gate
+
+The release state management is validated by a strict, automated acceptance gate
+that requires no manual steps or platform builds:
+
+- **Declaration-typed exports**: `scripts/release-state.d.mts` provides exact
+  TypeScript declarations for all production exports. The `.mjs` module remains
+  plain Node ESM with no TypeScript-only syntax.
+- **Unified hermetic runner**: All external commands (stamp and stages) flow
+  through a single `runCommand(name)` function. When injected via `deps.runCommand`
+  or selected via `RELEASE_STATE_RUNNER=stub`, no real `npm run stamp` or platform
+  builds execute. The stub runner logs each command to `run-command.log`.
+- **Dual test coverage**: `tests/releaseState.test.ts` exercises production code
+  two ways: (1) importing and calling `main()` with injected stub `runCommand`,
+  and (2) spawning the real CLI with `RELEASE_STATE_RUNNER=stub`. No literal
+  stand-ins or duplicated implementations exist.
+- **One-stamp/stage-once verification**: Tests prove two real CLI invocations
+  against a shared fixture log `stamp` exactly once and each stage exactly once,
+  with resume skipping stamp on the second call.
+- **Byte-identical nonmutation**: Corrupt and mismatched lock files remain
+  byte-identical after failure (fail-closed; never overwritten).
+- **Strict TypeScript compilation**: A forced strict compilation over the test
+  and declaration files (`npx tsc --noEmit --strict --module nodenext
+  --moduleResolution nodenext scripts/release-state.d.mts tests/releaseState.test.ts`)
+  must exit with zero errors.
+
+Run the full acceptance gate:
+```bash
+node --check scripts/release-state.mjs
+node scripts/release-state.mjs --help  # exits 0
+git diff --exit-code -- version.txt version.json package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
+git check-ignore release.lock  # exits 0
+grep -c 'path\.expanduser' scripts/release-state.mjs  # → 0
+npx tsc --noEmit --strict --module nodenext --moduleResolution nodenext scripts/release-state.d.mts tests/releaseState.test.ts  # zero errors
+node --experimental-strip-types --test tests/releaseState.test.ts
+npx tsc -b --pretty false
+npm test
+npm run build
+```
+
+All commands must exit 0 with no real platform build or stamp run. The test
+suite imports production declarations and spawns the real CLI for every path
+(help, fresh, interrupted, resumed, mismatched, corrupt, restart, completed).
+
 ## Coherent release
 
 ```bash

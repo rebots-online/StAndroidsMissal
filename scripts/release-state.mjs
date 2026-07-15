@@ -16,9 +16,31 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT = process.env.RELEASE_ROOT || path.resolve(__dirname, '..');
-const LOCK_PATH = path.join(ROOT, 'release.lock');
-const DIST_RUBRIC_RUNS = path.join(ROOT, 'dist', 'rubric-runs');
+
+/**
+ * Get root directory from deps, env, or default
+ */
+function getRoot(deps) {
+  if (deps?.fixtureDir) {
+    return deps.fixtureDir;
+  }
+  const env = deps?.env || process.env;
+  return env.RELEASE_STATE_FIXTURE || env.RELEASE_ROOT || path.resolve(__dirname, '..');
+}
+
+/**
+ * Get lock path for current root
+ */
+function getLockPath(root) {
+  return path.join(root, 'release.lock');
+}
+
+/**
+ * Get dist rubric runs path
+ */
+function getDistRubricRuns(root) {
+  return path.join(root, 'dist', 'rubric-runs');
+}
 
 /**
  * Expand a tilde-prefixed path to the home directory.
@@ -42,18 +64,20 @@ export function expandHomePath(value, home = os.homedir()) {
 
 /**
  * Version source: version.txt (MAJOR.MINOR.BUILD)
+ * @param {string} root - The root directory
  * @returns {string} The current version string
  */
-function readVersion() {
-  return fs.readFileSync(path.join(ROOT, 'version.txt'), 'utf-8').trim();
+function readVersion(root) {
+  return fs.readFileSync(path.join(root, 'version.txt'), 'utf-8').trim();
 }
 
 /**
  * Get current git HEAD commit hash
+ * @param {string} root - The root directory
  * @returns {string} The current git HEAD commit hash
  */
-function getSourceHead() {
-  const gitDir = path.join(ROOT, '.git');
+function getSourceHead(root) {
+  const gitDir = path.join(root, '.git');
   const headPath = path.join(gitDir, 'HEAD');
   let headRef = fs.readFileSync(headPath, 'utf-8').trim();
 
@@ -75,16 +99,17 @@ function getSourceHead() {
 
 /**
  * Read and parse the release lock file, or return null if not present/invalid
+ * @param {string} lockPath - The lock file path
  * @returns {ReleaseState|null} The parsed release state or null
  * @throws {Error} If the lock file exists but contains corrupt JSON
  */
-function readLock() {
-  if (!fs.existsSync(LOCK_PATH)) {
+function readLock(lockPath) {
+  if (!fs.existsSync(lockPath)) {
     return null;
   }
 
   try {
-    const content = fs.readFileSync(LOCK_PATH, 'utf-8');
+    const content = fs.readFileSync(lockPath, 'utf-8');
     const parsed = JSON.parse(content);
 
     // Validate structure
@@ -111,19 +136,21 @@ function readLock() {
 /**
  * Atomically write the release lock file
  * @param {ReleaseState} state - The release state to write
+ * @param {string} lockPath - The lock file path
  */
-function writeLock(state) {
-  const tempPath = `${LOCK_PATH}.tmp`;
+function writeLock(state, lockPath) {
+  const tempPath = `${lockPath}.tmp`;
   fs.writeFileSync(tempPath, JSON.stringify(state, null, 2), 'utf-8');
-  fs.renameSync(tempPath, LOCK_PATH);
+  fs.renameSync(tempPath, lockPath);
 }
 
 /**
  * Atomically append a completed stage to the lock
  * @param {string} stage - The stage name to mark complete
+ * @param {string} lockPath - The lock file path
  */
-function markStageComplete(stage) {
-  const lock = readLock();
+function markStageComplete(stage, lockPath) {
+  const lock = readLock(lockPath);
   if (!lock) {
     throw new Error('Cannot mark stage complete: no valid lock file');
   }
@@ -137,125 +164,155 @@ function markStageComplete(stage) {
     completedStages: [...lock.completedStages, stage],
   };
 
-  writeLock(updated);
+  writeLock(updated, lockPath);
 }
 
 /**
  * Check if lock matches current state
  * @param {ReleaseState} lock - The lock to check
+ * @param {string} root - The root directory
  * @returns {boolean} True if the lock matches current version and sourceHead
  */
-function lockMatchesCurrent(lock) {
-  const currentVersion = readVersion();
-  const currentHead = getSourceHead();
+function lockMatchesCurrent(lock, root) {
+  const currentVersion = readVersion(root);
+  const currentHead = getSourceHead(root);
 
   return lock.version === currentVersion && lock.sourceHead === currentHead;
 }
 
 /**
- * Stage commands in execution order
- * @type {Object<string, function(): Promise<void>>}
+ * Canonical stage order
  */
-export const STAGE_COMMANDS = {
-  test: async () => {
-    console.log('🔧 Stage: test');
-    const { execSync } = await import('node:child_process');
-    execSync('npm test', { cwd: ROOT, stdio: 'inherit' });
-  },
+export const STAGE_ORDER = ['test', 'web', 'linux', 'windows', 'android-debug', 'android-release', 'symbols', 'collect'];
 
-  web: async () => {
-    console.log('🔧 Stage: web');
-    const { execSync } = await import('node:child_process');
-    execSync('npm run build', { cwd: ROOT, stdio: 'inherit' });
-  },
+/**
+ * Unified command runner for stamp and stages.
+ * Resolves from injected deps, environment, or runs real commands.
+ * @param {string} name - Command name ('stamp' or stage name)
+ * @param {Object} deps - Dependency injection object
+ * @param {string} root - Root directory
+ * @returns {Promise<number>} Exit code (0 for success)
+ */
+async function runCommand(name, deps, root) {
+  // Injected stub runner
+  if (deps?.runCommand) {
+    const result = await deps.runCommand(name);
+    return result ?? 0;
+  }
 
-  linux: async () => {
-    console.log('🔧 Stage: linux');
-    const { execSync } = await import('node:child_process');
-    execSync('./node_modules/.bin/tauri build --bundles deb,appimage --ci', {
-      cwd: ROOT,
-      stdio: 'inherit',
-    });
-  },
+  // Environment-selected hermetic stub mode
+  const env = deps?.env || process.env;
+  const isStub = env.RELEASE_STATE_RUNNER === 'stub';
+  const fixtureDir = deps?.fixtureDir || env.RELEASE_STATE_FIXTURE;
 
-  windows: async () => {
-    console.log('🔧 Stage: windows');
-    const { execSync } = await import('node:child_process');
-    execSync('npm run build:windows:unstamped', {
-      cwd: ROOT,
-      stdio: 'inherit',
-    });
-  },
+  if (isStub && fixtureDir) {
+    // Log to run-command.log in fixture directory
+    const logPath = path.join(fixtureDir, 'run-command.log');
+    const logLine = `${name}\n`;
+    fs.appendFileSync(logPath, logLine, 'utf-8');
+    console.log(`🔧 [STUB] ${name}`);
+    return 0;
+  }
 
-  'android-debug': async () => {
-    console.log('🔧 Stage: android-debug');
-    const { execSync } = await import('node:child_process');
-    execSync('./node_modules/.bin/tauri android build --debug --apk --ci', {
-      cwd: ROOT,
-      stdio: 'inherit',
-    });
-  },
+  // Real command execution
+  const { execSync } = await import('node:child_process');
 
-  'android-release': async () => {
-    console.log('🔧 Stage: android-release');
-    const { execSync } = await import('node:child_process');
-    process.env.CARGO_PROFILE_RELEASE_STRIP = 'false';
-    execSync('./node_modules/.bin/tauri android build --apk --aab --ci', {
-      cwd: ROOT,
-      stdio: 'inherit',
-    });
-  },
+  if (name === 'stamp') {
+    console.log('🔧 Stamp: npm run stamp');
+    execSync('npm run stamp', { cwd: root, stdio: 'inherit' });
+    return 0;
+  }
 
-  symbols: async () => {
-    console.log('🔧 Stage: symbols');
-    const { execSync } = await import('node:child_process');
-    execSync('npm run package:android-symbols', {
-      cwd: ROOT,
-      stdio: 'inherit',
-    });
-  },
+  // Stage commands
+  const stageCommands = {
+    test: () => {
+      console.log('🔧 Stage: test');
+      execSync('npm test', { cwd: root, stdio: 'inherit' });
+    },
+    web: () => {
+      console.log('🔧 Stage: web');
+      execSync('npm run build', { cwd: root, stdio: 'inherit' });
+    },
+    linux: () => {
+      console.log('🔧 Stage: linux');
+      execSync('./node_modules/.bin/tauri build --bundles deb,appimage --ci', {
+        cwd: root,
+        stdio: 'inherit',
+      });
+    },
+    windows: () => {
+      console.log('🔧 Stage: windows');
+      execSync('npm run build:windows:unstamped', {
+        cwd: root,
+        stdio: 'inherit',
+      });
+    },
+    'android-debug': () => {
+      console.log('🔧 Stage: android-debug');
+      execSync('./node_modules/.bin/tauri android build --debug --apk --ci', {
+        cwd: root,
+        stdio: 'inherit',
+      });
+    },
+    'android-release': () => {
+      console.log('🔧 Stage: android-release');
+      process.env.CARGO_PROFILE_RELEASE_STRIP = 'false';
+      execSync('./node_modules/.bin/tauri android build --apk --aab --ci', {
+        cwd: root,
+        stdio: 'inherit',
+      });
+    },
+    symbols: () => {
+      console.log('🔧 Stage: symbols');
+      execSync('npm run package:android-symbols', {
+        cwd: root,
+        stdio: 'inherit',
+      });
+    },
+    collect: () => {
+      console.log('🔧 Stage: collect');
+      execSync('npm run collect-artifacts', {
+        cwd: root,
+        stdio: 'inherit',
+      });
+    },
+  };
 
-  collect: async () => {
-    console.log('🔧 Stage: collect');
-    const { execSync } = await import('node:child_process');
-    execSync('npm run collect-artifacts', {
-      cwd: ROOT,
-      stdio: 'inherit',
-    });
+  const command = stageCommands[name];
+  if (!command) {
+    throw new Error(`Unknown command: ${name}`);
+  }
 
-    // Archive completed lock to dist/rubric-runs
-    const lock = readLock();
-    if (!lock) {
-      throw new Error('Cannot archive lock: no valid lock file');
-    }
-
-    fs.mkdirSync(DIST_RUBRIC_RUNS, { recursive: true });
-    const archivePath = path.join(DIST_RUBRIC_RUNS, `release-state-v${lock.version}.json`);
-    fs.writeFileSync(archivePath, JSON.stringify(lock, null, 2), 'utf-8');
-    fs.unlinkSync(LOCK_PATH);
-    console.log(`📦 Archived release state to ${archivePath}`);
-  },
-};
+  await command();
+  return 0;
+}
 
 /**
  * Run a single stage and mark it complete
  * @param {string} stage - The stage name to run
- * @returns {Promise<void>}
+ * @param {Object} [deps] - Optional dependency overrides
+ * @param {string} [root] - Root directory
+ * @param {string} [lockPath] - Lock file path
+ * @returns {Promise<number>} Exit code
  */
-export async function runReleaseStage(stage) {
-  const command = STAGE_COMMANDS[stage];
-  if (!command) {
+export async function runReleaseStage(stage, deps, root, lockPath) {
+  if (!STAGE_ORDER.includes(stage)) {
     throw new Error(`Unknown stage: ${stage}`);
   }
 
-  await command();
-  markStageComplete(stage);
+  const exitCode = await runCommand(stage, deps, root);
+  if (exitCode !== 0) {
+    throw new Error(`Stage ${stage} failed with exit code ${exitCode}`);
+  }
+
+  markStageComplete(stage, lockPath);
+  return 0;
 }
 
 /**
  * Print usage information
  */
-function printUsage() {
+export function printUsage() {
   console.log(`Usage: node release-state.mjs [options]
 
 Options:
@@ -283,76 +340,83 @@ The lock file (release.lock) enables resume after interruption:
  * Main release orchestration
  * @param {string[]} argv - Command line arguments
  * @param {Object} [deps] - Optional dependency overrides for testing
- * @returns {Promise<void>}
+ * @returns {Promise<number>} Exit code (0 for success, non-zero for failure)
  */
 export async function main(argv, deps = {}) {
-  const { process: processObj = process, fs: fsObj = fs, path: pathObj = path } = deps;
+  const processObj = deps?.process || process;
+  const fsObj = deps?.fs || fs;
+  const pathObj = deps?.path || path;
+  const env = deps?.env || process.env;
 
   const args = argv.slice(2);
   const restartFlag = args.includes('--restart');
   const cleanOnlyFlag = args.includes('--clean-only');
   const helpFlag = args.includes('--help') || args.includes('-h');
 
+  const root = getRoot(deps);
+  const lockPath = getLockPath(root);
+  const distRubricRuns = getDistRubricRuns(root);
+
   if (helpFlag) {
     printUsage();
-    processObj.exit(0);
+    return 0;
   }
 
   if (restartFlag && cleanOnlyFlag) {
     console.error('❌ Cannot specify both --restart and --clean-only');
-    processObj.exit(1);
+    return 1;
   }
 
-  const outboxDir = expandHomePath('~/outbox/standroidsmissal');
+  const outboxDir = expandHomePath('~/outbox/standroidsmissal', env.HOME);
 
   // Handle --restart: move old lock to outbox and exit
   if (restartFlag) {
-    const lock = readLock();
+    const lock = readLock(lockPath);
     if (lock) {
       fsObj.mkdirSync(outboxDir, { recursive: true });
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const archivedPath = pathObj.join(outboxDir, `release-lock-${timestamp}.json`);
-      fsObj.renameSync(LOCK_PATH, archivedPath);
+      fsObj.renameSync(lockPath, archivedPath);
       console.log(`🔄 Moved old lock to ${archivedPath}`);
     } else {
       console.log('ℹ️  No lock file found');
     }
-    processObj.exit(0);
+    return 0;
   }
 
   // Handle --clean-only: just move old lock to outbox (for manual intervention)
   if (cleanOnlyFlag) {
-    const lock = readLock();
+    const lock = readLock(lockPath);
     if (!lock) {
       console.log('ℹ️  No lock file found');
-      processObj.exit(0);
+      return 0;
     }
 
     fsObj.mkdirSync(outboxDir, { recursive: true });
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const archivedPath = pathObj.join(outboxDir, `release-lock-${timestamp}.json`);
 
-    if (!lockMatchesCurrent(lock)) {
+    if (!lockMatchesCurrent(lock, root)) {
       console.error('❌ Lock mismatch or corruption detected');
       console.error(`Lock version: ${lock.version}`);
       console.error(`Lock sourceHead: ${lock.sourceHead}`);
-      console.error(`Current version: ${readVersion()}`);
-      console.error(`Current sourceHead: ${getSourceHead()}`);
+      console.error(`Current version: ${readVersion(root)}`);
+      console.error(`Current sourceHead: ${getSourceHead(root)}`);
       console.error('');
       console.error('Remediation: run `npm run build:release --restart` to move this lock');
       console.error('to the outbox and start a fresh stamp, or manually inspect and resolve.');
-      processObj.exit(1);
+      return 1;
     }
 
-    fsObj.renameSync(LOCK_PATH, archivedPath);
+    fsObj.renameSync(lockPath, archivedPath);
     console.log(`🧹 Moved lock to ${archivedPath}`);
-    processObj.exit(0);
+    return 0;
   }
 
   // Normal execution path
   let lock;
   try {
-    lock = readLock();
+    lock = readLock(lockPath);
   } catch (error) {
     // Corrupt lock file
     if (error instanceof SyntaxError || error.message.includes('invalid JSON')) {
@@ -361,7 +425,7 @@ export async function main(argv, deps = {}) {
       console.error('');
       console.error('Remediation: run `npm run build:release --restart` to move this lock');
       console.error('to the outbox and start a fresh stamp, or manually inspect and resolve.');
-      process.exit(1);
+      return 1;
     }
     throw error;
   }
@@ -369,30 +433,33 @@ export async function main(argv, deps = {}) {
   if (!lock) {
     // Fresh release: stamp once and write new lock
     console.log('🚀 Starting fresh release');
-    const { execSync } = await import('node:child_process');
-    execSync('npm run stamp', { cwd: ROOT, stdio: 'inherit' });
+    const exitCode = await runCommand('stamp', deps, root);
+    if (exitCode !== 0) {
+      throw new Error(`Stamp failed with exit code ${exitCode}`);
+    }
 
     const newLock = {
-      version: readVersion(),
-      sourceHead: getSourceHead(),
+      version: readVersion(root),
+      sourceHead: getSourceHead(root),
       startedAt: new Date().toISOString(),
       completedStages: [],
     };
 
-    writeLock(newLock);
+    writeLock(newLock, lockPath);
     console.log(`🔒 Wrote release.lock v${newLock.version}`);
+    lock = newLock;
   } else {
     // Existing lock: validate match
-    if (!lockMatchesCurrent(lock)) {
+    if (!lockMatchesCurrent(lock, root)) {
       console.error('❌ Lock mismatch or corruption detected');
       console.error(`Lock version: ${lock.version}`);
       console.error(`Lock sourceHead: ${lock.sourceHead}`);
-      console.error(`Current version: ${readVersion()}`);
-      console.error(`Current sourceHead: ${getSourceHead()}`);
+      console.error(`Current version: ${readVersion(root)}`);
+      console.error(`Current sourceHead: ${getSourceHead(root)}`);
       console.error('');
       console.error('Remediation: run `npm run build:release --restart` to move this lock');
       console.error('to the outbox and start a fresh stamp, or manually inspect and resolve.');
-      processObj.exit(1);
+      return 1;
     }
 
     console.log(`🔄 Resuming release v${lock.version}`);
@@ -401,29 +468,51 @@ export async function main(argv, deps = {}) {
   }
 
   // Determine stages to run
-  const allStages = Object.keys(STAGE_COMMANDS);
-  const completedStages = lock?.completedStages || [];
-  const pendingStages = allStages.filter(s => !completedStages.includes(s));
+  const completedStages = lock.completedStages;
+  const pendingStages = STAGE_ORDER.filter(s => !completedStages.includes(s));
 
   if (pendingStages.length === 0) {
     console.log('✅ All stages already completed');
-    processObj.exit(0);
+    return 0;
   }
 
   console.log(`⏭️  Stages to run: ${pendingStages.join(', ')}`);
 
   // Run pending stages
   for (const stage of pendingStages) {
-    await runReleaseStage(stage);
+    try {
+      await runReleaseStage(stage, deps, root, lockPath);
+    } catch (error) {
+      console.error(`❌ Stage ${stage} failed:`, error.message);
+      throw error;
+    }
   }
 
+  // Archive completed lock to dist/rubric-runs after successful collect
+  const finalLock = readLock(lockPath);
+  if (!finalLock) {
+    throw new Error('Cannot archive lock: no valid lock file');
+  }
+
+  fsObj.mkdirSync(distRubricRuns, { recursive: true });
+  const archivePath = pathObj.join(distRubricRuns, `release-state-v${finalLock.version}.json`);
+  fsObj.writeFileSync(archivePath, JSON.stringify(finalLock, null, 2), 'utf-8');
+  fsObj.unlinkSync(lockPath);
+  console.log(`📦 Archived release state to ${archivePath}`);
+
   console.log('✅ Release complete');
+  return 0;
 }
 
 // Only run main when executed directly (isMain guard)
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main(process.argv).catch(error => {
-    console.error('❌ Release failed:', error);
-    process.exit(1);
-  });
+const isMain = import.meta.url === `file://${process.argv[1]}`;
+if (isMain) {
+  main(process.argv)
+    .then(exitCode => {
+      process.exit(exitCode);
+    })
+    .catch(error => {
+      console.error('❌ Release failed:', error);
+      process.exit(1);
+    });
 }
