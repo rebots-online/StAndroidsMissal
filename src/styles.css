@@ -226,6 +226,150 @@ body {
 .reader-section .head .chev { color: var(--accent); font-size: 12px; width: 14px; flex: none; }
 .reader-section.collapsed .head { margin-bottom: 0; opacity: 0.75; }
 
+/* ── Split layout with resizable inspector (BX.2) ─────────────── */
+.split.resizable-inspector-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8px var(--inspector-width);
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.single.resizable-inspector-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.resizable-inspector-layout > .content,
+.resizable-inspector-layout > .exegesis {
+  min-width: 0;
+  min-height: 0;
+}
+
+.inspector-main {
+  overflow: hidden;
+}
+
+.inspector-pane {
+  overflow: auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ── Resizable divider ─────────────────────────────────────────── */
+.inspector-divider {
+  position: relative;
+  background: transparent;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  user-select: none;
+}
+
+.inspector-divider:hover .divider-handle,
+.inspector-divider:focus .divider-handle {
+  background: var(--accent);
+}
+
+.divider-handle {
+  width: 4px;
+  height: 48px;
+  background: var(--ink-faint);
+  border-radius: 2px;
+  transition: background 0.15s ease, height 0.15s ease;
+}
+
+.inspector-divider:hover .divider-handle,
+.inspector-divider:focus .divider-handle {
+  height: 64px;
+}
+
+.inspector-divider:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ── Narrow viewport overlay (mobile) ─────────────────────────── */
+.resizable-inspector-layout.narrow {
+  position: relative;
+}
+
+.inspector-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--surface-2);
+  overflow: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  animation: inspector-slide-up 0.2s ease-out;
+}
+
+@keyframes inspector-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.inspector-overlay-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--card-border);
+  color: var(--ink);
+  border: 0;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.inspector-overlay-close:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.inspector-open-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+  z-index: 90;
+}
+
+.inspector-open-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.inspector-open-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── Legacy split/single (preserved for non-inspector use) ─────── */
 .split { display: grid; grid-template-columns: 1fr 340px; gap: 0; height: 100%; min-height: 0; overflow: hidden; }
 .single { display: grid; grid-template-columns: 1fr; height: 100%; min-height: 0; overflow: hidden; }
 .split > .content, .single > .content { min-width: 0; min-height: 0; }

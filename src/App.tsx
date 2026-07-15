@@ -20,6 +20,7 @@ import JournalSidecar from './ui/JournalSidecar.tsx';
 import JournalView from './ui/JournalView.tsx';
 import HomilyPlanner from './ui/HomilyPlanner.tsx';
 import ThemePicker from './ui/ThemePicker.tsx';
+import ResizableInspectorLayout from './ui/ResizableInspectorLayout.tsx';
 
 type View = 'map' | 'reader' | 'calendar' | 'office' | 'bible' | 'journal';
 
@@ -282,59 +283,64 @@ export default function App() {
           />
         )}
 
-        <div className={action || capture ? 'split' : 'single'}>
-          {view === 'map' && (
-            <div className="content map-wrap">
-              <SubwayMap db={db} day={day} onStation={onStation} />
-            </div>
-          )}
-          {view === 'reader' && day && (
-            <ReaderView
-              db={db}
-              day={day}
-              focusSection={focus.section}
-              focusNonce={focus.nonce}
-              sidecar={sidecar}
-              onAction={openAction}
-              onCapture={openCapture}
-              onVisibleSection={onVisibleSection}
-            />
-          )}
-          {view === 'calendar' && (
-            <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); setView('reader'); setFocus({ section: null, nonce: 0 }); }} />
-          )}
-          {view === 'office' && <OfficeView db={db} day={day} hour={officeHour} onHour={setOfficeHour} />}
-          {view === 'bible' && (
-            <BibleView
-              db={db}
-              focusRef={bibleFocus.ref}
-              focusNonce={bibleFocus.nonce}
-              sidecar={sidecar}
-              onAction={openAction}
-              onCapture={openCapture}
-              onOpenKey={onOpenKey}
-            />
-          )}
-          {view === 'journal' && sidecar && (
-            <div className="content">
-              <div className="cal-head">
-                <button className={journalTab==='timeline'?'active':''} onClick={() => setJournalTab('timeline')}>Journal timeline</button>
-                <button className={journalTab==='planner'?'active':''} onClick={() => setJournalTab('planner')}>Homily planner</button>
-              </div>
-              {journalTab==='timeline' ? <JournalView db={db} sidecar={sidecar} day={day} onOpenKey={onOpenKey} /> : <HomilyPlanner db={db} sidecar={sidecar} day={day} />}
-            </div>
-          )}
-          {view === 'journal' && !sidecar && (
-            <div className="content"><p>Opening your journal…</p></div>
-          )}
-
-          {action && (
-            <MeaningPanel db={db} action={action} onClose={() => history.back()} onOpenKey={onOpenKey} />
-          )}
-          {capture && sidecar && (
-            <JournalSidecar db={db} sidecar={sidecar} capture={capture} day={day} onClose={() => setCapture(null)} onOpenKey={onOpenKey} />
-          )}
-        </div>
+        <ResizableInspectorLayout
+          sidecar={sidecar}
+          main={
+            <>
+              {view === 'map' && (
+                <div className="content map-wrap">
+                  <SubwayMap db={db} day={day} onStation={onStation} />
+                </div>
+              )}
+              {view === 'reader' && day && (
+                <ReaderView
+                  db={db}
+                  day={day}
+                  focusSection={focus.section}
+                  focusNonce={focus.nonce}
+                  sidecar={sidecar}
+                  onAction={openAction}
+                  onCapture={openCapture}
+                  onVisibleSection={onVisibleSection}
+                />
+              )}
+              {view === 'calendar' && (
+                <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); setView('reader'); setFocus({ section: null, nonce: 0 }); }} />
+              )}
+              {view === 'office' && <OfficeView db={db} day={day} hour={officeHour} onHour={setOfficeHour} />}
+              {view === 'bible' && (
+                <BibleView
+                  db={db}
+                  focusRef={bibleFocus.ref}
+                  focusNonce={bibleFocus.nonce}
+                  sidecar={sidecar}
+                  onAction={openAction}
+                  onCapture={openCapture}
+                  onOpenKey={onOpenKey}
+                />
+              )}
+              {view === 'journal' && sidecar && (
+                <div className="content">
+                  <div className="cal-head">
+                    <button className={journalTab==='timeline'?'active':''} onClick={() => setJournalTab('timeline')}>Journal timeline</button>
+                    <button className={journalTab==='planner'?'active':''} onClick={() => setJournalTab('planner')}>Homily planner</button>
+                  </div>
+                  {journalTab==='timeline' ? <JournalView db={db} sidecar={sidecar} day={day} onOpenKey={onOpenKey} /> : <HomilyPlanner db={db} sidecar={sidecar} day={day} />}
+                </div>
+              )}
+              {view === 'journal' && !sidecar && (
+                <div className="content"><p>Opening your journal…</p></div>
+              )}
+            </>
+          }
+          inspector={
+            action ? (
+              <MeaningPanel db={db} action={action} onClose={() => history.back()} onOpenKey={onOpenKey} />
+            ) : capture && sidecar ? (
+              <JournalSidecar db={db} sidecar={sidecar} capture={capture} day={day} onClose={() => setCapture(null)} onOpenKey={onOpenKey} />
+            ) : null
+          }
+        />
       </div>
 
       {/* Mandatory app chrome: version bottom-right on every surface. */}
