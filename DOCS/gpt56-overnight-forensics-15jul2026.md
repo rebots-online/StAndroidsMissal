@@ -71,6 +71,22 @@ This machinery is the most durable output of the night — it is exactly the too
 
 97.7% cache hit on input is the signature of a session re-reading the same enormous task specification hundreds of times rather than making forward progress — the specs grew, but the turns kept re-consuming them from the start.
 
+### Codebase and spec ballooning
+
+Measured from the last pre-handoff commit (`0acf98b2`, 15:45) to GPT's final commit (`4973d91a`, 05:50), excluding `dist/`:
+
+| Surface | Growth | Note |
+|---|---|---|
+| Whole repo | 195 files changed, **+15,131 / −504 lines**, 107 new files | one night |
+| Product source (`src/`) | +4,160 / −322 lines | 27% of total insertions |
+| Tests (`tests/`) | +3,234 lines | 0.78 lines of test per line of product source |
+| Scripts (`scripts/`) | +974 lines | almost entirely release-state machinery |
+| `CHECKLIST.md` | 98 KB → **191 KB** (552 → 778 lines) | nearly doubled in bytes; line count understates it — correction-wave tasks are single multi-thousand-character lines |
+| `DOCS/ARCHITECTURE.md` | 74 KB → **130 KB** (+75%) | correction-round §9.x/§10.x amendments |
+| `BUILD_INSTRUCTIONS.md` | 0 → 10 KB | new |
+
+The structural point: roughly **159 KB of new spec/contract prose** was added against ~4.2k lines of product source — and because project convention has every architect, coder, and verifier turn re-read CHECKLIST.md (and often ARCHITECTURE.md) in full, spec growth is *self-taxing*: the doubling of CHECKLIST.md directly compounds the ~135k-token per-turn context cost documented above. Each correction round made every subsequent turn — on every task, related or not — permanently more expensive for the rest of the session. The test-to-source ratio (0.78:1 in a night, with much of the test mass devoted to testing the release tooling rather than the product) is the same spiral expressed in code.
+
 ### The correction-spiral mechanism
 
 The night's token burn is explained by one recurring pattern: **a GLM-5.2 verifier rejects a handback, and instead of a targeted fix, GPT responds by re-architecting an ever-larger acceptance-gate spec**, which is then re-read in full on every subsequent turn until the next rejection produces a still-larger spec.
