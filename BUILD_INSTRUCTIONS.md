@@ -285,6 +285,63 @@ LFS objects to Forgejo. GitHub receives commits and LFS pointers only.
   not yet exist.
 - Ubuntu/Snap Store: listing assets exist, but a `.snap` does not yet exist.
 
+## Web deployment
+
+The web/PWA build is deployed to `https://standroid.robin.mba` on a self-hosted
+nginx-ui LXC container (Proxmox CT 123, IP `192.168.0.126`).
+
+### Architecture
+
+- **Vhost:** `/etc/nginx/sites-available/standroid.robin.mba.conf`
+- **Static root:** `/var/www/standroid/current` → symlink to
+  `/var/www/standroid/releases/<version>/`
+- **TLS:** `*.robin.mba` wildcard ECC P-256 cert (acme.sh-managed, auto-renewed)
+- **SPA fallback:** `try_files $uri $uri/ /index.html`
+- **Asset caching:** hashed filenames get `expires 1y` + `immutable`;
+  `.wasm` same
+- **Corpus DB:** `/missal.db` uses `etag on` + `Cache-Control: public, no-cache`
+  (URL is stable across releases — clients revalidate via ETag)
+- **No backend:** pure static SPA; sql.js loads the corpus client-side
+
+### Deploy procedure
+
+After `npm run build:release` has produced
+`dist/standroidsmissal-v<version>-web-pwa.zip`:
+
+```bash
+# 1. Extract the web PWA zip to the project outbox staging area
+mkdir -p ~/outbox/standroidsmissal/web-deploy
+cd ~/outbox/standroidsmissal/web-deploy
+rm -rf *
+unzip ~/CascadeProjects/StAndroidsMissal/dist/standroidsmissal-v<version>-web-pwa.zip
+
+# 2. Create the new release directory on CT 123
+ssh root@192.168.0.214 "pct exec 123 -- mkdir -p /var/www/standroid/releases/<version>"
+
+# 3. Push files into the LXC via tar pipe
+tar czf - -C ~/outbox/standroidsmissal/web-deploy . | 
+  ssh root@192.168.0.214 "pct exec 123 -- tar xzf - -C /var/www/standroid/releases/<version>/"
+ssh root@192.168.0.214 "pct exec 123 -- chown -R 1000:1000 /var/www/standroid/releases/<version>"
+
+# 4. Atomic symlink swap
+ssh root@192.168.0.214 "pct exec 123 -- ln -sfn /var/www/standroid/releases/<version> /var/www/standroid/current"
+
+# 5. Verify
+curl -sI https://standroid.robin.mba            # expect: 200 OK
+curl -s https://standroid.robin.mba | grep index-  # confirm new asset hash
+```
+
+### Rollback
+
+Old releases remain in `/var/www/standroid/releases/`. To roll back:
+
+```bash
+ssh root@192.168.0.214 "pct exec 123 -- ln -sfn /var/www/standroid/releases/<old-version> /var/www/standroid/current"
+```
+
+Operator-specific access paths and credential locations are documented in
+`~/Admin-Manual/PROJECTS/BUILD-INSTRUCTIONS-StAndroidsMissal.md`.
+
 ## CI/CD — proposed recipe (not yet implemented)
 
 CI/CD is **not yet active**. The forgejo/github hosting architecture is

@@ -25,7 +25,7 @@ databases**, serving a beautiful, exegetical UI:
 
 ## Platforms and current release outputs
 
-- Web/PWA: versioned offline ZIP
+- Web/PWA: versioned offline ZIP, deployed to `https://standroid.robin.mba`
 - Linux x64: `.deb` and AppImage
 - Windows 11 x64: standalone PE `.exe`
 - Android: production-signed release APK and Play-uploadable AAB

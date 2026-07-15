@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⛔ URGENT — Phase-specific rules check (every turn)
+
+Before taking any action each turn, check the appropriate phase-specific rules file:
+
+- **Global rules:** `~/.claude/CLAUDE.md` (loaded automatically — never override)
+- **Global conventions:** `~/.claude/CONVENTIONS.md` (nomenclature, naming)
+- **Global build conventions:** `~/.claude/BUILD_CONVENTIONS.md` (signing, versioning, CI shape)
+- **Project build/deploy:** `~/Admin-Manual/PROJECTS/BUILD-INSTRUCTIONS-StAndroidsMissal.md`
+  (operator credentials, deployment targets, access paths, verification gates)
+- **Project architecture:** `DOCS/ARCHITECTURE.md` (entity table, data flow)
+- **Project execution contract:** `CHECKLIST.md` (state markers, task contract)
+- **Server infrastructure:** `~/Admin-Manual/SERVERS/README.md` and
+  `~/Admin-Manual/SERVERS/nginx-ui/README.md` (for any deployment or server interaction)
+
+If a task involves building, deploying, pushing, or interacting with infrastructure,
+read the relevant Admin-Manual section **before** acting — not after. The Admin-Manual
+is the single source of truth for access paths, credential locations, and deployment
+targets. Never scatter temp files in `/tmp`; use `~/outbox/standroidsmissal/` for
+staging. Never cross-reference other projects' documentation.
+
 ## What this is
 
 St. Android's Missal — the Traditional Latin Mass and Divine Office rendered as a navigable subway map. Tauri 2 multiplatform (web/PWA, Windows, Linux, Android), React 18 + Vite frontend, sql.js corpus. Rewrite of SanctissiMissa / "Hello, Word"; corpus is László Kiss' Divinum Officium flat-text tree re-realized as a graph + vector SQLite database.
