@@ -13,8 +13,8 @@ import type { Season } from '../core/calendar/computus.ts';
 import { annotationsFor, addAnnotation, removeAnnotation, type Annotation } from '../core/annotations/store.ts';
 import type { SidecarDb } from '../core/accompaniment/store.ts';
 import { massTextsForDay } from '../core/data/liturgicalDay.ts';
-import { alignSelection, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
-import BilingualText, { TextLines, useNarrow } from './BilingualText.tsx';
+import { alignSelection, alignPhrase, wordEcho, wordAtPoint, type WordEchoResult } from '../core/text/align.ts';
+import BilingualText, { TextLines, useNarrow, type SelectionEcho } from './BilingualText.tsx';
 
 export interface SelectionAction {
   kind: 'meaning' | 'similar' | 'crossrefs';
@@ -78,6 +78,8 @@ export default function ReaderView({
    *  The echo is a line RANGE `[from,to]` within one section: hover/tap set a
    *  one-line range; a live selection sets its full line span (BK.2). */
   const [echo, setEcho] = useState<{ nodeKey: string; from: number; to: number } | null>(null);
+  /** Live phrase echo: shows the aligned counterpart of the selected text */
+  const [livePhraseEcho, setLivePhraseEcho] = useState<SelectionEcho | null>(null);
   const echoFromEvent = (e: React.SyntheticEvent) => {
     const t = e.target as HTMLElement;
     const line = t.closest?.('span[data-line]') as HTMLElement | null;
@@ -219,20 +221,52 @@ export default function ReaderView({
     };
     const onSel = () => {
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !rootRef.current) return;
+      if (!sel || sel.isCollapsed || !rootRef.current) {
+        setLivePhraseEcho(null);
+        return;
+      }
+      
       const a = lineAt(sel.anchorNode);
       const f = lineAt(sel.focusNode);
-      if (a && f && a.nodeKey === f.nodeKey) {
+      
+      // Only handle selection within one language/section/line
+      if (a && f && a.nodeKey === f.nodeKey && a.idx === f.idx) {
         setEcho({ nodeKey: a.nodeKey, from: Math.min(a.idx, f.idx), to: Math.max(a.idx, f.idx) });
+        
+        // Derive selected text and call alignPhrase for live phrase echo
+        const selectedText = sel.toString().trim();
+        if (selectedText) {
+          const src = entries.find((en) => en.nodeKey === a.nodeKey);
+          if (src) {
+            const aligned = alignPhrase(db, { latin: src.latin, english: src.english }, selectedText);
+            if (aligned && aligned.dstLine) {
+              const dstLang = aligned.srcLang === 'latin' ? 'english' : 'latin';
+              setLivePhraseEcho({
+                lang: dstLang,
+                line: aligned.idx,
+                start: aligned.dstStart,
+                end: aligned.dstEnd,
+              });
+            } else {
+              setLivePhraseEcho(null);
+            }
+          }
+        } else {
+          setLivePhraseEcho(null);
+        }
       } else if (a) {
         setEcho({ nodeKey: a.nodeKey, from: a.idx, to: a.idx });
+        setLivePhraseEcho(null);
       } else if (f) {
         setEcho({ nodeKey: f.nodeKey, from: f.idx, to: f.idx });
+        setLivePhraseEcho(null);
+      } else {
+        setLivePhraseEcho(null);
       }
     };
     document.addEventListener('selectionchange', onSel);
     return () => document.removeEventListener('selectionchange', onSel);
-  }, []);
+  }, [db, entries]);
 
   function openMenu(e: React.MouseEvent, nodeKey: string | null) {
     const sel = window.getSelection()?.toString().trim() ?? '';
@@ -359,16 +393,17 @@ export default function ReaderView({
                 quotes={quotes}
                 echoLine={echoRange?.from}
                 echoTo={echoRange?.to}
+                selectionEcho={echo?.nodeKey === s.nodeKey ? (livePhraseEcho ?? undefined) : undefined}
               />
             ) : (
             <div className="bilingual">
               <div className="latin" lang="la">
                 <span className="lang-tag">Latine</span>
-                {s.latin ? <TextLines text={s.latin} quotes={quotes} echoLine={echoRange?.from} echoTo={echoRange?.to} /> : <p style={{ opacity: 0.5 }}>—</p>}
+                {s.latin ? <TextLines text={s.latin} quotes={quotes} echoLine={echoRange?.from} echoTo={echoRange?.to} selectionEcho={echo?.nodeKey === s.nodeKey && livePhraseEcho?.lang === 'latin' ? (livePhraseEcho ?? undefined) : undefined} /> : <p style={{ opacity: 0.5 }}>—</p>}
               </div>
               <div className="english" lang="en">
                 <span className="lang-tag">English</span>
-                {s.english ? <TextLines text={s.english} quotes={quotes} echoLine={echoRange?.from} echoTo={echoRange?.to} /> : <p style={{ opacity: 0.5 }}>—</p>}
+                {s.english ? <TextLines text={s.english} quotes={quotes} echoLine={echoRange?.from} echoTo={echoRange?.to} selectionEcho={echo?.nodeKey === s.nodeKey && livePhraseEcho?.lang === 'english' ? (livePhraseEcho ?? undefined) : undefined} /> : <p style={{ opacity: 0.5 }}>—</p>}
               </div>
             </div>
             )}

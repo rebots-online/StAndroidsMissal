@@ -19,6 +19,13 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { dialogueClass } from '../core/text/dialogue.ts';
 
+export interface SelectionEcho {
+  lang: 'latin' | 'english';
+  line: number;
+  start: number;
+  end: number;
+}
+
 /** Leading versicle/response marker (must match dialogue.ts detection). */
 const DIALOGUE_MARKER = /^\s*(?:V|℣|P|R|℟|S)\./u;
 
@@ -89,11 +96,13 @@ export function TextLines({
   quotes,
   echoLine,
   echoTo,
+  selectionEcho,
 }: {
   text: string;
   quotes: string[];
   echoLine?: number;
   echoTo?: number;
+  selectionEcho?: SelectionEcho;
 }) {
   const lines = text.split('\n');
   return (
@@ -106,9 +115,30 @@ export function TextLines({
             </span>
           );
         }
+        const echoed = inRange(i, echoLine, echoTo);
+        const hasSelectionEcho = selectionEcho?.line === i;
+        
+        // If there's a selection echo, split the line and wrap the selected portion
+        let content: (string | ReactElement)[];
+        if (hasSelectionEcho && selectionEcho) {
+          const { start, end } = selectionEcho;
+          const before = line.slice(0, start);
+          const selected = line.slice(start, end);
+          const after = line.slice(end);
+          
+          // Render each part with quotes, and wrap the selected part
+          const beforeRendered = renderLine(before, quotes, i);
+          const selectedRendered = <mark key="selection-echo" className="selection-echo">{renderLine(selected, quotes, i)}</mark>;
+          const afterRendered = renderLine(after, quotes, i);
+          
+          content = [...beforeRendered, selectedRendered, ...afterRendered];
+        } else {
+          content = renderLine(line, quotes, i);
+        }
+        
         return (
-          <span key={i} data-line={i} className={inRange(i, echoLine, echoTo) ? 'xlate-echo' : undefined}>
-            {renderLine(line, quotes, i)}
+          <span key={i} data-line={i} className={echoed ? 'xlate-echo' : undefined}>
+            {content}
             {i < lines.length - 1 ? '\n' : ''}
           </span>
         );
@@ -124,6 +154,7 @@ export default function BilingualText({
   echoLine,
   echoTo,
   layout,
+  selectionEcho,
 }: {
   latin: string | null;
   english: string | null;
@@ -132,6 +163,7 @@ export default function BilingualText({
   /** End of the echoed line range (inclusive); defaults to `echoLine`. */
   echoTo?: number;
   layout: 'columns' | 'interleaved';
+  selectionEcho?: SelectionEcho;
 }) {
   const q = quotes ?? [];
 
@@ -140,11 +172,11 @@ export default function BilingualText({
       <div className="bilingual">
         <div className="latin" lang="la">
           <span className="lang-tag">Latine</span>
-          {latin ? <TextLines text={latin} quotes={q} echoLine={echoLine} echoTo={echoTo} /> : <p style={{ opacity: 0.5 }}>—</p>}
+          {latin ? <TextLines text={latin} quotes={q} echoLine={echoLine} echoTo={echoTo} selectionEcho={selectionEcho?.lang === 'latin' ? selectionEcho : undefined} /> : <p style={{ opacity: 0.5 }}>—</p>}
         </div>
         <div className="english" lang="en">
           <span className="lang-tag">English</span>
-          {english ? <TextLines text={english} quotes={q} echoLine={echoLine} echoTo={echoTo} /> : <p style={{ opacity: 0.5 }}>—</p>}
+          {english ? <TextLines text={english} quotes={q} echoLine={echoLine} echoTo={echoTo} selectionEcho={selectionEcho?.lang === 'english' ? selectionEcho : undefined} /> : <p style={{ opacity: 0.5 }}>—</p>}
         </div>
       </div>
     );
@@ -162,6 +194,9 @@ export default function BilingualText({
         const laRef = la !== undefined && la.startsWith('!');
         const enRef = en !== undefined && en.startsWith('!');
         const echoed = inRange(i, echoLine, echoTo);
+        const laSelectionEcho = selectionEcho?.lang === 'latin' && selectionEcho.line === i ? selectionEcho : undefined;
+        const enSelectionEcho = selectionEcho?.lang === 'english' && selectionEcho.line === i ? selectionEcho : undefined;
+        
         return (
           <p className="il-pair" key={i}>
             {la !== undefined &&
@@ -174,7 +209,15 @@ export default function BilingualText({
                   data-lang="la"
                   lang="la"
                 >
-                  {renderLine(la, q, i)}
+                  {laSelectionEcho ? (
+                    <>
+                      {la.slice(0, laSelectionEcho.start)}
+                      <mark className="selection-echo">{la.slice(laSelectionEcho.start, laSelectionEcho.end)}</mark>
+                      {la.slice(laSelectionEcho.end)}
+                    </>
+                  ) : (
+                    renderLine(la, q, i)
+                  )}
                 </span>
               ))}
             {en !== undefined &&
@@ -188,7 +231,15 @@ export default function BilingualText({
                   data-lang="en"
                   lang="en"
                 >
-                  {renderLine(en, q, i)}
+                  {enSelectionEcho ? (
+                    <>
+                      {en.slice(0, enSelectionEcho.start)}
+                      <mark className="selection-echo">{en.slice(enSelectionEcho.start, enSelectionEcho.end)}</mark>
+                      {en.slice(enSelectionEcho.end)}
+                    </>
+                  ) : (
+                    renderLine(en, q, i)
+                  )}
                 </span>
               ))}
           </p>

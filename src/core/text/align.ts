@@ -11,6 +11,19 @@
 
 import { normalizeText } from './normalize.ts';
 
+export interface PhraseAlignment {
+  srcLang: 'latin' | 'english';
+  idx: number;
+  srcLine: string;
+  srcStart: number;
+  srcEnd: number;
+  dstLine: string;
+  dstStart: number;
+  dstEnd: number;
+  countsMatch: boolean;
+  method: 'attested-anchors' | 'positional-fallback';
+}
+
 export interface AlignedLine {
   srcLang: 'latin' | 'english';
   /** Line index within the source-language block. */
@@ -123,6 +136,148 @@ export function wordEcho(db: EchoDb, block: { latin: string | null; english: str
 }
 
 /** Word under a pointer event, via caret hit-testing (no per-word DOM spans). */
+export interface PhraseAlignment {
+  srcLang: 'latin' | 'english';
+  idx: number;
+  srcLine: string;
+  srcStart: number;
+  srcEnd: number;
+  dstLine: string;
+  dstStart: number;
+  dstEnd: number;
+  countsMatch: boolean;
+  method: 'attested-anchors' | 'positional-fallback';
+}
+
+export function alignPhrase(
+  db: EchoDb,
+  block: { latin: string | null; english: string | null },
+  term: string,
+): PhraseAlignment | null {
+  const normTerm = normalizeText(term);
+  if (!normTerm) return null;
+
+  // Try both source languages
+  for (const srcLang of ['latin', 'english'] as const) {
+    const src = block[srcLang];
+    if (!src) continue;
+
+    const srcLines = src.split('\n');
+    const dst = block[srcLang === 'latin' ? 'english' : 'latin'];
+    const dstLines = dst ? dst.split('\n') : null;
+
+    // Find line containing the term (diacritics-insensitive)
+    for (let idx = 0; idx < srcLines.length; idx++) {
+      const srcLine = srcLines[idx];
+      const normLine = normalizeText(srcLine);
+
+      // Find the exact term range in the original-casing source line
+      const termStart = normLine.indexOf(normTerm);
+      if (termStart < 0) continue;
+
+      // Calculate normalized token offsets to find original position
+      const normTokens = normLine.split(/\s+/).filter(Boolean);
+      const srcTokens = srcLine.split(/\s+/).filter(Boolean);
+      let charCount = 0;
+      let srcStart = 0;
+      let srcEnd = srcLine.length;
+
+      // Find which token(s) contain the term and their original positions
+      for (let i = 0; i < normTokens.length; i++) {
+        const tokenNorm = normTokens[i];
+        const tokenSrc = srcTokens[i];
+        const tokenInTerm = normTerm.includes(tokenNorm);
+
+        if (tokenInTerm) {
+          // First token of the match
+          if (charCount <= termStart && charCount + tokenNorm.length >= termStart) {
+            srcStart = charCount;
+          }
+          // Last token of the match
+          if (charCount <= termStart + normTerm.length) {
+            srcEnd = charCount + tokenSrc.length;
+          }
+        }
+        charCount += tokenNorm.length + 1; // +1 for space
+      }
+
+      const dstLine = dstLines && idx < dstLines.length ? dstLines[idx] : null;
+      if (!dstLine) return null;
+
+      // Use wordEcho for each selected source token to find anchors
+      const selectedSrcTokens = srcLine.slice(srcStart, srcEnd).split(/\s+/).filter(Boolean);
+      const anchors: Array<{ start: number; end: number }> = [];
+
+      for (const token of selectedSrcTokens) {
+        const echo = wordEcho(db, block, token);
+        if (echo?.word) {
+          const tokenNorm = normalizeText(echo.word);
+          const dstNorm = normalizeText(dstLine);
+          const tokenIdx = dstNorm.indexOf(tokenNorm);
+          if (tokenIdx >= 0) {
+            // Find original position
+            const dstTokens = dstLine.split(/\s+/).filter(Boolean);
+            const normTokens2 = dstNorm.split(/\s+/).filter(Boolean);
+            let charPos = 0;
+            for (let i = 0; i < normTokens2.length; i++) {
+              if (i === tokenIdx) {
+                anchors.push({ start: charPos, end: charPos + dstTokens[i].length });
+                break;
+              }
+              charPos += normTokens2[i].length + 1;
+            }
+          }
+        }
+      }
+
+      const countsMatch = dstLines !== null && dstLines.length === srcLines.length;
+
+      // When we have >=2 anchors, use them to determine the destination range
+      if (anchors.length >= 2) {
+        const dstStart = Math.min(...anchors.map(a => a.start));
+        const dstEnd = Math.max(...anchors.map(a => a.end));
+        return {
+          srcLang,
+          idx,
+          srcLine,
+          srcStart,
+          srcEnd,
+          dstLine,
+          dstStart,
+          dstEnd,
+          countsMatch,
+          method: 'attested-anchors',
+        };
+      }
+
+      // Fewer than 2 anchors: use positional fallback
+      // Project source token start/end ratios into destination token indices
+      const srcTotal = srcLine.length;
+      const dstTotal = dstLine.length;
+      const srcRatioStart = srcStart / Math.max(1, srcTotal);
+      const srcRatioEnd = srcEnd / Math.max(1, srcTotal);
+
+      const dstStart = Math.floor(srcRatioStart * dstTotal);
+      const dstEnd = Math.floor(srcRatioEnd * dstTotal);
+
+      return {
+        srcLang,
+        idx,
+        srcLine,
+        srcStart,
+        srcEnd,
+        dstLine,
+        dstStart,
+        dstEnd,
+        countsMatch,
+        method: 'positional-fallback',
+      };
+    }
+  }
+
+  return null;
+}
+
 export function wordAtPoint(x: number, y: number): string | null {
   type CaretPos = { offsetNode: Node; offset: number };
   const doc = document as Document & {

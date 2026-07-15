@@ -495,6 +495,13 @@ mark.ann { background: #f2d67a88; border-radius: 2px; padding: 0 1px; }
 
 /* ── Bilingual echo + word callout (align.ts interaction grammar) ── */
 .xlate-echo { background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 3px; transition: background 0.15s; }
+.selection-echo { 
+  background: color-mix(in srgb, var(--gold) 25%, transparent); 
+  color: inherit;
+  border-radius: 2px; 
+  padding: 0 1px;
+  transition: background 0.12s ease;
+}
 .xlate-callout {
   position: fixed; z-index: 60; pointer-events: none; max-width: 250px;
   background: var(--surface-2); color: var(--ink); border: 1px solid var(--accent);
