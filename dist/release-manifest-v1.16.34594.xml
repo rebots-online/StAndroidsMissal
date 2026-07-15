@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<release schema="mba.robin.release-manifest.v1" version="1.16.34594" versionCode="100016">
+  <artifact id="web-pwa" platform="web" kind="pwa-zip"><filename>standroidsmissal-v1.16.34594-web-pwa.zip</filename><size_bytes>65134454</size_bytes><sha256>31fdff2f4ae9fc7f5f691f7c68c5746dcf66bff19511d74a7b4a1cf407d73646</sha256></artifact>
+  <artifact id="linux-deb" platform="linux" kind="deb"><filename>standroidsmissal-v1.16.34594-linux-amd64.deb</filename><size_bytes>117587860</size_bytes><sha256>15e8e0233461559a28c4cc5e5679c33e0f1e1397a164839d6f0b48596d7db072</sha256></artifact>
+  <artifact id="linux-appimage" platform="linux" kind="appimage"><filename>standroidsmissal-v1.16.34594-linux-amd64.AppImage</filename><size_bytes>187927032</size_bytes><sha256>aab6d469d2e038f9f7b4fa5c37b637cd61d6a96b12d85d7f9567fc8f03f08f11</sha256></artifact>
+  <artifact id="windows-standalone" platform="windows" kind="exe"><filename>standroidsmissal-v1.16.34594-windows-x64-standalone.exe</filename><size_bytes>251326976</size_bytes><sha256>d59eaee1d6ddcb5ab6786f36b2579153e40a2ce9b9004204a2ce48d2adcc0e24</sha256></artifact>
+  <artifact id="android-apk-debug" platform="android" kind="apk-debug"><filename>standroidsmissal-v1.16.34594-android-universal-debug.apk</filename><size_bytes>1471218636</size_bytes><sha256>a2357b575058ae30a61eb6c6fba0fb5d5cba6bcdcc61a4dddc35a3473b3654aa</sha256></artifact>
+  <artifact id="android-apk-release" platform="android" kind="apk-release"><filename>standroidsmissal-v1.16.34594-android-universal-release.apk</filename><size_bytes>1024428321</size_bytes><sha256>7e956e8e1b9c0d24160c1f6260d48d59d529923313100f5010babacc302001d1</sha256></artifact>
+  <artifact id="android-aab-release" platform="android" kind="aab-release"><filename>standroidsmissal-v1.16.34594-android-universal-release.aab</filename><size_bytes>477690938</size_bytes><sha256>18dcf9bfdadd4783d2b0da155df361d69c7d58474c1491a8adf374f492ce93ff</sha256></artifact>
+  <artifact id="android-native-debug-symbols" platform="android" kind="native-debug-symbols"><filename>standroidsmissal-v1.16.34594-android-native-debug-symbols.zip</filename><size_bytes>473036325</size_bytes><sha256>d4d01332f210a60f8f5b004ddfca9a8b099b99a3d6af0cd241e4526d0b20dc56</sha256></artifact>
+</release>
