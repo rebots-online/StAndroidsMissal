@@ -10,7 +10,6 @@ import {
   readFileSync,
   renameSync,
   statSync,
-  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -20,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = resolve(ROOT, 'dist');
+const WEB_DIST = resolve(ROOT, 'build', 'web');
 const OUTBOX = resolve(homedir(), 'outbox', 'standroidsmissal');
 const SLUG = 'standroidsmissal';
 const versionJson = JSON.parse(readFileSync(resolve(ROOT, 'version.json'), 'utf8'));
@@ -120,15 +120,21 @@ for (const artifact of sources) {
   if (!existsSync(artifact.source)) throw new Error(`${artifact.id}: missing ${artifact.source}`);
 }
 
-// Web/PWA is zipped before native artifacts enter dist, so it contains only
-// the runnable web surface and its offline corpus.
+// Web/PWA staging is intentionally separate from dist. Vite owns and may
+// empty build/web; dist is the append-only release-artifact archive.
 for (const required of ['index.html', 'assets', 'icon.png', 'missal.db']) {
-  if (!existsSync(join(DIST, required))) throw new Error(`Web build missing dist/${required}`);
+  if (!existsSync(join(WEB_DIST, required))) throw new Error(`Web build missing build/web/${required}`);
 }
 const webFilename = `${PREFIX}-web-pwa.zip`;
 const webPath = join(DIST, webFilename);
-if (existsSync(webPath)) unlinkSync(webPath);
-execFileSync('zip', ['-qr', webFilename, 'index.html', 'assets', 'icon.png', 'missal.db'], { cwd: DIST });
+if (existsSync(webPath)) {
+  throw new Error(`Refusing to overwrite existing release artifact: ${webPath}`);
+}
+console.log(`  ⟳ web-pwa: archiving build/web to dist/${webFilename}`);
+execFileSync('zip', ['-r', webPath, 'index.html', 'assets', 'icon.png', 'missal.db'], {
+  cwd: WEB_DIST,
+  stdio: 'inherit',
+});
 
 const copied = [{ id: 'web-pwa', platform: 'web', kind: 'pwa-zip', filename: webFilename }];
 for (const artifact of sources) {
