@@ -19,3 +19,5 @@ src-tauri/gen/schemas/
 **/*.p12
 release.lock
 build-logs/
+standroidsmissal-release-state.json
+tests/.tmp/
