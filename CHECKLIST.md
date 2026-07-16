@@ -49,6 +49,7 @@ Contract: `DOCS/ARCHITECTURE.md` (v0.2, authoritative). v0.1 sections below are 
   Ran `git push -u origin claude/st-androids-missal-tauri-sg3xos` → new branch tracked; draft PR opened: https://github.com/rebots-online/StAndroidsMissal/pull/1.
 
 ## Phase 5 (next major — not in v1)
+- [ ] Origin Story content is authored by Robin and loaded from a local HTML artifact or an HTTPS link on the forthcoming blog; do not ship replacement prose written by an agent. Preserve a local fallback when the blog URL is unavailable.
 - [/] Breviary full texts + hour-construction schema (all eight hours, every day). → **in scope as v0.2 tasks B2.1–B2.3 below.**
 - ✅ `INCLUDES` (`@file:section`) and `EXPANDS` (`$`/`&`) directive edges ingested from the raw DO tree.
   Delivered by v0.2 task V0.5 (ingest v2). Ran `npm test` 2026-07-06 → 16/16 pass incl. `tests/ingest.test.ts` include/macro cases.
