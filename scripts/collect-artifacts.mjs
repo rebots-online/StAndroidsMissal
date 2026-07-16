@@ -107,8 +107,20 @@ for (const artifact of sources) {
 // (vite outDir), zipped into `dist/` alongside the native artifacts. dist-web/
 // holds ONLY the web surface, so the zip is never contaminated by prior
 // release binaries the way a shared `dist/` would be.
-for (const required of ['index.html', 'assets', 'icon.png', 'missal.db']) {
+for (const required of [
+  'index.html',
+  'assets',
+  'icon.png',
+  'icon-192.png',
+  'manifest.webmanifest',
+  'registerSW.js',
+  'sw.js',
+  'missal.db',
+]) {
   if (!existsSync(join(WEBDIST, required))) throw new Error(`Web build missing dist-web/${required}`);
+}
+if (!readdirSync(WEBDIST).some((entry) => /^workbox-[\w-]+\.js$/.test(entry))) {
+  throw new Error('Web build missing generated Workbox runtime');
 }
 const webFilename = `${PREFIX}-web-pwa.zip`;
 const webPath = join(DIST, webFilename);
@@ -116,7 +128,7 @@ if (existsSync(webPath)) {
   throw new Error(`Refusing to overwrite existing release artifact: ${webPath}`);
 }
 console.log(`  ⟳ web-pwa: archiving dist-web/ to dist/${webFilename}`);
-execFileSync('zip', ['-r', webPath, 'index.html', 'assets', 'icon.png', 'missal.db'], {
+execFileSync('zip', ['-r', webPath, ...readdirSync(WEBDIST).sort()], {
   cwd: WEBDIST,
   stdio: 'inherit',
 });
