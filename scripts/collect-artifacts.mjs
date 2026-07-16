@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = resolve(ROOT, 'dist');
+const WEBDIST = resolve(ROOT, 'dist-web');
 const OUTBOX = resolve(homedir(), 'outbox', 'standroidsmissal');
 const SLUG = 'standroidsmissal';
 const versionJson = JSON.parse(readFileSync(resolve(ROOT, 'version.json'), 'utf8'));
@@ -120,15 +121,17 @@ for (const artifact of sources) {
   if (!existsSync(artifact.source)) throw new Error(`${artifact.id}: missing ${artifact.source}`);
 }
 
-// Web/PWA is zipped before native artifacts enter dist, so it contains only
-// the runnable web surface and its offline corpus.
+// Web/PWA: the runnable web surface lives in the clean `dist-web/` embed dir
+// (vite outDir), zipped into `dist/` alongside the native artifacts. dist-web/
+// holds ONLY the web surface, so the zip is never contaminated by prior
+// release binaries the way a shared `dist/` would be.
 for (const required of ['index.html', 'assets', 'icon.png', 'missal.db']) {
-  if (!existsSync(join(DIST, required))) throw new Error(`Web build missing dist/${required}`);
+  if (!existsSync(join(WEBDIST, required))) throw new Error(`Web build missing dist-web/${required}`);
 }
 const webFilename = `${PREFIX}-web-pwa.zip`;
 const webPath = join(DIST, webFilename);
 if (existsSync(webPath)) unlinkSync(webPath);
-execFileSync('zip', ['-qr', webFilename, 'index.html', 'assets', 'icon.png', 'missal.db'], { cwd: DIST });
+execFileSync('zip', ['-qr', webFilename, 'index.html', 'assets', 'icon.png', 'missal.db'], { cwd: WEBDIST });
 
 const copied = [{ id: 'web-pwa', platform: 'web', kind: 'pwa-zip', filename: webFilename }];
 for (const artifact of sources) {

@@ -20,5 +20,11 @@ export default defineConfig({
     target: 'es2022',
     sourcemap: false,
     chunkSizeWarningLimit: 1600,
+    // Web output lives in a clean, disposable `dist-web/` (gitignored via the
+    // `dist-*/` rule) so Tauri's `frontendDist` embeds ONLY the web surface —
+    // not the multi-GB native release artifacts that accumulate in `dist/`.
+    // `dist/` stays append-only (I-0/CC12); `dist-web/` is cleared each build.
+    outDir: 'dist-web',
+    emptyOutDir: true,
   },
 });

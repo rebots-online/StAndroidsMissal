@@ -52,10 +52,31 @@ function humanRef(db: CorpusDb, key: string): { headline: string; where: string 
   else if (p.startsWith('Commune/')) when = `Commune ${p.slice(8)}`;
   else if (p.startsWith('Ordo/')) when = 'Ordinary of the Mass';
   else if (p.startsWith('Psalterium/')) when = 'Psalter';
+  if (p.startsWith('Ordo/Missae')) {
+    const ordoTitle =
+      section === 'Incipit'
+        ? 'Prayers at the Foot of the Altar'
+        : section || 'Ordinary';
+    return {
+      headline: `${ordoTitle} — Ordinary of the Mass`,
+      where: 'Ordinary of the Mass',
+    };
+  }
   return {
     headline: title ? `${section} — ${title}` : `${section} — ${p}`,
     where: office ? `Office · ${when}` : when,
   };
+}
+
+/** Pin Ordinary of the Mass concordance hits ahead of Office / sanctoral. */
+function pinOrdinaryMassHits<T extends { key: string }>(hits: T[]): T[] {
+  const ordo: T[] = [];
+  const rest: T[] = [];
+  for (const h of hits) {
+    if (/^section:Ordo\/Missae/i.test(h.key) || /Ordo\/Missae/i.test(h.key)) ordo.push(h);
+    else rest.push(h);
+  }
+  return ordo.length ? [...ordo, ...rest] : hits;
 }
 
 function ConcordanceHitRow({ db, hit, query, onOpenKey }: { db: CorpusDb; hit: ConcordanceHit; query: string; onOpenKey: (k: string) => void }) {
@@ -473,18 +494,36 @@ export default function MeaningPanel({ db, action, onClose, onOpenKey }: Props) 
             if (groups.length === 0) {
               return <div className="hit">No literal occurrences elsewhere in the corpus — see the similar passages below.</div>;
             }
-            return groups.map((g, i) => (
-              <ConceptGroup
-                key={i}
-                label={g.label}
-                description={g.description}
-                count={g.count}
-                hits={g.hits}
-                query={term}
-                renderHit={(hit, q, ok) => <ConcordanceHitRow db={db} hit={hit} query={q} onOpenKey={ok} />}
-                onOpenKey={onOpenKey}
-              />
-            ));
+            const flat = groups.flatMap((g) => g.hits);
+            const pinned = pinOrdinaryMassHits(flat);
+            const ordoHits = pinned.filter((h) => /Ordo\/Missae/i.test(h.key));
+            return (
+              <>
+                {ordoHits.length > 0 && (
+                  <ConceptGroup
+                    label="In the Ordinary of the Mass"
+                    description="Pinned — same words in the Mass Ordinary"
+                    count={ordoHits.length}
+                    hits={ordoHits}
+                    query={term}
+                    renderHit={(hit, q, ok) => <ConcordanceHitRow db={db} hit={hit} query={q} onOpenKey={ok} />}
+                    onOpenKey={onOpenKey}
+                  />
+                )}
+                {groups.map((g, i) => (
+                  <ConceptGroup
+                    key={i}
+                    label={g.label}
+                    description={g.description}
+                    count={g.count}
+                    hits={g.hits}
+                    query={term}
+                    renderHit={(hit, q, ok) => <ConcordanceHitRow db={db} hit={hit} query={q} onOpenKey={ok} />}
+                    onOpenKey={onOpenKey}
+                  />
+                ))}
+              </>
+            );
           })()}
 
           <div className="group-title">Nearest by meaning (vector)</div>

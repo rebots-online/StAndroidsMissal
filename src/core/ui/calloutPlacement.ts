@@ -37,7 +37,7 @@ export function placeFloatingCallout(
   anchor: DOMRectLike,
   box: Size,
   viewport: DOMRectLike,
-  gap: number = 12
+  gap: number = 28
 ): FloatingCalloutPlacement {
   const safeViewport: DOMRectLike = {
     left: viewport.left + VIEWPORT_INSET,

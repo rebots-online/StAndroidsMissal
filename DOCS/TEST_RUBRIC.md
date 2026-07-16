@@ -155,6 +155,21 @@ All artifacts staged in the canonical checkout's `dist/`; version bumped + stamp
 
 ---
 
+
+## MS — Mass specials & rubrics (DO parity)
+
+| ID | Requirement | Driver | Steps / PASS criteria | Severity |
+|---|---|---|---|---|
+| M-S1 | No raw DO specials in Incipit | AUTO | Working web/desktop artifact: Mass Incipit shows no `*&Introibo`, `*D`, `*S`, or bare control tokens; evidence still | BLOCKER |
+| M-S2 | Judica present ordinary Sunday Low | AUTO | Non-Passiontide non-Requiem day: Judica me block present after Introibo antiphon | BLOCKER |
+| M-S3 | Judica omitted Passiontide/Requiem | AUTO | Fixture Passiontide or Requiem day: Judica block absent; Confiteor path continues | BLOCKER |
+| M-S4 | Solemn vs Low incense | AUTO | `mass.solemn=0` omits Incensatio; `mass.solemn=1` shows solemn incense block | HIGH |
+| M-S5 | Callout not on citation | AUTO | Hover/hold over `!Ps. 42` citation does not park callout on reading line; placement above/below anchor | HIGH |
+| M-S6 | Meaning pins Ordinary | AUTO | Select “Introíbo ad altáre Dei” → Meaning shows pinned “In the Ordinary of the Mass” / Incipit before distant Office lessons | HIGH |
+| M-S7 | Production Incipit | AUTO | https://standroid.robin.mba (or current host) after deploy of this version matches M-S1–M-S2 stills | BLOCKER |
+
+**Evidence:** stills + screencast under `dist/rubric-runs/v…/` from **working release artifacts**, not dev-server-only. Smoke tests are not part of this process.
+
 ## Verdict computation
 
 1. Any ❌ (or ⚠️ on BLOCKER/HIGH) ⇒ **DEFECTIVE** — named IDs return to ARCHITECT/CODE; gauntlet re-runs after fix.

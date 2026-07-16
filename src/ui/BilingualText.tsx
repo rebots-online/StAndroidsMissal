@@ -18,6 +18,14 @@
 
 import { useEffect, useState, type ReactElement } from 'react';
 import { dialogueClass } from '../core/text/dialogue.ts';
+import { isScriptureCitationLine, isSpecialsControlLine } from '../core/liturgy/massSpecials.ts';
+
+/** Classify a leading-! line for display (controls already stripped by specials). */
+function bangLineClass(line: string): 'suppress' | 'verse-ref' | 'rubric-text' {
+  if (isSpecialsControlLine(line)) return 'suppress';
+  if (isScriptureCitationLine(line)) return 'verse-ref';
+  return 'rubric-text';
+}
 
 export interface SelectionEcho {
   lang: 'latin' | 'english';
@@ -109,8 +117,10 @@ export function TextLines({
     <p>
       {lines.map((line, i) => {
         if (line.startsWith('!')) {
+          const kind = bangLineClass(line);
+          if (kind === 'suppress') return null;
           return (
-            <span className="verse-ref" key={i}>
+            <span className={kind} key={i}>
               {line.slice(1)}
             </span>
           );
@@ -191,17 +201,20 @@ export default function BilingualText({
       {Array.from({ length: count }, (_, i) => {
         const la = laLines[i];
         const en = enLines[i];
-        const laRef = la !== undefined && la.startsWith('!');
-        const enRef = en !== undefined && en.startsWith('!');
+        const laKind = la !== undefined && la.startsWith('!') ? bangLineClass(la) : null;
+        const enKind = en !== undefined && en.startsWith('!') ? bangLineClass(en) : null;
+        if (laKind === 'suppress' && (enKind === 'suppress' || enKind === null) && (en === undefined || en.startsWith('!'))) {
+          return null;
+        }
         const echoed = inRange(i, echoLine, echoTo);
         const laSelectionEcho = selectionEcho?.lang === 'latin' && selectionEcho.line === i ? selectionEcho : undefined;
         const enSelectionEcho = selectionEcho?.lang === 'english' && selectionEcho.line === i ? selectionEcho : undefined;
         
         return (
           <p className="il-pair" key={i}>
-            {la !== undefined &&
-              (laRef ? (
-                <span className="verse-ref">{la.slice(1)}</span>
+            {la !== undefined && laKind !== 'suppress' &&
+              (laKind ? (
+                <span className={laKind}>{la.slice(1)}</span>
               ) : (
                 <span
                   className={`il-la${echoed ? ' xlate-echo' : ''}`}
@@ -220,10 +233,10 @@ export default function BilingualText({
                   )}
                 </span>
               ))}
-            {en !== undefined &&
-              // A verse-ref line paired with the same Latin ref renders once.
-              (enRef ? (
-                laRef ? null : <span className="verse-ref">{en.slice(1)}</span>
+            {en !== undefined && enKind !== 'suppress' &&
+              // A bang-line paired with the same Latin bang renders once when both are refs/rubrics.
+              (enKind ? (
+                laKind ? null : <span className={enKind}>{en.slice(1)}</span>
               ) : (
                 <span
                   className={`il-en${echoed ? ' xlate-echo' : ''}`}

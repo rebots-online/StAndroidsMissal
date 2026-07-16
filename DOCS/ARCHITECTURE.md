@@ -405,7 +405,7 @@ Supersessions within the entity table: `PlannerView`/`HomilyEditor` (P-D) are **
 
 - Fine-tuned ecclesiastical-Latin LLM behind the Meaning panel (labelled slot stays).
 - Real sentence-transformer embeddings (schema is ready; not swapped).
-- Actual multi-device/parish sync transport (sidecar schema is sync-*ready*; no server ships).
+- Actual multi-device/parish sync transport (sidecar schema is sync-*ready*; no server ships). Design: `DOCS/PEER-SIDECAR-SYNC.md` (DHT-primary; billing identity only).
 - Entitlement tier decisions and any paid gating (map ships all-`null`); the BTCPay/Woo bridge *implementation* (spec doc only).
 - Full corpus browser / cross-corpus navigation beyond same-day sections (v0.1 Phase-5 backlog item).
 - External-manual role lenses (M-C, detailed server choreography, laity postures from a St. Stephen's-type ceremonies manual) — release ships the DO-provided role granularity (§7.5 `role_rubrics`); manual vendoring + transcription is next-major (operator, 2026-07-06).

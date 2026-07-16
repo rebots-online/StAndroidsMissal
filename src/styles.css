@@ -1390,3 +1390,105 @@ html[data-mode='dark'] .settings-workspace .theme-picker button {
 .content.homily-workspace button {
   font-family: var(--sans);
 }
+
+/* ── TrayPanel — slide-out presentation tray (Y-3/Y-4/Y-6/Y-7) ── */
+.tray-handle {
+  position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+  z-index: 45; background: var(--surface-2); border: 1px solid var(--card-border);
+  border-right: none; border-radius: 8px 0 0 8px;
+  width: 32px; height: 56px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: -2px 2px 8px #0002; transition: right 0.2s ease;
+  font-family: var(--sans); color: var(--ink-soft);
+}
+.tray-handle:hover { background: var(--surface); color: var(--ink); }
+.tray-handle.open { right: 280px; }
+.tray-handle-icon { font-size: 18px; }
+
+.tray-panel {
+  position: fixed; right: 0; top: 0; bottom: 0; width: 280px;
+  z-index: 44; background: var(--surface); border-left: 1px solid var(--card-border);
+  box-shadow: -4px 0 24px #0003;
+  overflow-y: auto; padding: 16px 18px;
+  font-family: var(--sans); font-size: 13px; color: var(--ink);
+  animation: tray-slide-in 0.2s ease-out;
+}
+@keyframes tray-slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .tray-panel { animation: none; } }
+
+.tray-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--card-border);
+}
+.tray-header h3 { font-family: var(--serif); font-size: 17px; margin: 0; }
+.tray-close {
+  background: none; border: none; font-size: 22px; cursor: pointer;
+  color: var(--ink-soft); padding: 0 4px; line-height: 1;
+}
+.tray-close:hover { color: var(--ink); }
+
+.tray-section { margin-bottom: 18px; }
+.tray-section h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); margin: 0 0 8px; }
+.tray-hint { font-size: 11px; color: var(--ink-faint); margin: 0 0 8px; }
+
+.tray-radio-group { display: flex; flex-direction: column; gap: 4px; }
+.tray-radio {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 6px; cursor: pointer;
+  font-size: 12.5px; transition: background 0.15s;
+}
+.tray-radio:hover { background: var(--surface-2); }
+.tray-radio.active { background: var(--surface-2); font-weight: 600; }
+.tray-radio input { margin: 0; accent-color: var(--accent); }
+
+.tray-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12.5px; }
+.tray-toggle input { accent-color: var(--accent); }
+
+.tray-size-group { display: flex; gap: 8px; align-items: baseline; }
+.tray-size-btn {
+  width: 32px; height: 32px; border: 1px solid var(--card-border);
+  border-radius: 6px; background: var(--surface-2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); color: var(--ink); transition: border-color 0.15s;
+}
+.tray-size-btn:hover { border-color: var(--accent); }
+.tray-size-btn.active { border-color: var(--accent); border-width: 2px; }
+
+/* Reader/Office font variables */
+.reader, .office-reader {
+  font-size: var(--reader-font-size, 16px);
+  font-family: var(--reader-font-family, var(--serif));
+}
+
+/* Rubrics toggle — hide rubric-text lines when data-rubrics="off" */
+.reader[data-rubrics="off"] .rubric-text,
+.office-reader[data-rubrics="off"] .rubric-text {
+  display: none;
+}
+
+/* Role lens — highlight the active role's parts (never hide others) */
+.reader[data-role-lens="celebrans"] .dialogue-p,
+.office-reader[data-role-lens="celebrans"] .dialogue-p {
+  background: rgba(200, 170, 80, 0.12);
+  border-radius: 3px;
+}
+.reader[data-role-lens="diaconus"] .dialogue-s,
+.office-reader[data-role-lens="diaconus"] .dialogue-s {
+  background: rgba(80, 140, 200, 0.12);
+  border-radius: 3px;
+}
+
+/* ── Export bar (X-1/X-2/X-3) ─────────────────────────────────── */
+.export-bar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 0 12px; border-bottom: 1px solid var(--card-border);
+  margin-bottom: 12px;
+}
+.export-label { font-size: 12px; color: var(--ink-soft); font-family: var(--sans); }
+.export-bar button {
+  font: 12px var(--sans); padding: 4px 10px; border: 1px solid var(--card-border);
+  border-radius: 6px; background: var(--surface-2); cursor: pointer; color: var(--ink);
+}
+.export-bar button:hover { border-color: var(--accent); }
+.export-sep { width: 1px; height: 20px; background: var(--card-border); margin: 0 4px; }
+

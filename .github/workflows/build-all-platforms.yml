@@ -21,7 +21,7 @@ jobs:
       - name: Unit tests (computus, embeddings, mass ordo)
         run: npm test
       - name: Web production build
-        run: npm run build
+        run: npm run build:vite
       - uses: actions/upload-artifact@v4
         with:
           name: web-dist

@@ -46,8 +46,43 @@ export default function JournalView({ db, sidecar, day, onOpenKey }: Props) {
   const [expFilter, setExpFilter] = useState<Exposure | 'all'>('all');
   const [tagFilter, setTagFilter] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const bump = () => setTick((t) => t + 1);
+
+  function exportHtml(a: Accompaniment) {
+    const blob = new Blob(
+      [`<!doctype html><meta charset="utf-8"><title>${a.title || 'Note'}</title>${a.bodyHtml || ''}`],
+      { type: 'text/html' },
+    );
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement('a');
+    el.href = url;
+    el.download = `${(a.title || a.exposure || 'note').replace(/\s+/g, '-')}.html`;
+    el.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function shareNote(a: Accompaniment) {
+    const path = `#/acc/${a.id}`;
+    const url = `${location.origin}${location.pathname}${path}`;
+    const text = a.title || stripHtml(a.bodyHtml || '').slice(0, 120);
+    try {
+      if (navigator.share) await navigator.share({ title: a.title || 'Note', text, url });
+      else await navigator.clipboard.writeText(url);
+    } catch {
+      /* user cancelled share */
+    }
+  }
+
+  function printNote(a: Accompaniment) {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`<!doctype html><title>${a.title || 'Note'}</title><body>${a.bodyHtml || ''}</body>`);
+    w.document.close();
+    w.focus();
+    w.print();
+  }
 
   const mode = sidecar.getSetting('mode') ?? 'priest';
   const label = (x: Exposure) => (x === 'homily' && mode === 'laity' ? 'Reflection' : EXPOSURE_LABELS[x]);
@@ -105,6 +140,34 @@ export default function JournalView({ db, sidecar, day, onOpenKey }: Props) {
         </div>
       )}
 
+      <div className="jsc-toolbar" style={{ marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => {
+            setCreating(true);
+            setEditingId(null);
+          }}
+        >
+          New note
+        </button>
+      </div>
+
+      {(creating || editingId === '__new__') && (
+        <AccompanimentEditor
+          sidecar={sidecar}
+          acc={null}
+          day={day}
+          onClose={() => {
+            setCreating(false);
+            bump();
+          }}
+          onSaved={() => {
+            setCreating(false);
+            bump();
+          }}
+        />
+      )}
+
       <div className="jsc-dest" role="group" aria-label="Filter by exposure">
         <button
           type="button"
@@ -131,8 +194,8 @@ export default function JournalView({ db, sidecar, day, onOpenKey }: Props) {
         />
       </div>
 
-      {months.length === 0 && (
-        <p className="jsc-why">No entries yet — capture a passage from the reader to begin.</p>
+      {months.length === 0 && !creating && (
+        <p className="jsc-why">No entries yet — use New note, or capture a passage from the reader.</p>
       )}
 
       {months.map((m) => (
@@ -176,6 +239,9 @@ export default function JournalView({ db, sidecar, day, onOpenKey }: Props) {
                       <button type="button" onClick={() => setEditingId(editingId === a.id ? null : a.id)}>
                         {editingId === a.id ? 'Close editor' : 'Edit'}
                       </button>
+                      <button type="button" onClick={() => exportHtml(a)}>Export</button>
+                      <button type="button" onClick={() => printNote(a)}>Print</button>
+                      <button type="button" onClick={() => void shareNote(a)}>Share</button>
                       {confirmId === a.id ? (
                         <>
                           <span className="jsc-why">Delete this entry?</span>

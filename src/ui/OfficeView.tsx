@@ -11,6 +11,16 @@ import { OFFICE_CURSUS } from '../core/model/officeCursus.ts';
 import { buildHour, type OfficeEntry } from '../core/office/engine.ts';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { DayInfo } from '../core/data/types.ts';
+import { isScriptureCitationLine, isSpecialsControlLine } from '../core/liturgy/massSpecials.ts';
+import type { SidecarDb } from '../core/accompaniment/store.ts';
+import { downloadExport, type ExportEntry } from '../core/export/exportFormats.ts';
+import { shareUrl } from '../core/share/shareLink.ts';
+
+function bangLineClass(line: string): 'suppress' | 'verse-ref' | 'rubric-text' {
+  if (isSpecialsControlLine(line)) return 'suppress';
+  if (isScriptureCitationLine(line)) return 'verse-ref';
+  return 'rubric-text';
+}
 
 interface Props {
   db: CorpusDb;
@@ -18,6 +28,7 @@ interface Props {
   /** Selected hour id — lifted to App so the map strip stays in sync. */
   hour: string;
   onHour: (id: string) => void;
+  sidecar?: SidecarDb | null;
 }
 
 /** Corpus text renderer: "!Citation" lines become styled rubric refs. */
@@ -26,8 +37,10 @@ function OfficeText({ text }: { text: string }) {
     <p>
       {text.split('\n').map((line, i) => {
         if (line.startsWith('!')) {
+          const kind = bangLineClass(line);
+          if (kind === 'suppress') return null;
           return (
-            <span className="verse-ref" key={i}>
+            <span className={kind} key={i}>
               {line.slice(1)}
             </span>
           );
@@ -43,7 +56,7 @@ function OfficeText({ text }: { text: string }) {
   );
 }
 
-export default function OfficeView({ db, day, hour, onHour }: Props) {
+export default function OfficeView({ db, day, hour, onHour, sidecar }: Props) {
   const sel = OFFICE_CURSUS.find((h) => h.id === hour) ?? OFFICE_CURSUS[1];
   /** Accordion: folded section indices (per hour; reset on hour change). */
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
@@ -69,8 +82,11 @@ export default function OfficeView({ db, day, hour, onHour }: Props) {
     }
   }, [db, day, sel.id]);
 
+  const rubricsOn = (sidecar?.getSetting('mass.rubrics') ?? '1') === '1';
+  const roleLens = sidecar?.getSetting('mass.roleLens') ?? 'off';
+
   return (
-    <div className="content office-full">
+    <div className="content office-full" data-rubrics={rubricsOn ? 'on' : 'off'} data-role-lens={roleLens}>
       <aside className="office-rail">
         <svg className="office-loop" viewBox="0 0 260 260" role="img" aria-label="The eight canonical hours as a loop line">
           <circle cx={CX} cy={CY} r={R} fill="none" stroke="var(--line-office)" strokeWidth={7} />
@@ -116,6 +132,16 @@ export default function OfficeView({ db, day, hour, onHour }: Props) {
             The corpus carries no constructible texts for <b>{sel.latin}</b> on {day.date} — this
             should not happen; please report the date.
           </p>
+        )}
+        {day && entries.length > 0 && (
+          <div className="export-bar">
+            <span className="export-label">Export {sel.latin}:</span>
+            <button onClick={() => downloadExport('html', { day: day.date, feastName: day.feastName, season: day.season, source: sel.id }, entries.map((e) => ({ title: e.title, latin: e.latin, english: e.english, source: e.source, rubric: e.rubric })) as ExportEntry[])}>HTML</button>
+            <button onClick={() => downloadExport('md', { day: day.date, feastName: day.feastName, season: day.season, source: sel.id }, entries.map((e) => ({ title: e.title, latin: e.latin, english: e.english, source: e.source, rubric: e.rubric })) as ExportEntry[])}>Markdown</button>
+            <button onClick={() => downloadExport('json', { day: day.date, feastName: day.feastName, season: day.season, source: sel.id }, entries.map((e) => ({ title: e.title, latin: e.latin, english: e.english, source: e.source, rubric: e.rubric })) as ExportEntry[])}>JSON</button>
+            <span className="export-sep" />
+            <button onClick={() => { const url = shareUrl(`#/day/${day.date}`); if (navigator.share) navigator.share({ title: `${sel.latin} — ${day.feastName ?? day.date}`, text: `${sel.latin} — ${day.feastName ?? day.date}`, url }); else navigator.clipboard.writeText(url); }}>Share link</button>
+          </div>
         )}
         {entries.map((e, i) =>
           e.rubric ? (

@@ -525,9 +525,11 @@ export class OfficeEngine {
       const resp = this.sect([`Responsory${i}`]);
       if (resp) out.push({ title: `Responsorium ${i}`, latin: resp.latin, english: resp.english, source: resp.nodeKey });
     }
-    // Te Deum after the final lesson except on penitential ferias.
+    // Te Deum after the final lesson except on penitential ferias
+    // (Advent/Septuagesima/Lent ferias — not feasts — and Requiem).
+    const isFeria = this.day.winner?.key?.startsWith('Tempora/') ?? true;
     const penitential =
-      ['Advent', 'Pre-Lent', 'Lent'].includes(this.day.season) && this.day.rank < 2 && this.dow !== 0;
+      ['Advent', 'Pre-Lent', 'Lent'].includes(this.day.season) && isFeria && this.dow !== 0;
     if (out.length && !penitential) {
       const te = this.prayer('Te Deum');
       if (te) out.push({ title: 'Te Deum', latin: te.latin, english: te.english, source: te.nodeKey });

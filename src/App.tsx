@@ -21,6 +21,7 @@ import HomilyPlanner from './ui/HomilyPlanner.tsx';
 import SettingsView from './ui/SettingsView.tsx';
 import AboutView from './ui/AboutView.tsx';
 import ResizableInspectorLayout from './ui/ResizableInspectorLayout.tsx';
+import TrayPanel from './ui/TrayPanel.tsx';
 
 type View = 'map' | 'reader' | 'calendar' | 'office' | 'bible' | 'journal' | 'homily' | 'settings' | 'about';
 
@@ -61,6 +62,7 @@ export default function App() {
   const [bibleFocus, setBibleFocus] = useState<{ ref: string | null; nonce: number }>({ ref: null, nonce: 0 });
   const [sidecar, setSidecar] = useState<SidecarDb | null>(null);
   const [capture, setCapture] = useState<{ quote: string; quoteAlt?: string; anchor: string | null } | null>(null);
+  const [trayOpen, setTrayOpen] = useState(false);
 
   useEffect(() => {
     loadCorpusBytes()
@@ -316,7 +318,7 @@ export default function App() {
               {view === 'calendar' && (
                 <CalendarView db={db} selected={date} onPick={(iso) => { setDate(iso); setView('reader'); setFocus({ section: null, nonce: 0 }); }} />
               )}
-              {view === 'office' && <OfficeView db={db} day={day} hour={officeHour} onHour={setOfficeHour} />}
+              {view === 'office' && <OfficeView db={db} day={day} hour={officeHour} onHour={setOfficeHour} sidecar={sidecar} />}
               {view === 'bible' && (
                 <BibleView
                   db={db}
@@ -340,7 +342,7 @@ export default function App() {
               {view === 'homily' && !sidecar && (
                 <div className="content"><p>Opening your homily planner…</p></div>
               )}
-              {view === 'settings' && <SettingsView />}
+              {view === 'settings' && <SettingsView sidecar={sidecar} />}
               {view === 'about' && <AboutView />}
             </>
           }
@@ -353,6 +355,10 @@ export default function App() {
           }
         />
       </div>
+
+      {(view === 'reader' || view === 'office') && (
+        <TrayPanel sidecar={sidecar} open={trayOpen} onToggle={() => setTrayOpen((o) => !o)} />
+      )}
 
       {/* Mandatory app chrome: version bottom-right on every surface. */}
       <div className="version-tag" title={`Build ${versionInfo.buildNumber} · ${versionInfo.buildDate}`}>

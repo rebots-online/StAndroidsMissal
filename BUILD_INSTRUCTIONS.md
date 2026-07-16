@@ -183,7 +183,7 @@ npx tsc --noEmit --strict --module nodenext --moduleResolution nodenext scripts/
 node --experimental-strip-types --test tests/releaseState.test.ts
 npx tsc -b --pretty false
 npm test
-npm run build
+npm run build:vite
 ```
 
 All commands must exit 0 with no real platform build or stamp run. The test
@@ -216,8 +216,10 @@ After each successful stage, its name is atomically recorded in `release.lock`.
 If the driver is interrupted, re-running `npm run build:release` resumes at the
 first incomplete stage without stamping. Use `--restart` to begin a fresh stamp.
 
-Web must precede collection because Vite empties its output directory. Never
-place collected native release artifacts in `dist/` before the final web build.
+Vite is configured with `emptyOutDir: false` so it never wipes `dist/`. Native
+release artifacts in `dist/` survive web rebuilds. The web stage still runs
+first in the pipeline for logical ordering, but artifact safety no longer
+depends on stage sequencing.
 
 The Admin-Manual kickstart script can provision toolchains and build individual
 targets. It does not replace the coherent release driver: it does not own the

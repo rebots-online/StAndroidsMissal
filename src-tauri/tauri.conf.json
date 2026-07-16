@@ -1,13 +1,13 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "St. Android's Missal",
-  "version": "1.18.35665",
+  "version": "1.23.36329",
   "identifier": "mba.robin.standroidsmissal",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:vite",
     "devUrl": "http://localhost:5173",
-    "frontendDist": "../dist"
+    "frontendDist": "../dist-web"
   },
   "app": {
     "windows": [
@@ -63,7 +63,7 @@
       }
     },
     "android": {
-      "versionCode": 100018,
+      "versionCode": 100023,
       "autoIncrementVersionCode": false
     }
   }

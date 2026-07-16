@@ -26,7 +26,7 @@ describe('placeFloatingCallout', () => {
     const placement = placeFloatingCallout(anchor, box, viewport);
     
     assert.strictEqual(placement.side, 'above');
-    assert.strictEqual(placement.top, anchor.top - 12 - box.height);
+    assert.strictEqual(placement.top, anchor.top - 28 - box.height);
     assert.strictEqual(placement.left, anchor.left);
   });
 
@@ -36,7 +36,7 @@ describe('placeFloatingCallout', () => {
     const placement = placeFloatingCallout(anchor, box, viewport);
     
     assert.strictEqual(placement.side, 'below');
-    assert.strictEqual(placement.top, anchor.bottom + 12);
+    assert.strictEqual(placement.top, anchor.bottom + 28);
     assert.strictEqual(placement.left, anchor.left);
   });
 
@@ -73,7 +73,7 @@ describe('placeFloatingCallout', () => {
     const placement = placeFloatingCallout(anchor, box, viewport);
     
     assert.strictEqual(placement.side, 'below');
-    assert.strictEqual(placement.top, anchor.bottom + 12);
+    assert.strictEqual(placement.top, anchor.bottom + 28);
   });
 
   it('clamps to viewport inset vertically below', () => {
@@ -82,7 +82,7 @@ describe('placeFloatingCallout', () => {
     const placement = placeFloatingCallout(anchor, box, viewport);
     
     assert.strictEqual(placement.side, 'above');
-    assert.strictEqual(placement.top, anchor.top - 12 - box.height);
+    assert.strictEqual(placement.top, anchor.top - 28 - box.height);
   });
 
   it('avoids intersecting anchor when both sides have room', () => {
@@ -103,7 +103,7 @@ describe('placeFloatingCallout', () => {
     const placement = placeFloatingCallout(anchor, box, viewport);
     
     assert.strictEqual(placement.side, 'above');
-    assert.strictEqual(placement.top, anchor.top - 12 - box.height);
+    assert.strictEqual(placement.top, anchor.top - 28 - box.height);
   });
 
   it('handles five-line callout size', () => {
@@ -112,7 +112,7 @@ describe('placeFloatingCallout', () => {
     const placement = placeFloatingCallout(anchor, box, viewport);
     
     assert.strictEqual(placement.side, 'above');
-    assert.strictEqual(placement.top, anchor.top - 12 - box.height);
+    assert.strictEqual(placement.top, anchor.top - 28 - box.height);
   });
 
   it('prefers above for middle anchor with equal room', () => {

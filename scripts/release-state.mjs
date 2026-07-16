@@ -363,7 +363,7 @@ async function runCommand(name, deps, root) {
     },
     web: () => {
       console.log('🔧 Stage: web');
-      execSync('npm run build', { cwd: root, stdio: 'inherit' });
+      execSync('npm run build:vite', { cwd: root, stdio: 'inherit' });
     },
     linux: () => {
       console.log('🔧 Stage: linux');

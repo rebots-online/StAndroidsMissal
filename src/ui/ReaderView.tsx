@@ -5,7 +5,7 @@
  * Catholic meaning · similar passages · cross-references · annotate.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { DayInfo, SectionText } from '../core/data/types.ts';
 import { MASS_ORDO, READER_ORDER, ORDO_STATION_SECTION, stationActive } from '../core/model/massOrdo.ts';
@@ -15,6 +15,18 @@ import type { SidecarDb } from '../core/accompaniment/store.ts';
 import { massTextsForDay } from '../core/data/liturgicalDay.ts';
 import { alignSelection, alignPhrase, wordEcho, wordAtPoint, type WordEchoResult, type PhraseSelectionInput } from '../core/text/align.ts';
 import BilingualText, { TextLines, useNarrow, type SelectionEcho } from './BilingualText.tsx';
+import {
+  applyMassSpecialsBilingual,
+  massSpecialsContextFromDay,
+} from '../core/liturgy/massSpecials.ts';
+import {
+  placeFloatingCallout,
+  reconcileCallout,
+  type DOMRectLike,
+  type FloatingCalloutPlacement,
+} from '../core/ui/calloutPlacement.ts';
+import { downloadExport, type ExportEntry } from '../core/export/exportFormats.ts';
+import { shareUrl } from '../core/share/shareLink.ts';
 
 export interface SelectionAction {
   kind: 'meaning' | 'similar' | 'crossrefs';
@@ -88,14 +100,26 @@ export default function ReaderView({
       setEcho({ nodeKey: sec.dataset.nodekey, from: idx, to: idx });
     }
   };
-  /** Word callout: hover (desktop) / finger-hold (touch) shows the
-   *  corpus-attested corresponding word + its aligned line. */
-  const [callout, setCallout] = useState<{ x: number; y: number; word: string; echo: WordEchoResult } | null>(null);
+  /** Word callout: hover (desktop) / finger-hold (touch) — placed via placeFloatingCallout (BX.1 parity). */
+  const [callout, setCallout] = useState<{
+    anchor: DOMRectLike;
+    word: string;
+    echo: WordEchoResult;
+    placement?: FloatingCalloutPlacement;
+  } | null>(null);
   const echoCache = useRef(new Map<string, WordEchoResult | null>());
   const lastWord = useRef<string | null>(null);
+  const calloutElRef = useRef<HTMLDivElement>(null);
+  const anchorElRef = useRef<HTMLElement | null>(null);
   const showCallout = (e: React.PointerEvent) => {
+    const t = e.target as HTMLElement;
+    if (t.closest?.('.verse-ref, .rubric-text')) {
+      lastWord.current = null;
+      setCallout(null);
+      return;
+    }
     const word = wordAtPoint(e.clientX, e.clientY);
-    const sec = (e.target as HTMLElement).closest?.('section[data-nodekey]') as HTMLElement | null;
+    const sec = t.closest?.('section[data-nodekey]') as HTMLElement | null;
     const nodeKey = sec?.dataset.nodekey ?? null;
     if (!word || !nodeKey) {
       lastWord.current = null;
@@ -112,9 +136,36 @@ export default function ReaderView({
       result = wordEcho(db, { latin: src.latin, english: src.english }, word);
       echoCache.current.set(cacheKey, result);
     }
-    if (result?.word) setCallout({ x: e.clientX, y: e.clientY, word, echo: result });
-    else setCallout(null);
+    if (result?.word) {
+      const lineEl = t.closest?.('span[data-line]') as HTMLElement | null;
+      const anchorEl = lineEl ?? t;
+      anchorElRef.current = anchorEl;
+      const r = anchorEl.getBoundingClientRect();
+      setCallout({
+        anchor: { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height },
+        word,
+        echo: result,
+      });
+    } else setCallout(null);
   };
+
+  useLayoutEffect(() => {
+    if (!callout) return;
+    const anchorEl = anchorElRef.current;
+    if (!anchorEl || !anchorEl.isConnected) {
+      setCallout(null);
+      return;
+    }
+    const r = anchorEl.getBoundingClientRect();
+    const anchor = { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
+    const box = { width: calloutElRef.current?.offsetWidth ?? 0, height: calloutElRef.current?.offsetHeight ?? 0 };
+    const viewport = {
+      left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight,
+      width: window.innerWidth, height: window.innerHeight,
+    };
+    const placement = placeFloatingCallout(anchor, box, viewport);
+    setCallout((prev) => (prev ? reconcileCallout(prev, anchor, placement) : null));
+  }, [callout?.echo]);
   const toggleSection = (anchor: string) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -124,9 +175,13 @@ export default function ReaderView({
     });
 
   const path = day.winner?.key ?? day.temporaPath;
+  const solemn = (sidecar?.getSetting('mass.solemn') ?? '0') === '1';
+  const rubricsOn = (sidecar?.getSetting('mass.rubrics') ?? '1') === '1';
+  const roleLens = sidecar?.getSetting('mass.roleLens') ?? 'off';
   const entries: ReaderEntry[] = useMemo(() => {
     const propers = new Map(massTextsForDay(db, day).texts.map((s) => [s.section, s]));
     const ordo = db.getOrdoTexts();
+    const specialsCtx = massSpecialsContextFromDay(day, { solemn });
     const out: ReaderEntry[] = [];
     for (const slot of READER_ORDER) {
       if (slot.kind === 'proper') {
@@ -137,16 +192,27 @@ export default function ReaderView({
         const sw = MASS_ORDO.find((st) => st.branch === 'chant' && st.sectionKey === slot.section);
         if (sw && !stationActive(sw, day.season as Season)) continue;
         const s = propers.get(slot.section);
-        if (s) out.push({ ...s, ordinary: false, displayTitle: s.section, anchor: s.section });
+        if (s) {
+          const filtered = applyMassSpecialsBilingual(s.latin, s.english, specialsCtx);
+          out.push({ ...s, latin: filtered.latin || null, english: filtered.english || null, ordinary: false, displayTitle: s.section, anchor: s.section });
+        }
       } else {
         const s = ordo.get(slot.section);
         if (s && (s.latin || s.english)) {
-          out.push({ ...s, ordinary: true, displayTitle: slot.title ?? s.section, anchor: `ordo:${slot.section}` });
+          const filtered = applyMassSpecialsBilingual(s.latin, s.english, specialsCtx);
+          out.push({
+            ...s,
+            latin: filtered.latin || null,
+            english: filtered.english || null,
+            ordinary: true,
+            displayTitle: slot.title ?? s.section,
+            anchor: `ordo:${slot.section}`,
+          });
         }
       }
     }
     return out;
-  }, [db, path, day.season]);
+  }, [db, path, day.season, day.weekKey, day.weekday, day.rank, day.feastName, day.winner, day.temporaPath, solemn]);
 
   useEffect(() => {
     if (focusSection && rootRef.current) {
@@ -342,6 +408,19 @@ export default function ReaderView({
     };
   }
 
+  const exportEntries: ExportEntry[] = entries.map((s) => ({
+    title: s.displayTitle,
+    latin: s.latin,
+    english: s.english,
+    source: s.sourcePath,
+  }));
+  const exportMeta = { day: day.date, feastName: day.feastName, season: day.season, source: path };
+  const shareDay = () => {
+    const url = shareUrl(`#/day/${day.date}`);
+    if (navigator.share) navigator.share({ title: day.feastName ?? day.date, text: day.feastName ?? day.date, url });
+    else navigator.clipboard.writeText(url);
+  };
+
   if (entries.length === 0) {
     return (
       <div className="content reader" ref={rootRef}>
@@ -358,6 +437,8 @@ export default function ReaderView({
     <div
       className="content reader"
       ref={rootRef}
+      data-rubrics={rubricsOn ? 'on' : 'off'}
+      data-role-lens={roleLens}
       onContextMenu={(e) => {
         const sel = window.getSelection()?.toString().trim();
         if (sel) openMenu(e, menuNodeKeyFromSelection(rootRef.current));
@@ -394,6 +475,14 @@ export default function ReaderView({
       }}
       onClick={echoFromEvent}
     >
+      <div className="export-bar">
+        <span className="export-label">Export:</span>
+        <button onClick={() => downloadExport('html', exportMeta, exportEntries)}>HTML</button>
+        <button onClick={() => downloadExport('md', exportMeta, exportEntries)}>Markdown</button>
+        <button onClick={() => downloadExport('json', exportMeta, exportEntries)}>JSON</button>
+        <span className="export-sep" />
+        <button onClick={shareDay}>Share link</button>
+      </div>
       {entries.map((s) => {
         const anns = annotationsFor(s.nodeKey);
         const highlights = sidecar?.forAnchor(s.nodeKey) ?? [];
@@ -465,7 +554,16 @@ export default function ReaderView({
       })}
 
       {callout && (
-        <div className="xlate-callout" style={{ left: Math.min(callout.x + 12, window.innerWidth - 260), top: callout.y - 44 }}>
+        <div
+          ref={calloutElRef}
+          className="xlate-callout"
+          style={{
+            left: callout.placement ? callout.placement.left : callout.anchor.left,
+            top: callout.placement ? callout.placement.top : callout.anchor.top,
+            visibility: callout.placement ? 'visible' : 'hidden',
+          }}
+          data-side={callout.placement?.side}
+        >
           <b>{callout.echo.word}</b>
           <span className="xlate-callout-line">{(callout.echo.line ?? '').slice(0, 90)}</span>
         </div>

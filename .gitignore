@@ -18,3 +18,4 @@ src-tauri/gen/schemas/
 **/*.jks
 **/*.p12
 release.lock
+build-logs/

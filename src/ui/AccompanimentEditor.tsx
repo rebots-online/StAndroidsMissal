@@ -24,9 +24,25 @@ import { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import type { JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
+import Highlight from '@tiptap/extension-highlight';
+import Image from '@tiptap/extension-image';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import type { SidecarDb } from '../core/accompaniment/store.ts';
 import type { Accompaniment, Exposure, OccurrenceSelector } from '../core/accompaniment/types.ts';
 import type { DayInfo } from '../core/data/types.ts';
+
+function isAllowedHref(href: string): boolean {
+  const h = href.trim();
+  if (/^https:\/\//i.test(h)) return true;
+  if (/^#\/(verse|section|day|acc)\//i.test(h)) return true;
+  return false;
+}
 
 export const EXPOSURE_LABELS: Record<Exposure, string> = {
   journal: 'Journal entry',
@@ -98,12 +114,60 @@ export default function AccompanimentEditor({
   const tagsInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      Underline,
+      Highlight,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        validate: isAllowedHref,
+        HTMLAttributes: { rel: 'noopener noreferrer' },
+      }),
+      Image.configure({ inline: false, allowBase64: true }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
+    ],
     content: initialContent(acc),
-    shouldRerenderOnTransaction: true, // toolbar aria-pressed states track the selection
+    shouldRerenderOnTransaction: true,
     editorProps: { attributes: { class: 'jsc-editor' } },
     onUpdate: () => scheduleSave(),
   });
+
+  function promptLink() {
+    if (!editor) return;
+    const prev = editor.getAttributes('link').href as string | undefined;
+    const next = window.prompt(
+      'Link URL (https://... or internal #/verse/ #/section/ #/day/ #/acc/)',
+      prev ?? 'https://',
+    );
+    if (next === null) return;
+    const href = next.trim();
+    if (!href) {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    if (!isAllowedHref(href)) {
+      window.alert('Only https:// or internal #/verse|section|day|acc links allowed.');
+      return;
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+  }
+
+  function promptImage() {
+    if (!editor) return;
+    const src = window.prompt('Image URL (https://...) or cancel');
+    if (!src?.trim()) return;
+    if (!/^https:\/\//i.test(src.trim()) && !src.trim().startsWith('data:image/')) {
+      window.alert('Image must be https:// or data:image URI.');
+      return;
+    }
+    editor.chain().focus().setImage({ src: src.trim() }).run();
+  }
 
   /** The single 400 ms ref-timer debounce for save + persist (BC.3). */
   function scheduleSave() {
@@ -194,30 +258,29 @@ export default function AccompanimentEditor({
         style={{ width: '100%', boxSizing: 'border-box', margin: '6px 0' }}
       />
       <div className="jsc-toolbar" role="toolbar" aria-label="Rich text tools">
-        <button
-          type="button"
-          aria-pressed={editor?.isActive('bold') ?? false}
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-          title="Bold"
-        >
-          <b>B</b>
-        </button>
-        <button
-          type="button"
-          aria-pressed={editor?.isActive('italic') ?? false}
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-          title="Italic"
-        >
-          <i>I</i>
-        </button>
-        <button
-          type="button"
-          aria-pressed={editor?.isActive('bulletList') ?? false}
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          title="Bullet list"
-        >
-          • List
-        </button>
+        <button type="button" aria-pressed={editor?.isActive('bold') ?? false} onClick={() => editor?.chain().focus().toggleBold().run()} title="Bold"><b>B</b></button>
+        <button type="button" aria-pressed={editor?.isActive('italic') ?? false} onClick={() => editor?.chain().focus().toggleItalic().run()} title="Italic"><i>I</i></button>
+        <button type="button" aria-pressed={editor?.isActive('underline') ?? false} onClick={() => editor?.chain().focus().toggleUnderline().run()} title="Underline"><u>U</u></button>
+        <button type="button" aria-pressed={editor?.isActive('strike') ?? false} onClick={() => editor?.chain().focus().toggleStrike().run()} title="Strike"><s>S</s></button>
+        <button type="button" aria-pressed={editor?.isActive('highlight') ?? false} onClick={() => editor?.chain().focus().toggleHighlight().run()} title="Highlight">HL</button>
+        <button type="button" aria-pressed={editor?.isActive('heading', { level: 1 }) ?? false} onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1">H1</button>
+        <button type="button" aria-pressed={editor?.isActive('heading', { level: 2 }) ?? false} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">H2</button>
+        <button type="button" aria-pressed={editor?.isActive('heading', { level: 3 }) ?? false} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">H3</button>
+        <button type="button" aria-pressed={editor?.isActive('bulletList') ?? false} onClick={() => editor?.chain().focus().toggleBulletList().run()} title="Bullet list">List</button>
+        <button type="button" aria-pressed={editor?.isActive('orderedList') ?? false} onClick={() => editor?.chain().focus().toggleOrderedList().run()} title="Ordered list">1.</button>
+        <button type="button" aria-pressed={editor?.isActive('blockquote') ?? false} onClick={() => editor?.chain().focus().toggleBlockquote().run()} title="Quote">Quote</button>
+        <button type="button" onClick={() => editor?.chain().focus().setHorizontalRule().run()} title="Horizontal rule">HR</button>
+        <button type="button" aria-pressed={editor?.isActive('code') ?? false} onClick={() => editor?.chain().focus().toggleCode().run()} title="Code">Code</button>
+        <button type="button" aria-pressed={editor?.isActive({ textAlign: 'left' }) ?? false} onClick={() => editor?.chain().focus().setTextAlign('left').run()} title="Align left">Left</button>
+        <button type="button" aria-pressed={editor?.isActive({ textAlign: 'center' }) ?? false} onClick={() => editor?.chain().focus().setTextAlign('center').run()} title="Align center">Center</button>
+        <button type="button" aria-pressed={editor?.isActive({ textAlign: 'right' }) ?? false} onClick={() => editor?.chain().focus().setTextAlign('right').run()} title="Align right">Right</button>
+        <button type="button" aria-pressed={editor?.isActive('link') ?? false} onClick={promptLink} title="Link">Link</button>
+        <button type="button" onClick={() => editor?.chain().focus().unsetLink().run()} title="Remove link">Unlink</button>
+        <button type="button" onClick={promptImage} title="Image">Img</button>
+        <button type="button" onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert table">Table</button>
+        <button type="button" onClick={() => editor?.chain().focus().undo().run()} title="Undo">Undo</button>
+        <button type="button" onClick={() => editor?.chain().focus().redo().run()} title="Redo">Redo</button>
+        <button type="button" onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} title="Clear formatting">Clear</button>
       </div>
       <EditorContent editor={editor} />
       {themeSuggestions.length > 0 && (

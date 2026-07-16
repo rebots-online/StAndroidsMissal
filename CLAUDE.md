@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## ⛔ URGENT — Phase-specific rules check (every turn)
 
+**I-22:** Long-running processes: poll status **once per minute**, no backoff, until exit.
+
 Before taking any action each turn, check the appropriate phase-specific rules file:
 
 - **Global rules:** `~/.claude/CLAUDE.md` (loaded automatically — never override)
@@ -19,8 +21,7 @@ Before taking any action each turn, check the appropriate phase-specific rules f
 If a task involves building, deploying, pushing, or interacting with infrastructure,
 read the relevant Admin-Manual section **before** acting — not after. The Admin-Manual
 is the single source of truth for access paths, credential locations, and deployment
-targets. Never scatter temp files in `/tmp`; use `~/outbox/standroidsmissal/` for
-staging. Never cross-reference other projects' documentation.
+targets. Never scatter temp files in `/tmp` (I-8). **Never delete anything** (I-0): only `cp` into the common trash `~/outbox/` (all projects; operator-emptied only). Never cross-reference other projects' documentation.
 
 ## What this is
 
@@ -31,7 +32,8 @@ St. Android's Missal — the Traditional Latin Mass and Divine Office rendered a
 ```bash
 npm run dev            # web dev server (predev copies assets/missal.db → public/missal.db)
 npm run tauri dev      # desktop shell
-npm run build          # tsc -b && vite build (prebuild syncs the db too)
+npm run build          # full release pipeline (test → web → linux → windows → android → collect)
+npm run build:vite     # web-only build (tsc -b && vite build, prebuild syncs the db too)
 npm test               # all tests (node:test runner)
 node --experimental-strip-types --test tests/computus.test.ts   # single test file
 npm run ingest         # rebuild assets/missal.db from VENDORED/ (see below)
