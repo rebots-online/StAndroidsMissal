@@ -94,7 +94,7 @@ async function spawnCli(args: string[], envOverrides: Record<string, string> = {
       ...envOverrides,
     };
 
-    const child = spawn('node', ['scripts/release-state.mjs', ...args], {
+    const child = spawn(process.execPath, ['scripts/release-state.mjs', ...args], {
       cwd: ROOT,
       env,
       stdio: 'pipe',
