@@ -10,7 +10,6 @@ import {
   readFileSync,
   renameSync,
   statSync,
-  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -21,7 +20,6 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = resolve(ROOT, 'dist');
 const WEBDIST = resolve(ROOT, 'dist-web');
-const OUTBOX = resolve(homedir(), 'outbox', 'standroidsmissal');
 const SLUG = 'standroidsmissal';
 const versionJson = JSON.parse(readFileSync(resolve(ROOT, 'version.json'), 'utf8'));
 const VERSION = versionJson.version;
@@ -32,25 +30,9 @@ if (readFileSync(resolve(ROOT, 'version.txt'), 'utf8').trim() !== VERSION) {
   throw new Error('version.txt and version.json disagree');
 }
 mkdirSync(DIST, { recursive: true });
-mkdirSync(OUTBOX, { recursive: true });
 
-function moveToOutbox(path) {
-  let target = join(OUTBOX, basename(path));
-  if (existsSync(target)) {
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    target = join(OUTBOX, `${basename(path)}.${stamp}`);
-  }
-  renameSync(path, target);
-  console.log(`  ↪ stale ${basename(path)} → ${target}`);
-}
-
-const managedExt = /\.(?:deb|AppImage|apk|aab|exe|zip)$/;
-for (const name of readdirSync(DIST)) {
-  const managedName = name.startsWith(`${SLUG}-v`) || /^v\d+\.\d+\.\d+-standroidsmissal/.test(name);
-  if (managedName && managedExt.test(name) && !name.startsWith(PREFIX)) {
-    moveToOutbox(join(DIST, name));
-  }
-}
+// dist/ is an append-only release archive. Older versions remain in place;
+// cleanup and deployment retention are separate, explicit operator actions.
 
 function exactOne(dir, predicate, label) {
   if (!existsSync(dir)) throw new Error(`${label}: missing directory ${dir}`);
@@ -130,12 +112,22 @@ for (const required of ['index.html', 'assets', 'icon.png', 'missal.db']) {
 }
 const webFilename = `${PREFIX}-web-pwa.zip`;
 const webPath = join(DIST, webFilename);
-if (existsSync(webPath)) unlinkSync(webPath);
-execFileSync('zip', ['-qr', webFilename, 'index.html', 'assets', 'icon.png', 'missal.db'], { cwd: WEBDIST });
+if (existsSync(webPath)) {
+  throw new Error(`Refusing to overwrite existing release artifact: ${webPath}`);
+}
+console.log(`  ⟳ web-pwa: archiving dist-web/ to dist/${webFilename}`);
+execFileSync('zip', ['-r', webPath, 'index.html', 'assets', 'icon.png', 'missal.db'], {
+  cwd: WEBDIST,
+  stdio: 'inherit',
+});
 
 const copied = [{ id: 'web-pwa', platform: 'web', kind: 'pwa-zip', filename: webFilename }];
 for (const artifact of sources) {
-  copyFileSync(artifact.source, join(DIST, artifact.filename));
+  const destination = join(DIST, artifact.filename);
+  if (existsSync(destination)) {
+    throw new Error(`Refusing to overwrite existing release artifact: ${destination}`);
+  }
+  copyFileSync(artifact.source, destination);
   copied.push({
     id: artifact.id,
     platform: artifact.platform,
