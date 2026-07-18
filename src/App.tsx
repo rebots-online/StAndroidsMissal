@@ -61,6 +61,7 @@ export default function App() {
   // Bible deep-link focus ("Gen/1/5"); nonce bumps so re-navigating re-scrolls.
   const [bibleFocus, setBibleFocus] = useState<{ ref: string | null; nonce: number }>({ ref: null, nonce: 0 });
   const [sidecar, setSidecar] = useState<SidecarDb | null>(null);
+  const [pendingAccId, setPendingAccId] = useState<string | null>(null);
   const [capture, setCapture] = useState<{ quote: string; quoteAlt?: string; anchor: string | null } | null>(null);
   const [trayOpen, setTrayOpen] = useState(false);
 
@@ -92,7 +93,9 @@ export default function App() {
       // Route through the same source-day navigation search hits use.
       onOpenKey(link.sectionKey);
     } else if (link.view === 'journal' && link.accId) {
+      setPendingAccId(link.accId);
       setView('journal');
+      history.replaceState(null, '', location.pathname + location.search);
     }
   }, []);
 
@@ -331,7 +334,14 @@ export default function App() {
                 />
               )}
               {view === 'journal' && sidecar && (
-                <JournalView db={db} sidecar={sidecar} day={day} onOpenKey={onOpenKey} />
+                <JournalView
+                  db={db}
+                  sidecar={sidecar}
+                  day={day}
+                  onOpenKey={onOpenKey}
+                  focusAccId={pendingAccId}
+                  onFocusConsumed={() => setPendingAccId(null)}
+                />
               )}
               {view === 'journal' && !sidecar && (
                 <div className="content"><p>Opening your journal…</p></div>
