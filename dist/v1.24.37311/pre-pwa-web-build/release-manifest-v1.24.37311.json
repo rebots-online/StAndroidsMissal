@@ -8,7 +8,7 @@
   "release_status": "release-candidate",
   "working_status": "unknown",
   "source": {
-    "commit": "1052b478d4c704b8e515ba8e442b716b65159ed6",
+    "commit": "5bc5ee7310ea517ac88dbb3d4b11bf8ac3bce3a0",
     "branch": "agent/v122-build-observability-and-artifact-safety"
   },
   "artifacts": [
@@ -17,8 +17,8 @@
       "platform": "web",
       "kind": "pwa-zip",
       "filename": "standroidsmissal-v1.24.37311-web-pwa.zip",
-      "size_bytes": 65237210,
-      "sha256": "58afbbe3a7cbcbfcfe85aa5f2de3ee6a88b41ee23057161301351330edf2b021",
+      "size_bytes": 65168023,
+      "sha256": "ddcaecc69c2adc7be00babfdf13f1565367a731e449c84a8f01afbb4b4f37ad9",
       "locations": [
         {
           "role": "canonical-checkout-dist",

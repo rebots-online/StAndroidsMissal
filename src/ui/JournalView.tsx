@@ -8,7 +8,7 @@
  * selectors project onto the provided day (accompanimentsForDay).
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CorpusDb } from '../core/data/corpusDb.ts';
 import type { SidecarDb } from '../core/accompaniment/store.ts';
 import type { Accompaniment, Exposure } from '../core/accompaniment/types.ts';
@@ -39,9 +39,11 @@ interface Props {
   sidecar: SidecarDb;
   day?: DayInfo | null;
   onOpenKey: (k: string) => void;
+  focusAccId?: string | null;
+  onFocusConsumed?: () => void;
 }
 
-export default function JournalView({ db, sidecar, day, onOpenKey }: Props) {
+export default function JournalView({ db, sidecar, day, onOpenKey, focusAccId, onFocusConsumed }: Props) {
   const [tick, setTick] = useState(0);
   const [expFilter, setExpFilter] = useState<Exposure | 'all'>('all');
   const [tagFilter, setTagFilter] = useState('');
@@ -115,6 +117,17 @@ export default function JournalView({ db, sidecar, day, onOpenKey }: Props) {
     void tick;
     return day ? accompanimentsForDay(db, sidecar, day.date) : [];
   }, [db, sidecar, day, tick]);
+
+  useEffect(() => {
+    if (!focusAccId) return;
+    if (!entries.some((a) => a.id === focusAccId)) return;
+    setExpFilter('all');
+    setTagFilter('');
+    setEditingId(focusAccId);
+    const el = document.getElementById(`acc-card-${focusAccId}`);
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    onFocusConsumed?.();
+  }, [focusAccId, entries, onFocusConsumed]);
 
   return (
     <div className="content">
@@ -204,7 +217,7 @@ export default function JournalView({ db, sidecar, day, onOpenKey }: Props) {
           {m.items.map((a) => {
             const firstLine = stripHtml(a.bodyHtml).slice(0, 160);
             return (
-              <div key={a.id}>
+              <div key={a.id} id={`acc-card-${a.id}`}>
                 <article className="jsc-card">
                   <span className="jsc-evidence">
                     <span className="chip">{label(a.exposure)}</span>
