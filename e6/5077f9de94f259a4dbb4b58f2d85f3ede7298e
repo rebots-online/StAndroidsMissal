@@ -1,0 +1,15 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "e65077f9de94f259a4dbb4b58f2d85f3ede7298e",
+  "prompts": {},
+  "humans": {
+    "h_30b36d78271bb4": {
+      "author": "Robin L. M. Cheung, MBA <robin@robin.mba>"
+    },
+    "h_e3b59d9b3c52cd": {
+      "author": "Robin Cheung, MBA <robin@robin.mba>"
+    }
+  }
+}
