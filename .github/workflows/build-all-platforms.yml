@@ -1,10 +1,8 @@
 name: build-all-platforms
 
+# Builds are local until public release (TC14). Keep CI available only by
+# deliberate operator dispatch; ordinary mirror pushes must not consume Actions.
 on:
-  push:
-    branches: [master]
-    tags: ['v*']
-  pull_request:
   workflow_dispatch:
 
 jobs:
